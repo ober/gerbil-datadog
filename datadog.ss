@@ -787,6 +787,12 @@ namespace: datadog
 	      ("title" title)
 	      ("description" (hash-get dash 'description)))))))
 
+(def (metric-name-to-title metric)
+  (let* ((no-netdata (pregexp-replace "^netdata." metric ""))
+	 (dot-to-space (pregexp-replace "\\." no-netdata " "))
+	 (no-es (pregexp-replace "elasticsearch_local\\." no-netdata "")))
+    no-es))
+
 (def (tboard-add-chart id title request viz)
   (let* ((tbinfo (get-tboard id))
 	 (ip (resolve-ipv4 datadog-host))
