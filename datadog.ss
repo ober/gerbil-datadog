@@ -114,14 +114,14 @@ namespace: datadog
 		 .?api-key
 		 .?api-iv
 		 .?api-password)
-	(let-hash (get-keys-from-config .api-key
+	(let ((keys (get-keys-from-config .api-key
 					.api-iv
 					.api-password
 					.app-key
 					.app-iv
-					.app-password)
-	  (hash-put! config 'datadog-api-key .api)
-	  (hash-put! config 'datadog-app-key .app))))
+					.app-password)))
+	  (hash-put! config 'datadog-api-key (hash-ref keys "api"))
+	  (hash-put! config 'datadog-app-key (hash-ref keys "app")))))
     config))
 
 (def (ensure-api-keys)
