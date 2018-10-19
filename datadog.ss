@@ -7,6 +7,9 @@ namespace: datadog
 (import
   :gerbil/gambit
   :scheme/base
+  :std/crypto/cipher
+  :std/crypto/etc
+  :std/crypto/libcrypto
   :std/db/dbi
   :std/debug/heap
   :std/format
@@ -47,6 +50,7 @@ namespace: datadog
 
 (def interactives
   (hash
+   ("config" (hash (description: "Configure credentials for datadog.") (usage: "config") (count: 0)))
    ("del-monitor" (hash (description: "Delete monitor.") (usage: "del-monitor <monitor id>") (count: 1)))
    ("edit-monitor" (hash (description: "Update a monitor with new values.") (usage: "edit-monitor <id> <new query> <new name> <new message>") (count: 4)))
    ("ems" (hash (description: "search event for last minute matching tag.") (usage: "ems") (count: 1)))
@@ -103,6 +107,21 @@ namespace: datadog
      (lambda (k v)
        (hash-put! config (string->symbol k) v))
      (car (yaml-load config-file)))
+    (let-hash config
+      (when (and .?app-key
+		 .?app-iv
+		 .?app-password
+		 .?api-key
+		 .?api-iv
+		 .?api-password)
+	(let-hash (get-keys-from-config .api-key
+					.api-iv
+					.api-password
+					.app-key
+					.app-iv
+					.app-password)
+	  (hash-put! config 'datadog-api-key .api)
+	  (hash-put! config 'datadog-app-key .app))))
     config))
 
 (def (ensure-api-keys)
@@ -1144,3 +1163,47 @@ namespace: datadog
 	  (string-append key "=" val) r))
        [] data) "&"))
     (displayln "not a table. got " data)))
+
+(def (config)
+  (let-hash (load-config)
+    (displayln "Please enter your DataDog API Key:")
+    (def api-key (read-line (current-input-port)))
+    (displayln "Please enter your DataDog Application Key:")
+    (def app-key (read-line (current-input-port)))
+    (displayln "Add the following lines to your " config-file)
+    (displayln "-----------------------------------------")
+    (let ((api-hash (encrypt-string api-key)))
+      (displayln "api-key: " (hash-ref api-hash "key"))
+      (displayln "api-iv:  " (hash-ref api-hash "iv"))
+      (displayln "api-password: " (hash-ref api-hash "password")))
+    (let ((app-hash (encrypt-string app-key)))
+      (displayln "app-key: " (hash-ref app-hash "key"))
+      (displayln "app-iv:  " (hash-ref app-hash "iv"))
+      (displayln "app-password: " (hash-ref app-hash "password")))
+    (displayln "-----------------------------------------")))
+
+(def (encrypt-string str)
+  (let* ((cipher (make-aes-256-ctr-cipher))
+	 (iv (random-bytes (cipher-iv-length cipher)))
+	 (key (random-bytes (cipher-key-length cipher)))
+	 (encrypted-password (encrypt cipher key iv str))
+	 (enc-pass-store (u8vector->base64-string encrypted-password))
+	 (iv-store (u8vector->base64-string iv))
+	 (key-store (u8vector->base64-string key)))
+    (hash
+	  ("key" key-store)
+	  ("iv" iv-store)
+	  ("password" enc-pass-store))))
+
+(def (decrypt-password key iv password)
+  (bytes->string
+   (decrypt
+    (make-aes-256-ctr-cipher)
+    (base64-string->u8vector key)
+    (base64-string->u8vector iv)
+    (base64-string->u8vector password))))
+
+(def (get-keys-from-config api-key api-iv api-password app-key app-iv app-password)
+  (hash
+   ("api" (decrypt-password api-key api-iv api-password))
+   ("app" (decrypt-password app-key app-iv app-password))))
