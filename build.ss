@@ -15,6 +15,7 @@
   '("datadog"
     (static-exe: "datadog"
                  "-ld-options" "-lyaml -lssl -lz -L/usr/local/lib"
+		 "-cc-options" "-I/usr/local/include"
                  "-prelude" "(declare (not safe))")))
 
 (def srcdir
