@@ -8,14 +8,14 @@
 
  (def build-spec
   '("datadog"
-    (exe: "datadog" "-ld-options" "-lyaml -lssl -lz -L/usr/local/lib/" "-cc-options" "-I/usr/local/include")
+    (exe: "datadog" "-ld-options" "-lyaml -lssl -lz -L/usr/local/opt/openssl/lib/" "-cc-options" "-I/usr/local/opt/openssl/include")
     ))
 
 (def build-spec-static
   '("datadog"
     (static-exe: "datadog"
-                 "-ld-options" "-lyaml -lssl -lz -L/usr/local/lib"
-		 "-cc-options" "-I/usr/local/include"
+                 "-ld-options" "-lyaml -lssl -lz -L/usr/local/opt/openssl/lib"
+		 "-cc-options" "-I/usr/local/opt/openssl/include"
                  "-prelude" "(declare (not safe))")))
 
 (def srcdir
