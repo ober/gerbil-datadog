@@ -14,8 +14,8 @@
 (def build-spec-static
   '("datadog"
     (static-exe: "datadog"
-                 "-ld-options" "-lyaml -lssl -lz -L/usr/local/opt/openssl/lib -L/usr/local/opt/lib"
-		 "-cc-options" "-I/usr/local/opt/openssl/include -I/usr/local/opt/include"
+                 "-ld-options" "-lyaml -lssl -lz -L/usr/local/opt/openssl/lib -L/usr/local/lib"
+		 "-cc-options" "-I/usr/local/opt/openssl/include -I/usr/local/include"
                  "-prelude" "(declare (not safe))")))
 
 (def srcdir
