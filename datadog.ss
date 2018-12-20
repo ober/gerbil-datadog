@@ -1111,7 +1111,6 @@ namespace: datadog
     (print-monitor mon)))
 
 (def (print-monitor monitor)
-
   (let-hash monitor
     (displayln
      "|" .id
@@ -1130,7 +1129,7 @@ namespace: datadog
   (let* ((ip (resolve-ipv4 datadog-host))
 	 (uri (make-dd-uri ip "monitor"))
 	 (results (from-json (do-get uri))))
-    (displayln "|ID|Query|Message|Tags|Options|Org_id|Type|Multi?|Created|Modified|")
+    (displayln "|ID|Creator|Query|Message|Tags|Options|Org_id|Type|Multi?|Created|Modified|")
     (displayln "|--|-----|-------|-------|------|----|------|-------|--------|")
     (for-each
       (lambda (monitor)
