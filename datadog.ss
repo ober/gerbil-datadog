@@ -1111,9 +1111,11 @@ namespace: datadog
     (print-monitor mon)))
 
 (def (print-monitor monitor)
+
   (let-hash monitor
     (displayln
      "|" .id
+     "|" (if (table? .creator) (let-hash .creator .name " " .email " " .handle) "N/A")
      "|" .query
      "|" .message
      "|" .tags
