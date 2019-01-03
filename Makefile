@@ -1,5 +1,3 @@
-.PHONY docker
-
 $(eval squid_ip := $(shell docker inspect squid|jq -r '.[].NetworkSettings.IPAddress'))
 
 docker:
