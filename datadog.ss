@@ -837,18 +837,18 @@ namespace: datadog
     (let-hash tbinfo
       (let-hash .dash
 	(displayln
-	 "id: " .id
-	 " title: " .title
-	 " resource: " ..resource
-	 " url: " ..url
+	 "id: " .?id
+	 " title: " .?title
+	 " resource: " ..?resource
+	 " url: " ..?url
 	 " dash: "
-	 " created: " .created
-	 " modified: " .modified
-	 " description: " .description
-	 " read_only: " .read_only
-	 " created_by: " (hash-keys .created_by))
+	 " created: " .?created
+	 " modified: " .?modified
+	 " description: " .?description
+	 " read_only: " .?read_only
+	 " created_by: " (hash-keys .?created_by))
 	;;                      " graphs: " (hash-keys (car .graphs))
-	(print-graphs .graphs)
+	(print-graphs .?graphs)
 	))))
 
 (def (print-graphs graphs)
