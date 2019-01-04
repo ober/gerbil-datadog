@@ -48,10 +48,12 @@ namespace: datadog
   (when DEBUG
     (displayln msg)))
 
+
 (def interactives
   (hash
    ("config" (hash (description: "Configure credentials for datadog.") (usage: "config") (count: 0)))
    ("del-monitor" (hash (description: "Delete monitor.") (usage: "del-monitor <monitor id>") (count: 1)))
+   ("dump" (hash (description: "Dump: dump json defintion of tboard ") (usage: "dump <tboard id>") (count: 1)))
    ("edit-monitor" (hash (description: "Update a monitor with new values.") (usage: "edit-monitor <id> <new query> <new name> <new message>") (count: 4)))
    ("ems" (hash (description: "search event for last minute matching tag.") (usage: "ems") (count: 1)))
    ("events-day" (hash (description: "list all events for the past day") (usage: "events-day <tags string>") (count: 1)))
@@ -850,6 +852,12 @@ namespace: datadog
 	;;                      " graphs: " (hash-keys (car .graphs))
 	(print-graphs .?graphs)
 	))))
+
+
+(def (dump id)
+  (let* ((ip (resolve-ipv4 datadog-host))
+	 (uri (make-dd-uri ip (format "dash/~a" id))))
+    (displayln (do-get uri))))
 
 (def (print-graphs graphs)
   (let ((results ""))
