@@ -1,7 +1,5 @@
-$(eval squid_ip := $(shell docker inspect squid|jq -r '.[].NetworkSettings.IPAddress'))
-
 docker:
-	docker build --build-arg squid=$(squid_ip) --rm=true -t datadog .
+	docker build --build-arg --rm=true -t datadog .
 	docker tag datadog jaimef/datadog
 
 push:
