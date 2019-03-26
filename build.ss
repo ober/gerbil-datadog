@@ -5,4 +5,4 @@
 	:std/make)
 
 (defbuild-script
-  `("datadog.ss"))
+  `("datadog/dda"))

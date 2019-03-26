@@ -1,0 +1,3270 @@
+** Datadog API
+*** API ENDPOINT
+
+https://app.datadoghq.com/api/
+*** AUTHENTICATION
+
+All requests to Datadog's API must be authenticated. Requests that write data require reporting access and require an API key. Requests that read data require full access and also require an application key.
+
+You can manage your account's API and application keys here.
+
+EXAMPLE
+
+#!/bin/sh
+# Make sure you replace the API and/or APP key below
+# with the ones for your account
+
+curl "https://app.datadoghq.com/api/v1/validate?api_key=9775a026f1ca7d1c6c5af9d94d9595a4"
+
+SUCCESS AND ERRORS
+
+The Datadog API uses HTTP status codes to indicate the success or failure of a request.
+
+An error indicates that the service did not successfully handle your request. In addition to the status code, the response may contain a JSON object with an errors array containing more detailed error messages. Note: When using libraries, some errors may throw exceptions rather than return JSON objects.
+
+If the service is able to handle your request, but some issues are present (e.g. using a deprecated API or API version), the HTTP status code will indicate success and the response body will contain the expected result with the addition of a warnings array containing detailed warning messages.
+
+STATUS CODES
+
+200 200
+201 Created
+202 202
+204 No Content
+301 301
+304 Not Modified
+401 401
+403 Forbidden 404
+404 Not Found
+409 409
+422 Unprocessable
+500 Server Error
+Accepted 204
+Conflict 422
+Entity 500
+Moved Permanently 304
+OK 201
+Unauthorized 403
+EXAMPLE ERROR RESPONSE
+
+{ 'errors': [
+    'Something bad happened to the server.',
+    'Your query made the server very sad.'
+  ]
+}
+
+EXAMPLE WARNING RESPONSE
+
+{ 'some_thing': ...,
+  'some_other_thing': ...,
+  'warnings': [
+      'This is a deprecated API.'
+  ]
+}
+
+RATE LIMITING
+
+Some of our API endpoints are rate limited. Once you exceed a certain number of requests in a certain time period we return an error.
+
+For rate limited API endpoints we return headers so you can know how close you are to your limit. If you exceed your limit, you can review these headers to determine when you will be able to try again.
+
+Rate limits can be increased from defaults by contacting the Datadog Support team.
+
+RATE LIMIT HEADERS
+
+X-RateLimit-Limitnumber of requests allowed in a time period
+X-RateLimit-Periodlength of time in seconds for resets (calendar aligned)
+X-RateLimit-Remainingnumber of allowed requests left in current time period
+X-RateLimit-Resettime in seconds until next reset
+*** METRICS
+
+The metrics end-point allows you to:
+
+Post metrics data so it can be graphed on Datadog's dashboards
+Query metrics from any time period
+As occurs within the Datadog UI, a graph can only contain a set number of points and as the timeframe over which a metric is viewed increases, aggregation between points will occur to stay below that set number.
+
+Thus, if you are querying for larger timeframes of data, the points returned will be more aggregated. The max granularity within Datadog is one point per second, so if you had submitted points at that interval and requested a very small interval from the query API (in this case, probably less than 100 seconds), you could end up getting all of those points back. Otherwise, our algorithm tries to return about 150 points per any given time window, so you'll see coarser and coarser granularity as the amount of time requested increases. We do this time aggregation via averages.
+
+GET LIST OF ACTIVE METRICS
+
+Get the list of actively reporting metrics from a given time until now. This endpoint is not available in the Python and Ruby libraries.
+
+ARGUMENTS
+
+from [required]
+seconds since the unix epoch
+SIGNATURE
+
+GET https://app.datadoghq.com/api/v1/metrics
+EXAMPLE REQUEST
+
+#!/bin/sh
+# Make sure you replace the API and/or APP key below
+# with the ones for your account
+
+api_key=9775a026f1ca7d1c6c5af9d94d9595a4
+app_key=87ce4a24b5553d2e482ea8a8500e71b8ad4554ff
+
+from_time=$(date -v -1d +%s)
+
+curl -G \
+    "https://app.datadoghq.com/api/v1/metrics" \
+    -d "api_key=${api_key}" \
+    -d "application_key=${app_key}" \
+    -d "from=${from_time}"
+EXAMPLE RESPONSE
+
+{
+ "metrics": [
+   "system.load.1",
+   "system.load.15",
+   "system.load.5",
+   "system.load.norm.1",
+   "system.load.norm.15",
+   "system.load.norm.5",
+   "system.mem.buffered",
+   "system.mem.cached",
+   "system.mem.committed",
+   "system.mem.free"
+ ],
+ "from": 1467815773
+}
+POST TIME SERIES POINTS
+
+The metrics end-point allows you to post time-series data that can be graphed on Datadog's dashboards.
+
+ARGUMENTS
+
+series [required]
+A JSON array of metrics where each item in the array contains the following arguments:
+metric [required]
+The name of the time series
+points [required]
+A JSON array of points. Each point is of the form:
+[[POSIX_timestamp, numeric_value], ...]
+Note that the timestamp should be in seconds, must be current, and the numeric value is a 32bit float gauge-type value. Current is defined as not more than 10 minutes in the future or more than 1 hour in the past.
+host [optional, default=None]
+The name of the host that produced the metric.
+tags [optional, default=None]
+A list of tags associated with the metric.
+SIGNATURE
+
+POST https://app.datadoghq.com/api/v1/series
+EXAMPLE REQUEST
+
+#!/bin/sh
+# Make sure you replace the API and/or APP key below
+# with the ones for your account
+
+
+currenttime=$(date +%s)
+curl  -X POST -H "Content-type: application/json" \
+-d "{ \"series\" :
+         [{\"metric\":\"test.metric\",
+          \"points\":[[$currenttime, 20],
+          \"type\":\"gauge\",
+          \"host\":\"test.example.com\",
+          \"tags\":[\"environment:test\"]}
+        ]
+    }" \
+'https://app.datadoghq.com/api/v1/series?api_key=9775a026f1ca7d1c6c5af9d94d9595a4'
+QUERY TIME SERIES POINTS
+
+This end point allows you to query for metrics from any time period.
+
+ARGUMENTS
+
+from [required]
+seconds since the unix epoch
+to [required]
+seconds since the unix epoch
+query [required]
+The query strong
+QUERY LANGUAGE
+
+Any query used for a graph can be used here. See here for more details. The time between from and to should be less than 24 hours. If it is longer, you will receive points with less granularity.
+
+SIGNATURE
+
+GET https://app.datadoghq.com/api/v1/query
+EXAMPLE REQUEST
+
+#!/bin/sh
+# Make sure you replace the API and/or APP key below
+# with the ones for your account
+
+api_key=9775a026f1ca7d1c6c5af9d94d9595a4
+app_key=87ce4a24b5553d2e482ea8a8500e71b8ad4554ff
+to_time=$(date +%s)
+from_time=$(date -v -1d +%s)
+
+curl -G \
+    "https://app.datadoghq.com/api/v1/query" \
+    -d "api_key=${api_key}" \
+    -d "application_key=${app_key}" \
+    -d "from=${from_time}" \
+    -d "to=${to_time}" \
+    -d "query=system.cpu.idle{*}by{host}"
+EXAMPLE RESPONSE
+
+{
+  "status": "ok",
+  "res_type": "time_series",xb
+
+  "series": [
+    {
+      "metric": "system.cpu.idle",
+      "attributes": {},
+      "display_name": "system.cpu.idle",
+      "unit": null,
+      "pointlist": [
+        [
+          1430311800000,
+          98.19375610351562
+        ],
+        [
+          1430312400000,
+          99.85856628417969
+        ]
+      ],
+      "end": 1430312999000,
+      "interval": 600,
+      "start": 1430311800000,
+      "length": 2,
+      "aggr": null,
+      "scope": "host:vagrant-ubuntu-trusty-64",
+      "expression": "system.cpu.idle{host:vagrant-ubuntu-trusty-64}"
+    }
+  ],
+  "from_date": 1430226140000,
+  "group_by": [
+    "host"
+  ],
+  "to_date": 1430312540000,
+  "query": "system.cpu.idle{*}by{host}",
+  "message": ""
+}
+VIEW METRIC METADATA
+
+The metrics metadata endpoint allows you to get metadata about a specific metric.
+
+ARGUMENTS
+
+This end point takes no JSON arguments.'
+SIGNATURE
+
+GET /api/v1/metrics/:metric_name
+EXAMPLE REQUEST
+
+#!/bin/sh
+# Make sure you replace the API and/or APP key below
+# with the ones for your account
+
+api_key=9775a026f1ca7d1c6c5af9d94d9595a4
+app_key=87ce4a24b5553d2e482ea8a8500e71b8ad4554ff
+metric_name="system.net.bytes_sent"
+
+curl "https://app.datadoghq.com/api/v1/metrics/${metric_name}?api_key=${api_key}&application_key=${app_key}"
+EXAMPLE RESPONSE
+
+{
+  "description": "My custom description","short_name":"bytes sent",
+  "integration": null,
+  "statsd_interval": null,
+  "per_unit": "second",
+  "type": "gauge",
+  "unit": "byte"
+}
+EDIT METRIC METADATA
+
+The metrics metadata endpoint allows you to edit fields of a metric's metadata.
+
+ARGUMENTS
+
+type [optional, default=None]
+metric type such as 'gauge' or 'rate'
+description [optional, default=None]
+string description of the metric
+short_name [optional, default=None]
+short name string of the metric
+unit [optional, default=None]
+primary unit of the metric such as 'byte' or 'operation'
+per_unit [optional, default=None]
+'per' unit of the metric such as 'second' in 'bytes per second'
+statsd_interval [optional, default=None]
+if applicable, statds flush interval in seconds for the metric
+SIGNATURE
+
+PUT /api/v1/metrics/:metric_name
+EXAMPLE REQUEST
+
+#!/bin/sh
+# Make sure you replace the API and/or APP key below
+# with the ones for your account
+
+api_key=9775a026f1ca7d1c6c5af9d94d9595a4
+app_key=87ce4a24b5553d2e482ea8a8500e71b8ad4554ff
+metric_name="system.net.bytes_sent"
+
+curl -X PUT -H "Content-type: application/json" \
+-d '{
+      "type": "gauge",
+      "description": "my custom description",
+      "short_name": "bytes sent",
+      "unit": "byte",
+      "per_unit": "second"
+    }' \
+    "https://app.datadoghq.com/api/v1/metrics/${metric_name}?api_key=${api_key}&application_key=${app_key}"
+EXAMPLE RESPONSE
+
+{
+  "description": "my custom description",
+  "short_name": "bytes sent",
+  "integration": null,
+  "statsd_interval": null,
+  "per_unit": "second",
+  "type": "gauge",
+  "unit": "byte"
+}
+*** EVENTS
+
+The events service allows you to programatically post events to the stream and fetch events from the stream.
+
+POST AN EVENT
+
+This end point allows you to post events to the stream. You can tag them, set priority and event aggregate them with other events.
+
+ARGUMENTS
+
+title [required]
+The event title. Limited to 100 characters.
+text [optional, default='']
+The body of the event. Limited to 4000 characters. The text supports markdown.
+date_happened [optional, default=now]
+POSIX timestamp of the event.
+priority [optional, default='normal']
+The priority of the event ('normal' or 'low').
+host [optional, default=None]
+Host name to associate with the event. Any tags associated with the host will also be applied to this event.
+tags [optional, default=None]
+A list of tags to apply to the event.
+alert_type [optional, default='info']
+"error", "warning", "info" or "success".
+[required]
+aggregation_key [optional, default=None]
+An arbitrary string to use for aggregation, max length of 100 characters. If you specify a key, all events using that key will be grouped together in the Event Stream.
+source_type_name [optional, default=None]
+The type of event being posted.
+Options: nagios, hudson, jenkins, my apps, feed, chef, puppet, git, bitbucket, fabric, capistrano
+SIGNATURE
+
+POST /api/v1/events
+EXAMPLE REQUEST
+
+#!/bin/sh
+# Make sure you replace the API and/or APP key below
+# with the ones for your account
+
+curl  -X POST -H "Content-type: application/json" \
+-d '{
+      "title": "Did you hear the news today?",
+      "text": "Oh boy!",
+      "priority": "normal",
+      "tags": ["environment:test"],
+      "alert_type": "info"
+  }' \
+'https://app.datadoghq.com/api/v1/events?api_key=18dbecb67766d5e999cf0c78761b8d80'
+EXAMPLE RESPONSE
+
+{
+    "event": {
+        "date_happened": 1346449298,
+        "handle": null,
+        "id": 1378859526682864843,
+        "priority": "normal",
+        "related_event_id": null,
+        "tags": [
+            "environment:test"
+        ],
+        "text": null,
+        "title": "Did you hear the news today?",
+        "url": "https://app.datadoghq.com/event/jump_to?event_id=1378859526682864843"
+    },
+    "status": "ok"
+}
+GET AN EVENT
+
+This end point allows you to query for event details.
+
+ARGUMENTS
+
+This end point takes no JSON arguments.'
+SIGNATURE
+
+GET /api/v1/events/:event_id
+EXAMPLE REQUEST
+
+#!/bin/sh
+# Make sure you replace the API and/or APP key below
+# with the ones for your account
+
+api_key=9775a026f1ca7d1c6c5af9d94d9595a4
+app_key=87ce4a24b5553d2e482ea8a8500e71b8ad4554ff
+event_id=1377281704830403917
+
+# Create an event to get
+event_id=$(curl  -X POST -H "Content-type: application/json" -d "{\"title\": \"Did you hear the news today?\"}" "https://app.datadoghq.com/api/v1/events?api_key=9775a026f1ca7d1c6c5af9d94d9595a4" | jq -r '.event.url|ltrimstr("https://app.datadoghq.com/event/event?id=")')
+sleep 5
+
+curl "https://app.datadoghq.com/api/v1/events/${event_id}?api_key=${api_key}&application_key=${app_key}"
+EXAMPLE RESPONSE
+
+{
+    "event": {
+        "alert_type": "info",
+        "date_happened": 1346355252,
+        "device_name": null,
+        "host": null,
+        "id": 1377281704830403917,
+        "payload": "{}",
+        "priority": "normal",
+        "resource": "/api/v1/events/1377281704830403917",
+        "tags": [
+            "environment:test"
+        ],
+        "text": "Oh boy!",
+        "title": "Did you hear the news today?",
+        "url": "/event/jump_to?event_id=1377281704830403917"
+    }
+}
+DELETE AN EVENT
+
+This end point allows you to delete an event.
+
+ARGUMENTS
+
+This end point takes no JSON arguments.'
+SIGNATURE
+
+DELETE /api/v1/events/:event_id
+EXAMPLE REQUEST
+
+#!/bin/sh
+# Make sure you replace the API and/or APP key below
+# with the ones for your account
+
+api_key=9775a026f1ca7d1c6c5af9d94d9595a4
+app_key=87ce4a24b5553d2e482ea8a8500e71b8ad4554ff
+event_id=1377281704830403917
+
+curl -X DELETE "https://app.datadoghq.com/api/v1/events/${event_id}?api_key=${api_key}&application_key=${app_key}"
+EXAMPLE RESPONSE
+
+{"deleted_event_id": "1377281704830403917"}
+QUERY THE EVENT STREAM
+
+The event stream can be queried and filtered by time, priority, sources and tags.
+
+ARGUMENTS
+
+start [required]
+POSIX timestamp
+end [required]
+POSIX timestamp
+priority [optional, default=None]
+'low' or 'normal'
+sources [optional, default=None]
+A comma separated string of sources
+tags [optional, default=None]
+A comma separated string of tags
+SIGNATURE
+
+GET /api/v1/events
+EXAMPLE REQUEST
+
+#!/bin/sh
+# Make sure you replace the API and/or APP key below
+# with the ones for your account
+
+# Note: this end point only accepts form-encoded requests.
+currenttime=$(date +%s)
+currenttime2=$(date --date='1 day ago' +%s)
+curl -G -H "Content-type: application/json" \
+    -d "start=${currenttime2}" \
+    -d "end=${currenttime}" \
+    -d "sources=My Apps" \
+    -d "tags=application:web,version:1" \
+    -d "api_key=9775a026f1ca7d1c6c5af9d94d9595a4" \
+    -d "application_key=87ce4a24b5553d2e482ea8a8500e71b8ad4554ff" \
+    'https://app.datadoghq.com/api/v1/events'
+EXAMPLE RESPONSE
+
+{
+    "events": [
+        {
+            "alert_type": "info",
+            "comments": [],
+            "date_happened": 1346273496,
+            "device_name": null,
+            "host": null,
+            "id": 1375910067732769979,
+            "is_aggregate": false,
+            "priority": "normal",
+            "resource": "/api/v1/events/1375910067732769979",
+            "source": "My Apps",
+            "tags": [
+                "application:web",
+                "version:1"
+            ],
+            "text": "And let me tell you all about it here!",
+            "title": "Something big happened!",
+            "url": "/event/jump_to?event_id=1375910067732769979"
+        },
+        {
+            "alert_type": "info",
+            "comments": [],
+            "date_happened": 1346273469,
+            "device_name": null,
+            "host": null,
+            "id": 1375909614428331251,
+            "is_aggregate": false,
+            "priority": "normal",
+            "resource": "/api/v1/events/1375909614428331251",
+            "source": "My Apps",
+            "tags": [
+                "application:web",
+                "version:1"
+            ],
+            "text": "And let me tell you all about it here!",
+            "title": "Something big happened!",
+            "url": "/event/jump_to?event_id=1375909614428331251"
+        }
+    ]
+}
+*** SERVICE CHECKS
+
+The service check endpoint allows you to post check statuses for use with monitors.
+
+POST A CHECK RUN
+
+ARGUMENTS
+
+check [required]
+The text for the message
+host_name [required]
+The name of the host submitting the check
+status [required]
+An integer for the status of the check.
+Options: '0': OK, '1': WARNING, '2': CRITICAL, '3': UNKNOWN
+timestamp [optional, default=now]
+POSIX timestamp of the event.
+message [optional, default=None]
+A description of why this status occurred
+tags [optional, default=None]
+A list of key:val tags for this check
+SIGNATURE
+
+POST /api/v1/check_run
+EXAMPLE REQUEST
+
+#!/bin/sh
+# Make sure you replace the API and/or APP key below
+# with the ones for your account
+
+currenttime=$(date +%s)
+curl  -X POST -H "Content-type: application/json" \
+-d "{
+      \"check\": \"app.is_ok\",
+      \"host_name\": \"app1\",
+      \"timestamp\": $currenttime,
+      \"status\": 0
+  }" \
+'https://app.datadoghq.com/api/v1/check_run?api_key=9775a026f1ca7d1c6c5af9d94d9595a4'
+EXAMPLE RESPONSE
+
+{
+    "status": "ok"
+}
+*** MONITORS
+
+Monitors allow you to watch a metric or check that you care about, notifying your team when some defined threshold is exceeded. Please refer to the Guide to Monitors for more information on creating monitors.
+
+CREATE A MONITOR
+
+ARGUMENTS
+
+type [required]
+The type of the monitor, chosen from:
+metric alert
+service check
+event alert
+composite
+query [required]
+The query defines when the monitor will trigger. Query syntax depends on what type of monitor you are creating:
+METRIC ALERT QUERY
+
+time_aggr(time_window):space_aggr:metric{tags} [by {key}] operator #
+time_aggr avg, sum, max, min, change, or pct_change
+time_window last_#m (5, 10, 15, or 30), last_#h (1, 2, or 4), or last_1d
+space_aggr avg, sum, min, or max
+tags one or more tags (comma-separated), or *
+key a 'key' in key:value tag syntax; defines a separate alert for each tag in the group (multi-alert)
+operator <, <=, >, >=, ==, or !=
+# an integer or decimal number used to set the threshold
+If you are using the change or pct_change time aggregator, you can instead use change_aggr(time_aggr(time_window), timeshift):space_aggr:metric{tags} [by {key}] operator # with:
+change_aggr change, pct_change
+time_aggr avg, sum, max, min
+time_window last_#m (1, 5, 10, 15, or 30), last_#h (1, 2, or 4), or last_#d (1 or 2)
+timeshift #m_ago (5, 10, 15, or 30), #h_ago (1, 2, or 4), or 1d_ago
+You can also use this to create an outlier monitor using the following query: avg(last_30m):outliers(avg:system.cpu.user{role:es-events-data} by {host}, 'dbscan', 7) > 0
+SERVICE CHECK QUERY
+
+"check".over(tags).last(count).count_by_status()
+check name of the check, e.g. datadog.agent.up
+tags one( or more quoted tags (comma-separated), or "*". e.g.: .over("env:prod", "role:db")
+count must be at >= your max threshold (defined in the options). e.g. if you want to notify on 1 critical, 3 ok and 2 warn statuses count should be 3.
+EVENT ALERT QUERY
+
+events('sources:nagios status:error,warning priority:normal tags: "string query"').rollup("count").last("1h")"
+event, the event query string:
+string_query free text query to match against event title and text.
+sources event sources (comma-separated).
+status event statuses (comma-separated). Valid options: error, warn, and info.
+priority event priorities (comma-separated). Valid options: low, normal, all.
+host event reporting host (comma-separated).
+tags event tags (comma-separated).
+excluded_tags exluded event tags (comma-separated).
+rollup the stats rollup method. count is the only supported method now.
+last the timeframe to roll up the counts. Examples: 60s, 4h. Supported timeframes: s, m, h and d.
+COMPOSITE QUERY
+
+12345 && 67890, where 12345 and 67890 are the IDs of non-composite monitors
+name [optional, default=dynamic, based on query]
+The name of the alert.
+message [optional, default=dynamic, based on query]
+A message to include with notifications for this monitor. Email notifications can be sent to specific users by using the same '@username' notation as events.
+tags [optional, default=empty list]
+A list of tags to associate with your monitor. When getting all monitor details via the API, you can use the monitor_tags argument to filter results by these tags. It will only be available via the API and will not be visible or editable in the Datadog UI.
+options [optional]
+A dictionary of options for the monitor. There are options that are common to all types as well as options that are specific to certain monitor types.
+COMMON OPTIONS
+
+silenced dictionary of scopes to timestamps or None. Each scope will be muted until the given POSIX timestamp or forever if the value is None.
+Default: None
+
+Examples:
+
+To mute the alert completely:
+{'*': None}
+
+To mute role:db for a short time:
+{'role:db': 1412798116}
+
+notify_no_data a boolean indicating whether this monitor will notify when data stops reporting.
+Default: false
+
+new_host_delay Time (in seconds) to allow a host to boot and applications to fully start before starting the evaluation of monitor results. Should be a non negative integer.
+Default: 300
+
+no_data_timeframe the number of minutes before a monitor will notify when data stops reporting. Must be at least 2x the monitor timeframe for metric alerts or 2 minutes for service checks.
+Default: 2x timeframe for metric alerts, 2 minutes for service checks
+
+timeout_h the number of hours of the monitor not reporting data before it will automatically resolve from a triggered state.
+Default: None
+
+require_full_window a boolean indicating whether this monitor needs a full window of data before it's evaluated. We highly recommend you set this to False for sparse metrics, otherwise some evaluations will be skipped.
+Default: True for "on average", "at all times" and "in total" aggregation. False otherwise.
+
+renotify_interval the number of minutes after the last notification before a monitor will re-notify on the current status. It will only re-notify if it's not resolved.
+Default: None
+
+escalation_message a message to include with a re-notification. Supports the '@username' notification we allow elsewhere. Not applicable if renotify_interval is None.
+Default: None
+
+notify_audit a boolean indicating whether tagged users will be notified on changes to this monitor.
+Default: False
+
+locked a boolean indicating whether changes to to this monitor should be restricted to the creator or admins.
+Default: False
+
+include_tags a boolean indicating whether notifications from this monitor will automatically insert its triggering tags into the title.
+Default: True
+
+Examples:
+
+True:
+[Triggered on {host:h1}] Monitor Title
+
+False:
+[Triggered] Monitor Title
+
+METRIC ALERT OPTIONS
+
+These options only apply to metric alerts.
+thresholds a dictionary of thresholds by threshold type. Currently we have two threshold types for metric alerts: critical and warning. Critical is defined in the query, but can also be specified in this option. Warning threshold can only be specified using the thresholds option.
+Example: {'critical': 90, 'warning': 80}
+
+evaluation_delay Time (in seconds) to delay evaluation, as a non-negative integer. For example, if the value is set to 300 (5min), the timeframe is set to last_5m and the time is 7:00, the monitor will evaluate data from 6:50 to 6:55. This is useful for AWS CloudWatch and other backfilled metrics to ensure the monitor will always have data during evaluation.
+SERVICE CHECK OPTIONS
+
+These options only apply to service checks and will be ignored for other monitor types.
+thresholds a dictionary of thresholds by status. Because service checks can have multiple thresholds, we don't define them directly in the query.
+Default: {'ok': 1, 'critical': 1, 'warning': 1}
+
+SIGNATURE
+
+POST /api/v1/monitor
+EXAMPLE REQUEST
+
+#!/bin/sh
+# Make sure you replace the API and/or APP key below
+# with the ones for your account
+
+api_key=9775a026f1ca7d1c6c5af9d94d9595a4
+app_key=87ce4a24b5553d2e482ea8a8500e71b8ad4554ff
+
+curl -X POST -H "Content-type: application/json" \
+-d '{
+      "type": "metric alert",
+      "query": "avg(last_5m):sum:system.net.bytes_rcvd{host:host0} > 100",
+      "name": "Bytes received on host0",
+      "message": "We may need to add web hosts if this is consistently high.",
+      "tags": ["app:webserver", "frontend"],
+      "options": {
+      	"notify_no_data": true,
+      	"no_data_timeframe": 20
+      }
+    }' \
+    "https://app.datadoghq.com/api/v1/monitor?api_key=${api_key}&application_key=${app_key}"
+EXAMPLE RESPONSE
+
+{
+    "id": 92090,
+    "message": "We may need to add web hosts if this is consistently high.",
+    "name": "Bytes received on host0",
+    "tags": ["app:webserver", "frontend"],
+    "options": {
+        "no_data_timeframe": 20,
+        "notify_audit": false,
+        "notify_no_data": true,
+        "silenced": {}
+    },
+    "org_id": 1499,
+    "query": "avg(last_5m):sum:system.net.bytes_rcvd{host:host0} > 100",
+    "state": {},
+    "type": "metric alert",
+    "multi": false,
+    "created": "2015-12-18T16:34:14.014039+00:00",
+    "modified": "2015-12-18T16:34:14.014039+00:00"
+}
+GET A MONITOR'S DETAILS
+
+ARGUMENTS
+
+group_states [optional, default=None]
+If this argument is set, the returned data will include additional information (if available) regarding the specified group states, including the last notification timestamp, last resolution timestamp and details about the last time the monitor was triggered. The argument should include a string list indicating what, if any, group states to include. Choose one or more from 'all', 'alert', 'warn', or 'no data'. Example: 'alert,warn'
+SIGNATURE
+
+GET /api/v1/monitor/:monitor_id
+EXAMPLE REQUEST
+
+#!/bin/sh
+# Make sure you replace the API and/or APP key below
+# with the ones for your account
+
+api_key=9775a026f1ca7d1c6c5af9d94d9595a4
+app_key=87ce4a24b5553d2e482ea8a8500e71b8ad4554ff
+monitor_id=91879
+
+# Create a monitor to show
+monitor_id=$(curl -X POST -H "Content-type: application/json" \
+-d '{
+      "type": "metric alert",
+      "query": "avg(last_5m):sum:system.net.bytes_rcvd{host:host0} > 100",
+      "name": "Bytes received on host0",
+      "message": "We may need to add web hosts if this is consistently high."
+    }' \
+    "https://app.datadoghq.com/api/v1/monitor?api_key=${api_key}&application_key=${app_key}" | jq '.id')
+
+curl -G "https://app.datadoghq.com/api/v1/monitor/${monitor_id}" \
+     -d "api_key=${api_key}" \
+     -d "application_key=${app_key}" \
+     -d "group_states=all"
+EXAMPLE RESPONSE
+
+{
+  "id": 91879,
+  "message": "We may need to add web hosts if this is consistently high.",
+  "name": "Bytes received on host0",
+  "options": {
+    'no_data_timeframe': 20,
+    "notify_audit": false,
+    "notify_no_data": false,
+    "silenced": {}
+  },
+  "org_id": 1499,
+  "query": "avg(last_1h):sum:system.net.bytes_rcvd{host:host0} > 100",
+  "type": "metric alert",
+  "multi": false,
+  "created": "2015-12-18T16:34:14.014039+00:00",
+  "modified": "2015-12-18T16:34:14.014039+00:00",
+  "state": {
+    "groups": {
+      "host:host0": {
+        "last_nodata_ts": null,
+        "last_notified_ts": 1481909160,
+        "last_resolved_ts": 1481908200,
+        "last_triggered_ts": 1481909160,
+        "name": "host:host0",
+        "status": "Alert",
+        "triggering_value": {
+          "from_ts": 1481909037,
+          "to_ts": 1481909097,
+          "value": 1000
+        }
+      }
+    }
+  }
+}
+EDIT A MONITOR
+
+ARGUMENTS
+
+query [required]
+The metric query to alert on.
+name [optional, default=dynamic, based on query]
+The name of the monitor.
+message [optional, default=dynamic, based on query]
+A message to include with notifications for this monitor. Email notifications can be sent to specific users by using the same '@username' notation as events.
+options [optional, default=None]
+Refer to the create monitor documentation for details on the available options.
+tags [optional, default=empty list]
+A list of tags to associate with your monitor. This can help you categorize and filter monitors.
+SIGNATURE
+
+PUT /api/v1/monitor/:monitor_id
+EXAMPLE REQUEST
+
+#!/bin/sh
+# Make sure you replace the API and/or APP key below
+# with the ones for your account
+
+api_key=9775a026f1ca7d1c6c5af9d94d9595a4
+app_key=87ce4a24b5553d2e482ea8a8500e71b8ad4554ff
+monitor_id=91879
+
+# Create a monitor to edit
+monitor_id=$(curl -X POST -H "Content-type: application/json" \
+-d '{
+      "type": "metric alert",
+      "query": "avg(last_5m):sum:system.net.bytes_rcvd{host:host0} > 100",
+      "name": "Bytes received on host0",
+      "message": "We may need to add web hosts if this is consistently high."
+    }' \
+    "https://app.datadoghq.com/api/v1/monitor?api_key=${api_key}&application_key=${app_key}" | jq '.id')
+
+curl -X PUT -H "Content-type: application/json" \
+-d '{
+      "query": "avg(last_1h):sum:system.net.bytes_rcvd{host:host0} > 100",
+      "name": "Bytes received on host0",
+      "message": "We may need to add web hosts if this is consistently high."
+    }' \
+    "https://app.datadoghq.com/api/v1/monitor/${monitor_id}?api_key=${api_key}&application_key=${app_key}"
+EXAMPLE RESPONSE
+
+{
+    "id": 91879,
+    "message": "We may need to add web hosts if this is consistently high.",
+    "name": "Bytes received on host0",
+    "options": {
+        "notify_audit": false,
+        "notify_no_data": false,
+        "silenced": {}
+    },
+    "org_id": 1499,
+    "query": "avg(last_1h):sum:system.net.bytes_rcvd{host:host0} > 100",
+    "state": {},
+    "type": "metric alert",
+    "multi": false,
+    "created": "2015-12-18T16:34:14.014039+00:00",
+    "modified": "2015-12-18T18:39:24.391207+00:00"
+}
+DELETE A MONITOR
+
+ARGUMENTS
+
+This end point takes no JSON arguments.'
+SIGNATURE
+
+DELETE /api/v1/monitor/:monitor_id
+EXAMPLE REQUEST
+
+#!/bin/sh
+# Make sure you replace the API and/or APP key below
+# with the ones for your account
+
+api_key=9775a026f1ca7d1c6c5af9d94d9595a4
+app_key=87ce4a24b5553d2e482ea8a8500e71b8ad4554ff
+monitor_id=59409
+
+# Create a monitor to delete
+monitor_id=$(curl -X POST -H "Content-type: application/json" \
+-d '{
+      "type": "metric alert",
+      "query": "avg(last_5m):sum:system.net.bytes_rcvd{host:host0} > 100",
+      "name": "Bytes received on host0",
+      "message": "We may need to add web hosts if this is consistently high."
+    }' \
+    "https://app.datadoghq.com/api/v1/monitor?api_key=${api_key}&application_key=${app_key}" | jq '.id')
+
+curl -X DELETE "https://app.datadoghq.com/api/v1/monitor/${monitor_id}?api_key=${api_key}&application_key=${app_key}"
+EXAMPLE RESPONSE
+
+{
+    "deleted_monitor_id": 59409
+}
+GET ALL MONITOR DETAILS
+
+ARGUMENTS
+
+group_states [optional, default=None]
+If this argument is set, the returned data will include additional information (if available) regarding the specified group states, including the last notification timestamp, last resolution timestamp and details about the last time the monitor was triggered. The argument should include a string list indicating what, if any, group states to include. Choose one or more from 'all', 'alert', 'warn', or 'no data'. Example: 'alert,warn'
+name [optional, default=None]
+A string to filter monitors by name
+tags [optional, default=None]
+A comma separated list indicating what tags, if any, should be used to filter the list of monitorsby scope, e.g. host:host0. For more information, see the tags parameter for the appropriate query argument in the Create a monitor section above.
+monitor_tags [optional, default=None]
+A comma separated list indicating what service and/or custom tags, if any, should be used to filter the list of monitors. Tags created in the Datadog UI will automatically have the "service" key prepended (e.g. service:my-app)
+with_downtimes [optional, default=true]
+If this argument is set to true, then the returned data will include all current downtimes for each monitor.
+SIGNATURE
+
+GET /api/v1/monitor
+EXAMPLE REQUEST
+
+#!/bin/sh
+# Make sure you replace the API and/or APP key below
+# with the ones for your account
+
+api_key=9775a026f1ca7d1c6c5af9d94d9595a4
+app_key=87ce4a24b5553d2e482ea8a8500e71b8ad4554ff
+
+curl -G "https://app.datadoghq.com/api/v1/monitor" \
+     -d "api_key=${api_key}" \
+     -d "application_key=${app_key}"
+EXAMPLE RESPONSE
+
+[
+    {
+        "id": 91879,
+        "message": "We may need to add web hosts if this is consistently high.",
+        "name": "Bytes received on host0",
+        "options": {
+            "notify_audit": false,
+            "notify_no_data": false,
+            "silenced": {}
+        },
+        "org_id": 1499,
+        "query": "avg(last_1h):sum:system.net.bytes_rcvd{host:host0} > 100",
+        "type": "metric alert",
+        "multi": false,
+        "created": "2015-12-18T16:34:14.014039+00:00",
+        "modified": "2015-12-18T16:34:14.014039+00:00"
+    },
+    {
+        "id": 91875,
+        "message": "",
+        "name": "**system.net.bytes_rcvd** over **host:host0** was **> 100** on average during the **last 1h**.",
+        "options": {
+            "escalation_message": "",
+            "no_data_timeframe": false,
+            "notify_audit": true,
+            "notify_no_data": false,
+            "renotify_interval": null,
+            "silenced": {},
+            "timeout_h": null
+        },
+        "org_id": 1499,
+        "query": "avg(last_1h):sum:system.net.bytes_rcvd{host:host0} > 100",
+        "type": "metric alert",
+        "multi": false,
+        "created": "2015-12-18T16:34:14.014039+00:00",
+        "modified": "2015-12-18T16:34:14.014039+00:00"
+    }
+]
+RESOLVE MONITOR
+
+ARGUMENTS
+
+RESOLVE
+
+Array of group(s) to resolve for a given monitor_id e.g.
+
+{"monitor_id": "group_to_resolve"}
+It supports multiple groups per monitor as well eg:
+
+resolve: [{"monitor_id": "group_1"}, {"monitor_id": "group_2"}]
+SIGNATURE
+
+POST /monitor/bulk_resolve
+EXAMPLE REQUEST
+
+#!/bin/sh
+# Make sure you replace the API and/or APP key below
+# with the ones for your account
+
+#!/bin/sh
+# Make sure you replace the API and/or APP key below
+# with the ones for your account
+
+api_key=9775a026f1ca7d1c6c5af9d94d9595a4
+app_key=87ce4a24b5553d2e482ea8a8500e71b8ad4554ff
+
+monitor_id= <YOUR_MONITOR_ID>
+group_1=<YOUR_FIRST_GROUP>
+group_2=<YOUR_FIRST_GROUP>
+
+curl -X POST -H "Content-type: application/json" \
+-d '{
+"resolve": [
+          {"${monitor_id}": "${group_1}"},
+          {"${monitor_id}": "${group_2}"}
+      ]
+    }' \
+    "https://app.datadoghq.com/monitor/bulk_resolve?api_key=${api_key}&application_key=${app_key}"
+
+EXAMPLE RESPONSE
+
+[
+  {
+    "tags": [
+      "*"
+    ],
+    "deleted": null,
+    "query": "avg(last_1h):avg:system.cpu.user{role:cassandra} by {host} > 10",
+    "message": "I'm a dummy test.",
+    "id": 2610751,
+    "multi": true,
+    "name": "[Do not mind] This is a test",
+    "created": "2017-08-09T14:30:38.584147+00:00",
+    "created_at": 1502289038000,
+    "org_id": 11287,
+    "modified": "2017-08-09T14:36:48.176919+00:00",
+    "overall_state_modified": "2017-08-11T12:21:05.949182+00:00",
+    "overall_state": "Alert",
+    "type": "metric alert",
+    "options": {
+      "notify_audit": false,
+      "locked": false,
+      "timeout_h": 0,
+      "silenced": {},
+      "include_tags": false,
+      "no_data_timeframe": 10,
+      "new_host_delay": 300,
+      "require_full_window": false,
+      "notify_no_data": false,
+      "renotify_interval": 0,
+      "escalation_message": "",
+      "thresholds": {
+        "critical": 10,
+        "warning": 5
+      }
+    }
+  }
+]
+MUTE ALL MONITORS
+
+Muting will prevent all monitors from notifying through email and posts to the event stream. State changes will only be visible by checking the alert page.
+
+ARGUMENTS
+
+This end point takes no JSON arguments.'
+SIGNATURE
+
+POST /api/v1/monitor/mute_all
+EXAMPLE REQUEST
+
+#!/bin/sh
+# Make sure you replace the API and/or APP key below
+# with the ones for your account
+
+api_key=9775a026f1ca7d1c6c5af9d94d9595a4
+app_key=87ce4a24b5553d2e482ea8a8500e71b8ad4554ff
+
+curl -X POST "https://app.datadoghq.com/api/v1/monitor/mute_all?api_key=${api_key}&application_key=${app_key}"
+EXAMPLE RESPONSE
+
+{
+    "active": true,
+    "disabled": false,
+    "end": null,
+    "id": 1648,
+    "scope": [
+        "*"
+    ],
+    "start": 1412805856
+}
+UNMUTE ALL MONITORS
+
+Disables muting all monitors. Throws an error if mute all was not enabled previously.
+
+ARGUMENTS
+
+This end point takes no JSON arguments.'
+SIGNATURE
+
+POST /api/v1/monitor/unmute_all
+EXAMPLE REQUEST
+
+#!/bin/sh
+# Make sure you replace the API and/or APP key below
+# with the ones for your account
+
+api_key=9775a026f1ca7d1c6c5af9d94d9595a4
+app_key=87ce4a24b5553d2e482ea8a8500e71b8ad4554ff
+
+curl -X POST "https://app.datadoghq.com/api/v1/monitor/unmute_all?api_key=${api_key}&application_key=${app_key}"
+EXAMPLE RESPONSE
+
+This end point does not return JSON on successful requests.
+MUTE A MONITOR
+
+ARGUMENTS
+
+scope [optional, default=None]
+The scope to apply the mute to, e.g. role:db
+end [optional, default=None]
+A POSIX timestamp for when the mute should end
+SIGNATURE
+
+POST /api/v1/monitor/:monitor_id/mute
+EXAMPLE REQUEST
+
+#!/bin/sh
+# Make sure you replace the API and/or APP key below
+# with the ones for your account
+
+api_key=9775a026f1ca7d1c6c5af9d94d9595a4
+app_key=87ce4a24b5553d2e482ea8a8500e71b8ad4554ff
+monitor_id=62628
+
+# Create a monitor to mute
+monitor_id=$(curl -X POST -H "Content-type: application/json" \
+-d '{
+      "type": "metric alert",
+      "query": "avg(last_5m):sum:system.net.bytes_rcvd{host:host0} > 100",
+      "name": "Bytes received on host0",
+      "message": "We may need to add web hosts if this is consistently high."
+    }' \
+    "https://app.datadoghq.com/api/v1/monitor?api_key=${api_key}&application_key=${app_key}" | jq '.id')
+
+
+curl -X POST "https://app.datadoghq.com/api/v1/monitor/${monitor_id}/mute?api_key=${api_key}&application_key=${app_key}"
+EXAMPLE RESPONSE
+
+{
+    "id": 62628,
+    "message": "",
+    "name": "avg(last_1h):sum:system.net.bytes_rcvd{host:host0} > 200",
+    "options": {
+        "is_data_sparse": false,
+        "notify_audit": true,
+        "notify_no_data": false,
+        "renotify_interval": null,
+        "silenced": {
+            "*": null
+        },
+        "timeout_h": null
+    },
+    "org_id": 1499,
+    "query": "avg(last_1h):sum:system.net.bytes_rcvd{host:host0} > 200",
+    "state": {},
+    "type": "metric alert",
+    "created": "2015-12-18T16:34:14.014039+00:00",
+    "modified": "2015-12-18T18:39:24.391207+00:00"
+}
+UNMUTE A MONITOR
+
+ARGUMENTS
+
+scope [optional, default=None]
+The scope to apply the mute to. For example, if your alert is grouped by {host}, you might mute 'host:app1'
+all_scopes [optional, default=False]
+Clear muting across all scopes
+SIGNATURE
+
+POST /api/v1/monitor/:monitor_id/unmute
+EXAMPLE REQUEST
+
+#!/bin/sh
+# Make sure you replace the API and/or APP key below
+# with the ones for your account
+
+api_key=9775a026f1ca7d1c6c5af9d94d9595a4
+app_key=87ce4a24b5553d2e482ea8a8500e71b8ad4554ff
+monitor_id=62628
+
+# Create a monitor to unmute
+monitor_id=$(curl -X POST -H "Content-type: application/json" \
+-d '{
+      "type": "metric alert",
+      "query": "avg(last_5m):sum:system.net.bytes_rcvd{host:host0} > 100",
+      "name": "Bytes received on host0",
+      "message": "We may need to add web hosts if this is consistently high."
+    }' \
+    "https://app.datadoghq.com/api/v1/monitor?api_key=${api_key}&application_key=${app_key}" | jq '.id')
+
+curl -X POST "https://app.datadoghq.com/api/v1/monitor/${monitor_id}/unmute?api_key=${api_key}&application_key=${app_key}"
+EXAMPLE RESPONSE
+
+{
+    "id": 62628,
+    "message": "",
+    "name": "avg(last_1h):sum:system.net.bytes_rcvd{host:host0} > 200",
+    "options": {
+        "is_data_sparse": false,
+        "notify_audit": true,
+        "notify_no_data": false,
+        "renotify_interval": null,
+        "silenced": {
+            "*": null
+        },
+        "timeout_h": null
+    },
+    "org_id": 1499,
+    "query": "avg(last_1h):sum:system.net.bytes_rcvd{host:host0} > 200",
+    "state": {},
+    "type": "metric alert",
+    "created": "2015-12-18T16:34:14.014039+00:00",
+    "modified": "2015-12-18T18:39:24.391207+00:00"
+}
+*** DOWNTIMES
+
+Downtiming gives you greater control over monitor notifications by allowing you to globally exclude scopes from alerting. Downtime settings, which can be scheduled with start and end times, prevent all alerting related to specified Datadog tags.
+
+SCHEDULE MONITOR DOWNTIME
+
+ARGUMENTS
+
+scope [required]
+The scope(s) to which the downtime will apply, e.g. 'host:app2'. Provide multiple scopes as a comma-separated list, e.g. 'env:dev,env:prod'. The resulting downtime applies to sources that matches ALL provided scopes (i.e. env:dev AND env:prod), NOT any of them.
+monitor_id [optional, default=None]
+A single monitor to which the downtime will apply. If not provided, the downtime will apply to all monitors.
+start [optional, default=None]
+POSIX timestamp to start the downtime. If not provided, the downtime starts the moment it is created.
+end [optional, default=None]
+POSIX timestamp to end the downtime. If not provided, the downtime will be in effect indefinitely (i.e. until you cancel it).
+message [optional, default=None]
+A message to include with notifications for this downtime. Email notifications can be sent to specific users by using the same '@username' notation as events
+monitor_id [optional, default=None]
+The id of a specific monitor to apply the downtime to.
+recurrence [optional, default=None]
+An object defining the recurrence of the downtime with a variety of parameters:
+type the type of recurrence. Choose from: days, weeks, months, years.
+period how often to repeat as an integer. For example to repeat every 3 days, select a type of days and a period of 3.
+week_days (optional) a list of week days to repeat on. Choose from: Mon, Tue, Wed, Thu, Fri, Sat or Sun. Only applicable when type is weeks. First letter must be capitalized.
+until_occurrences (optional) how many times the downtime will be rescheduled. until_occurences and until_date are mutually exclusive
+until_date (optional) the date at which the recurrence should end as a POSIX timestmap. until_occurences and until_date are mutually exclusive
+timezone [optional, default=UTC]
+The timezone for the downtime.
+SIGNATURE
+
+POST /api/v1/downtime
+EXAMPLE REQUEST
+
+#!/bin/sh
+# Make sure you replace the API and/or APP key below
+# with the ones for your account
+
+api_key=9775a026f1ca7d1c6c5af9d94d9595a4
+app_key=87ce4a24b5553d2e482ea8a8500e71b8ad4554ff
+
+start=$(date +%s)
+end=$(date -v+3H +%s)
+end_recurrence=$(date -v+21d +%s)
+
+curl -X POST -H "Content-type: application/json" \
+-d '{
+      "scope": "env:prod",
+      "start": '"${start}"',
+      "end": '"${end}"',
+      "recurrence": {
+        "type": "weeks",
+        "period": 1,
+        "week_days": ["Mon", "Tue", "Wed", "Thu", "Fri"],
+        "until_date": '"${end_recurrence}"'
+      }
+    }' \
+    "https://app.datadoghq.com/api/v1/downtime?api_key=${api_key}&application_key=${app_key}"
+EXAMPLE RESPONSE
+
+{
+    "active": true,
+    "canceled": null,
+    "creator_id": 3658,
+    "disabled": false,
+    "end": 1445979093,
+    "id": 169267786,
+    "message": null,
+    "monitor_id": null,
+    "parent_id": null,
+    "recurrence": {
+        "period": 1,
+        "type": "weeks",
+        "until_date": 1447786293,
+        "until_occurrences": null,
+        "week_days": [
+            "Mon",
+            "Tue",
+            "Wed",
+            "Thu",
+            "Fri"
+        ]
+    },
+    "scope": [
+        "env:prod"
+    ],
+    "start": 1445968293,
+    "updater_id": null
+}
+UPDATE MONITOR DOWNTIME
+
+ARGUMENTS
+
+id [required]
+The integer id of the downtime to be updated
+scope [optional, default=original scope]
+The scope to which the downtime will apply, e.g. 'host:app2'. Provide multiple scopes as a comma-separated list, e.g. 'env:dev,env:prod'. The resulting downtime applies to sources that matches ALL provided scopes (i.e. env:dev AND env:prod), NOT any of them.
+monitor_id [optional, default=None]
+A single monitor to which the downtime will apply. If not provided, the downtime will apply to all monitors.
+start [optional, default=original]
+POSIX timestamp to start the downtime.
+end [optional, default=original end]
+POSIX timestamp to end the downtime. If not provided, the downtime will be in effect indefinitely (i.e. until you cancel it).
+message [optional, default=original message]
+A message to include with notifications for this downtime. Email notifications can be sent to specific users by using the same '@username' notation as events
+recurrence [optional, default=original recurrence]
+An object defining the recurrence of the downtime with a variety of parameters:
+type the type of recurrence. Choose from: days, weeks, months, years.
+period how often to repeat as an integer. For example to repeat every 3 days, select a type of days and a period of 3.
+week_days (optional) a list of week days to repeat on. Choose from: Mon, Tue, Wed, Thu, Fri, Sat or Sun. Only applicable when type is weeks. First letter must be capitalized.
+until_occurrences (optional) how many times the downtime will be rescheduled. until_occurences and until_date are mutually exclusive
+until_date (optional) the date at which the recurrence should end as a POSIX timestmap. until_occurences and until_date are mutually exclusive
+timezone [optional, default=original timezone]
+The timezone for the downtime.
+SIGNATURE
+
+PUT /api/v1/downtime/:downtime_id
+EXAMPLE REQUEST
+
+#!/bin/sh
+# Make sure you replace the API and/or APP key below
+# with the ones for your account
+
+api_key=9775a026f1ca7d1c6c5af9d94d9595a4
+app_key=87ce4a24b5553d2e482ea8a8500e71b8ad4554ff
+downtime_id=4336
+
+# Create a downtime to update
+currenttime=$(date +%s)
+downtime_id=$(curl -X POST -H "Content-type: application/json" \
+-d "{
+      \"scope\": \"env:prod\",
+      \"start\": \"${currenttime}\"
+    }" \
+    "https://app.datadoghq.com/api/v1/downtime?api_key=${api_key}&application_key=${app_key}" | jq '.id')
+
+curl -X PUT -H "Content-type: application/json" \
+-d '{
+      "scope": "env:staging",
+      "message": "Doing some testing on staging"
+    }' \
+    "https://app.datadoghq.com/api/v1/downtime/${downtime_id}?api_key=${api_key}&application_key=${app_key}"
+EXAMPLE RESPONSE
+
+{
+    "active": true,
+    "disabled": false,
+    "end": 1418303372,
+    "id": 4336,
+    "message": "Doing some testing on staging",
+    "scope": [
+        "env:staging"
+    ],
+    "start": 1418224729
+}
+CANCEL MONITOR DOWNTIME
+
+ARGUMENTS
+
+id [required]
+The integer id of the downtime to be canceled
+SIGNATURE
+
+DELETE /api/v1/downtime/:downtime_id
+EXAMPLE REQUEST
+
+#!/bin/sh
+# Make sure you replace the API and/or APP key below
+# with the ones for your account
+
+api_key=9775a026f1ca7d1c6c5af9d94d9595a4
+app_key=87ce4a24b5553d2e482ea8a8500e71b8ad4554ff
+downtime_id=1656
+
+# Create a downtime to delete
+currenttime=$(date +%s)
+downtime_id=$(curl -X POST -H "Content-type: application/json" \
+-d "{
+      \"scope\": \"env:prod\",
+      \"start\": \"${currenttime}\"
+    }" \
+    "https://app.datadoghq.com/api/v1/downtime?api_key=${api_key}&application_key=${app_key}" | jq '.id')
+
+curl -X DELETE -H "Content-type: application/json" "https://app.datadoghq.com/api/v1/downtime/${downtime_id}?api_key=${api_key}&application_key=${app_key}"
+EXAMPLE RESPONSE
+
+This end point does not return JSON on successful requests.
+CANCEL MONITOR DOWNTIMES BY SCOPE
+
+ARGUMENTS
+
+scope [required]
+Cancel all downtimes with the given scope(s), e.g. 'env:prod', 'role:db,role:db-slave'.
+SIGNATURE
+
+POST /api/v1/downtime/cancel/by_scope
+EXAMPLE REQUEST
+
+#!/bin/sh
+# Make sure you replace the API and/or APP key below
+# with the ones for your account
+
+#!/bin/bash
+
+api_key="9775a026f1ca7d1c6c5af9d94d9595a4"
+app_key="87ce4a24b5553d2e482ea8a8500e71b8ad4554ff"
+
+curl -X POST -H "Content-type: application/json" -H "Accept: application/json" \
+-d "{
+      \"scope\": \"host:i-123\"
+   }" \
+   "https://app.datadoghq.com/api/v1/downtime/cancel/by_scope?api_key=${api_key}&application_key=${app_key}"
+EXAMPLE RESPONSE
+
+{
+	"cancelled_ids":[123456789,123456790]
+}
+GET A MONITOR DOWNTIME
+
+ARGUMENTS
+
+This end point takes no JSON arguments.'
+SIGNATURE
+
+GET /api/v1/downtime/:downtime_id
+EXAMPLE REQUEST
+
+#!/bin/sh
+# Make sure you replace the API and/or APP key below
+# with the ones for your account
+
+api_key=9775a026f1ca7d1c6c5af9d94d9595a4
+app_key=87ce4a24b5553d2e482ea8a8500e71b8ad4554ff
+downtime_id=2473
+
+curl "https://app.datadoghq.com/api/v1/downtime/${downtime_id}?api_key=${api_key}&application_key=${app_key}"
+EXAMPLE RESPONSE
+
+{'active': True,
+ 'disabled': False,
+ 'end': 1420447087,
+ 'id': 2910,
+ 'message': 'Doing some testing on staging.',
+ 'scope': ['env:staging'],
+ 'start': 1420387032}
+GET ALL MONITOR DOWNTIMES
+
+ARGUMENTS
+
+current_only [optional, default=false]
+Only return downtimes that are activewhen the request is made.
+SIGNATURE
+
+GET /api/v1/downtime
+EXAMPLE REQUEST
+
+#!/bin/sh
+# Make sure you replace the API and/or APP key below
+# with the ones for your account
+
+api_key=9775a026f1ca7d1c6c5af9d94d9595a4
+app_key=87ce4a24b5553d2e482ea8a8500e71b8ad4554ff
+
+curl -G "https://app.datadoghq.com/api/v1/downtime" \
+     -d "api_key=${api_key}" \
+     -d "application_key=${app_key}"
+EXAMPLE RESPONSE
+
+[
+    {
+        "active": false,
+        "disabled": true,
+        "end": 1412793983,
+        "id": 1625,
+        "scope": [
+            "env:staging"
+        ],
+        "start": 1412792983
+    },
+    {
+        "active": false,
+        "disabled": true,
+        "end": null,
+        "id": 1626,
+        "scope": [
+            "*"
+        ],
+        "start": 1412792985
+    }
+]
+*** TIMEBOARDS
+
+This endpoint allows you to programmatically create, update delete and query timeboards.
+
+CREATE A TIMEBOARD
+
+ARGUMENTS
+
+title [required]
+The name of the dashboard.
+description [required]
+A description of the dashboard's content.
+graphs [required]
+A list of graph definitions. Graph definitions follow this form:
+title [required]
+The name of the graph.
+definition [required]
+The graph definition. Example:
+{"requests": [{"q": "system.cpu.idle{*} by {host}"}
+template_variables [optional, default=None]
+A list of template variables for using Dashboard templating. Template variable definitions follow this form:
+name [required]
+The name of the variable.
+prefix [optional, default=None]
+The tag prefix associated with the variable. Only tags with this prefix will appear in the variable dropdown.
+default [optional, default=None]
+The default value for the template variable on dashboard load
+SIGNATURE
+
+POST /api/v1/dash
+EXAMPLE REQUEST
+
+#!/bin/sh
+# Make sure you replace the API and/or APP key below
+# with the ones for your account
+
+api_key=9775a026f1ca7d1c6c5af9d94d9595a4
+app_key=87ce4a24b5553d2e482ea8a8500e71b8ad4554ff
+
+curl  -X POST -H "Content-type: application/json" \
+-d '{
+      "graphs" : [{
+          "title": "Average Memory Free",
+          "definition": {
+              "events": [],
+              "requests": [
+                  {"q": "avg:system.mem.free{*}"}
+              ]
+          },
+          "viz": "timeseries"
+      }],
+      "title" : "Average Memory Free Shell",
+      "description" : "A dashboard with memory info.",
+      "template_variables": [{
+          "name": "host1",
+          "prefix": "host",
+          "default": "host:my-host"
+      }],
+      "read_only": "True"
+    }' \
+"https://app.datadoghq.com/api/v1/dash?api_key=${api_key}&application_key=${app_key}"
+xEXAMPLE RESPONSE
+
+{
+    "dash": {
+        "description": "A dashboard with memory info.",
+        "graphs": [
+            {
+                "definition": {
+                    "events": [],
+                    "requests": [
+                        {
+                            "q": "avg:system.mem.free{*}"
+                        }
+                    ]
+                },
+                "title": "Average Memory Free"
+            }
+        ],
+        "id": 2532,
+        "title": "Average Memory Free Shell"
+    },
+    "resource": "/api/v1/dash/2532",
+    "url": "/dash/dash/2532",
+    "created": "2015-12-17T23:06:06.703087+00:00",
+    "modified": "2015-12-17T23:06:06.726234+00:00",
+    "read_only": "true"
+}
+UPDATE A TIMEBOARD
+
+ARGUMENTS
+
+title [required]
+The name of the dashboard.
+description [required]
+A description of the dashboard's contents.
+graphs [required]
+A list of graph definitions. Graph definitions follow this form:
+title [required]
+The name of the graph.
+definition [required]
+The graph definition. Read the Graph Guide for more on graphs. Example:
+{"requests": [{"q": "system.cpu.idle{*} by {host}"}
+template_variables [optional, default=None]
+A list of template variables for using Dashboard templating. Template variable definitions follow this form:
+name [required]
+The name of the variable.
+prefix [optional, default=None]
+The tag prefix associated with the variable. Only tags with this prefix will appear in the variable dropdown.
+default [optional, default=None]
+The default value for the template variable on dashboard load
+SIGNATURE
+
+PUT /api/v1/dash/:dash_id
+EXAMPLE REQUEST
+
+#!/bin/sh
+# Make sure you replace the API and/or APP key below
+# with the ones for your account
+
+api_key=9775a026f1ca7d1c6c5af9d94d9595a4
+app_key=87ce4a24b5553d2e482ea8a8500e71b8ad4554ff
+dash_id=2532
+
+# Create a dashboard to get. Use jq (http://stedolan.github.io/jq/download/) to get the dash id.
+dash_id=$(curl  -X POST -H "Content-type: application/json" \
+-d '{
+      "graphs" : [{
+          "title": "Average Memory Free",
+          "definition": {
+              "events": [],
+              "requests": [
+                  {"q": "avg:system.mem.free{*}"}
+              ]
+          },
+          "viz": "timeseries"
+      }],
+      "title" : "Average Memory Free Shell",
+      "description" : "A dashboard with memory info.",
+      "template_variables": [{
+          "name": "host1",
+          "prefix": "host",
+          "default": "host:my-host"
+      }]
+    }' \
+"https://app.datadoghq.com/api/v1/dash?api_key=${api_key}&application_key=${app_key}" | jq '.dash.id')
+
+curl  -X PUT -H "Content-type: application/json" \
+-d '{
+      "graphs" : [{
+          "title": "Sum of Memory Free",
+          "definition": {
+              "events": [],
+              "requests": [
+                  {"q": "sum:system.mem.free{*}"}
+              ]
+          },
+          "viz": "timeseries"
+      }],
+      "title" : "Sum Memory Free Shell",
+      "description" : "An updated dashboard with memory info.",
+      "template_variables": [{
+          "name": "host1",
+          "prefix": "host",
+          "default": "host:my-host"
+      }]
+    }' \
+"https://app.datadoghq.com/api/v1/dash/${dash_id}?api_key=${api_key}&application_key=${app_key}"
+EXAMPLE RESPONSE
+
+{
+    "dash": {
+        "description": "A dashboard with memory info.",
+        "graphs": [
+            {
+                "definition": {
+                    "events": [],
+                    "requests": [
+                        {
+                            "q": "sum:system.mem.free{*}"
+                        }
+                    ]
+                },
+                "title": "Sum of Memory Free"
+            }
+        ],
+        "id": 2532,
+        "title": "Sum Memory Free Shell"
+    },
+    "resource": "/api/v1/dash/2532",
+    "url": "/dash/dash/2532",
+    "created": "2015-12-17T23:06:06.703087+00:00",
+    "modified": "2015-12-17T23:12:26.726234+00:00",
+    "read_only": "false"
+}
+DELETE A TIMEBOARD
+
+Delete an existing timeboard.
+
+This end point takes no JSON arguments.'
+SIGNATURE
+
+DELETE /api/v1/dash/:dash_id
+EXAMPLE REQUEST
+
+#!/bin/sh
+# Make sure you replace the API and/or APP key below
+# with the ones for your account
+
+api_key=9775a026f1ca7d1c6c5af9d94d9595a4
+app_key=87ce4a24b5553d2e482ea8a8500e71b8ad4554ff
+dash_id=2471
+
+# Create a dashboard to delete. Use jq (http://stedolan.github.io/jq/download/) to get the dash id.
+dash_id=$(curl  -X POST -H "Content-type: application/json" \
+-d '{
+      "graphs" : [{
+          "title": "Average Memory Free",
+          "definition": {
+              "events": [],
+              "requests": [
+                  {"q": "avg:system.mem.free{*}"}
+              ]
+          },
+          "viz": "timeseries"
+      }],
+      "title" : "Average Memory Free Shell",
+      "description" : "A dashboard with memory info.",
+      "template_variables": [{
+          "name": "host1",
+          "prefix": "host",
+          "default": "host:my-host"
+      }]
+    }' \
+"https://app.datadoghq.com/api/v1/dash?api_key=${api_key}&application_key=${app_key}" | jq '.dash.id')
+
+curl -X DELETE "https://app.datadoghq.com/api/v1/dash/${dash_id}?api_key=${api_key}&application_key=${app_key}"
+EXAMPLE RESPONSE
+
+This end point does not return JSON on successful requests.
+GET ALL TIMEBOARDS
+
+Fetch all of your timeboards' definitions.
+
+ARGUMENTS
+
+This end point takes no JSON arguments.'
+SIGNATURE
+
+GET /api/v1/dash
+EXAMPLE REQUEST
+
+#!/bin/sh
+# Make sure you replace the API and/or APP key below
+# with the ones for your account
+
+api_key=9775a026f1ca7d1c6c5af9d94d9595a4
+app_key=87ce4a24b5553d2e482ea8a8500e71b8ad4554ff
+
+curl "https://app.datadoghq.com/api/v1/dash?api_key=${api_key}&application_key=${app_key}"
+EXAMPLE RESPONSE
+
+{
+    "dashes": [
+        {
+            "description": "An informative dashboard.",
+            "id": "2473",
+            "resource": "/api/v1/dash/2473",
+            "title": "My Dashboard",
+            "created": "2015-12-12T23:06:06.703087+00:00",
+            "modified": "2015-12-12T23:12:26.726234+00:00",
+            "read_only": "true"
+        },
+        {
+            "description": "This has all the new hotness.",
+            "id": "2551",
+            "resource": "/api/v1/dash/2551",
+            "title": "New and Improved Dashboard",
+            "created": "2015-12-17T23:06:06.703087+00:00",
+            "modified": "2015-12-17T23:12:26.726234+00:00",
+            "read_only": "true"
+        }
+    ]
+}
+GET A TIMEBOARD
+
+Fetch an existing dashboard's definition.
+
+ARGUMENTS
+
+This end point takes no JSON arguments.'
+SIGNATURE
+
+GET /api/v1/dash/:dash_id
+EXAMPLE REQUEST
+
+#!/bin/sh
+# Make sure you replace the API and/or APP key below
+# with the ones for your account
+
+api_key=9775a026f1ca7d1c6c5af9d94d9595a4
+app_key=87ce4a24b5553d2e482ea8a8500e71b8ad4554ff
+dash_id=2473
+
+# Create a dashboard to get. Use jq (http://stedolan.github.io/jq/download/) to get the dash id.
+dash_id=$(curl  -X POST -H "Content-type: application/json" \
+-d '{
+      "graphs" : [{
+          "title": "Average Memory Free",
+          "definition": {
+              "events": [],
+              "requests": [
+                  {"q": "avg:system.mem.free{*}"}
+              ]
+          },
+          "viz": "timeseries"
+      }],
+      "title" : "Average Memory Free Shell",
+      "description" : "A dashboard with memory info.",
+      "template_variables": [{
+          "name": "host1",
+          "prefix": "host",
+          "default": "host:my-host"
+      }]
+    }' \
+"https://app.datadoghq.com/api/v1/dash?api_key=${api_key}&application_key=${app_key}" | jq '.dash.id')
+
+curl "https://app.datadoghq.com/api/v1/dash/${dash_id}?api_key=${api_key}&application_key=${app_key}"
+EXAMPLE RESPONSE
+
+{
+    "dash": {
+        "description": "An informative dashboard.",
+        "graphs": [
+            {
+                "definition": {
+                    "events": [],
+                    "requests": [
+                        {
+                            "q": "avg:system.mem.free{*}"
+                        }
+                    ],
+                    "viz": "timeseries"
+                },
+                "title": "Average Memory Free"
+            }
+        ],
+        "id": 2473,
+        "title": "My Dashboard",
+    },
+    "resource": "/api/v1/dash/2473",
+    "url": "/dash/dash/2473",
+    "created": "2015-12-17T23:06:06.703087+00:00",
+    "modified": "2015-12-17T23:12:26.726234+00:00",
+    "read_only": "true"
+}
+*** SCREENBOARDS
+
+You can view more detailed documentation on the Screenboard API at http://docs.datadoghq.com/api/screenboards/.
+
+CREATE A SCREENBOARD
+
+ARGUMENTS
+
+board_title [required]
+The name of the dashboard.
+description [optional, default=None]
+A description of the dashboard's content.
+widgets [required]
+A list of widget definitions. See here for more examples.
+template_variables [optional, default=None]
+A list of template variables for using Dashboard templating.
+width [optional, default=None]
+Screenboard width in pixels
+height [optional, default=None]
+Height in pixels.
+read_only [optional, default=False]
+The read-only status of the screenboard.
+SIGNATURE
+
+POST /api/v1/screen
+EXAMPLE REQUEST
+
+#!/bin/sh
+# Make sure you replace the API and/or APP key below
+# with the ones for your account
+
+api_key=9775a026f1ca7d1c6c5af9d94d9595a4
+app_key=87ce4a24b5553d2e482ea8a8500e71b8ad4554ff
+
+curl -X POST -H "Content-type: application/json" \
+-d '{
+        "width": 1024,
+        "height": 768,
+        "board_title": "dogapi test",
+        "widgets": [
+            {
+              "type": "image",
+              "height": 20,
+              "width": 32,
+              "y": 7,
+              "x": 32,
+              "url": "https://path/to/image.jpg"
+            }
+        ]
+    }' \
+"https://app.datadoghq.com/api/v1/screen?api_key=${api_key}&application_key=${app_key}"
+EXAMPLE RESPONSE
+
+{
+    "board_title": "dogapi test",
+    "height": 768,
+    "id": 7953,
+    "widgets": [
+        {
+            "height": 20,
+            "type": "image",
+            "url": "https://path/to/image.jpg",
+            "width": 32,
+            "x": 32,
+            "y": 7
+        }
+    ],
+    "width": 1024,
+    "created": "2015-12-17T23:06:06.703087+00:00",
+    "modified": "2015-12-17T23:06:06.705087+00:00",
+    "read_only": "false"
+}
+UPDATE A SCREENBOARD
+
+ARGUMENTS
+
+board_title [required]
+The name of the dashboard.
+description [optional, default=None]
+A description of the dashboard's content.
+widgets [required]
+A list of widget definitions. See here for more examples.
+template_variables [optional, default=None]
+A list of template variables for using Dashboard templating.
+width [optional, default=None]
+Screenboard width in pixels
+height [optional, default=None]
+Height in pixels.
+read_only [optional, default=False]
+The read-only status of the screenboard.
+SIGNATURE
+
+PUT /api/v1/screen/:board_id
+EXAMPLE REQUEST
+
+#!/bin/sh
+# Make sure you replace the API and/or APP key below
+# with the ones for your account
+
+api_key=9775a026f1ca7d1c6c5af9d94d9595a4
+app_key=87ce4a24b5553d2e482ea8a8500e71b8ad4554ff
+
+curl -X PUT -H "Content-type: application/json" \
+-d '{
+        "width": 1024,
+        "height": 768,
+        "board_title": "dogapi test",
+        "widgets": [
+            {
+              "type": "image",
+              "height": 20,
+              "width": 32,
+              "y": 7,
+              "x": 32,
+              "url": "https://path/to/image.jpg"
+            }
+        ]
+    }' \
+"https://app.datadoghq.com/api/v1/screen/${board_id}?api_key=${api_key}&application_key=${app_key}"
+EXAMPLE RESPONSE
+
+{
+    "board_title": "dogapi test",
+    "read_only": false,
+    "created": "2016-06-01T08:59:24.636877+00:00",
+    "modified": "2016-06-01T09:06:32.481009+00:00",
+    "height": 768,
+    "width": 1024,
+    "widgets": [
+        {"url": "https://path/to/image.jpg",
+        "height": 20,
+        "width": 32,
+        "y": 7,
+        "x": 32,
+        "type": "image"}
+    ],
+    "id": 7953}
+DELETE A SCREENBOARD
+
+Delete an existing screenboard.
+
+This end point takes no JSON arguments.'
+SIGNATURE
+
+DELETE /api/v1/screen/:board_id
+EXAMPLE REQUEST
+
+#!/bin/sh
+# Make sure you replace the API and/or APP key below
+# with the ones for your account
+
+api_key=9775a026f1ca7d1c6c5af9d94d9595a4
+app_key=87ce4a24b5553d2e482ea8a8500e71b8ad4554ff
+board_id=2471
+
+# Create a screenboard to delete
+board_id=$(curl -X POST -H "Content-type: application/json" \
+-d '{
+        "width": 1024,
+        "height": 768,
+        "board_title": "dogapi tests",
+        "widgets": [
+            {
+              "type": "image",
+              "height": 20,
+              "width": 32,
+              "y": 7,
+              "x": 32,
+              "url": "https://path/to/image.jpg"
+            }
+        ]
+    }' \
+"https://app.datadoghq.com/api/v1/screen?api_key=${api_key}&application_key=${app_key}" | jq '.id')
+
+
+curl -X DELETE \
+"https://app.datadoghq.com/api/v1/screen/${board_id}?api_key=${api_key}&application_key=${app_key}"
+EXAMPLE RESPONSE
+
+This end point does not return JSON on successful requests.
+GET A SCREENBOARD
+
+Fetch an existing screenboard's definition.
+
+ARGUMENTS
+
+This end point takes no JSON arguments.'
+SIGNATURE
+
+GET /api/v1/screen/:board_id
+EXAMPLE REQUEST
+
+#!/bin/sh
+# Make sure you replace the API and/or APP key below
+# with the ones for your account
+
+api_key=9775a026f1ca7d1c6c5af9d94d9595a4
+app_key=87ce4a24b5553d2e482ea8a8500e71b8ad4554ff
+board_id=6334
+
+# Create a screenboard to get
+board_id=$(curl -X POST -H "Content-type: application/json" \
+-d '{
+        "width": 1024,
+        "height": 768,
+        "board_title": "dogapi tests",
+        "widgets": [
+            {
+              "type": "image",
+              "height": 20,
+              "width": 32,
+              "y": 7,
+              "x": 32,
+              "url": "https://path/to/image.jpg"
+            }
+        ]
+    }' \
+"https://app.datadoghq.com/api/v1/screen?api_key=${api_key}&application_key=${app_key}" | jq '.id')
+
+
+curl -X GET \"https://app.datadoghq.com/api/v1/screen/${board_id}?api_key=${api_key}&application_key=${app_key}"
+EXAMPLE RESPONSE
+
+{
+    "board_title": "dogapi test",
+    "height": 768,
+    "id": 6334,
+    "widgets": [
+        {
+            "height": 20,
+            "type": "image",
+            "url": "http://path/to/image.jpg",
+            "width": 32,
+            "x": 32,
+            "y": 7
+        }
+    ],
+    "width": 1024,
+    "created": "2015-12-17T23:06:06.703087+00:00",
+    "modified": "2015-12-17T23:12:26.726234+00:00",
+    "read_only": "false"
+}
+GET ALL SCREENBOARDS
+
+Fetch all of your screenboards' definitions.
+
+ARGUMENTS
+
+This end point takes no JSON arguments.'
+SIGNATURE
+
+GET /api/v1/screen
+EXAMPLE REQUEST
+
+#!/bin/sh
+# Make sure you replace the API and/or APP key below
+# with the ones for your account
+
+api_key=9775a026f1ca7d1c6c5af9d94d9595a4
+app_key=87ce4a24b5553d2e482ea8a8500e71b8ad4554ff
+
+curl -X GET "https://app.datadoghq.com/api/v1/screen?api_key=${api_key}&application_key=${app_key}"
+EXAMPLE RESPONSE
+
+[{'description': 'This has all the new hotness.',
+  'id': '2551',
+  'resource': '/api/v1/screen/2551',
+  'title': 'New and Improved Screenboard',
+  'created': '2015-12-17T23:06:06.703087+00:00',
+  'modified': '2015-12-17T23:12:26.726234+00:00',
+  'read_only': 'false'}
+ {'description': 'And they are marvelous.',
+  'id': '2552',
+  'resource': '/api/v1/screen/2552',
+  'title': 'My First Metrics',
+  'created': '2015-12-17T23:06:06.703087+00:00',
+  'modified': '2015-12-17T23:12:26.726234+00:00',
+  'read_only': 'false'}
+]
+SHARE A SCREENBOARD
+
+Share an existing screenboard's with a public URL.
+
+ARGUMENTS
+
+This end point takes no JSON arguments.'
+SIGNATURE
+
+POST /api/v1/screen/share/:board_id
+EXAMPLE REQUEST
+
+#!/bin/sh
+# Make sure you replace the API and/or APP key below
+# with the ones for your account
+
+api_key=9775a026f1ca7d1c6c5af9d94d9595a4
+app_key=87ce4a24b5553d2e482ea8a8500e71b8ad4554ff
+board_id=6334
+
+# Create a screenboard to share
+board_id=$(curl -X POST -H "Content-type: application/json" \
+-d '{
+        "width": 1024,
+        "height": 768,
+        "board_title": "dogapi tests",
+        "widgets": [
+            {
+              "type": "image",
+              "height": 20,
+              "width": 32,
+              "y": 7,
+              "x": 32,
+              "url": "https://path/to/image.jpg"
+            }
+        ]
+    }' \
+"https://app.datadoghq.com/api/v1/screen?api_key=${api_key}&application_key=${app_key}" | jq '.id')
+
+
+
+curl -X POST \
+"https://app.datadoghq.com/api/v1/screen/share/${board_id}?api_key=${api_key}&application_key=${app_key}"
+EXAMPLE RESPONSE
+
+{
+    "board_id": 6334,
+    "public_url": "https://p.datadoghq.com/sb/20756e0cd4"
+}
+REVOKE A SHARED A SCREENBOARD
+
+Revoke a currently shared screenboard's.
+
+ARGUMENTS
+
+This end point takes no JSON arguments.'
+SIGNATURE
+
+DELETE /api/v1/screen/share/:board_id
+EXAMPLE REQUEST
+
+#!/bin/sh
+# Make sure you replace the API and/or APP key below
+# with the ones for your account
+
+api_key=9775a026f1ca7d1c6c5af9d94d9595a4
+app_key=87ce4a24b5553d2e482ea8a8500e71b8ad4554ff
+board_id=6334
+
+# Create a screenboard to share
+board_id=$(curl -X POST -H "Content-type: application/json" \
+-d '{
+        "width": 1024,
+        "height": 768,
+        "board_title": "dogapi tests",
+        "widgets": [
+            {
+              "type": "image",
+              "height": 20,
+              "width": 32,
+              "y": 7,
+              "x": 32,
+              "url": "https://path/to/image.jpg"
+            }
+        ]
+    }' \
+"https://app.datadoghq.com/api/v1/screen?api_key=${api_key}&application_key=${app_key}" | jq '.id')
+
+# Share it
+curl -X POST \
+"https://app.datadoghq.com/api/v1/screen/share/${board_id}?api_key=${api_key}&application_key=${app_key}"
+
+# Revoke the sharing
+curl -X DELETE \
+"https://app.datadoghq.com/api/v1/screen/share/${board_id}?api_key=${api_key}&application_key=${app_key}"
+EXAMPLE RESPONSE
+
+This end point does not return JSON on successful requests.
+*** HOSTS
+
+MUTE A HOST
+
+ARGUMENTS
+
+end [optional, default=None]
+POSIX timestamp when the host will be unmuted. If omitted, the host will remain muted until explicitly unmuted.
+message [optional, default=None]
+Message to associate with the muting of this host
+override [optional, default=False]
+If true and the host is already muted, will replace existing host mute settings.
+SIGNATURE
+
+POST /api/v1/host/:hostname/mute
+EXAMPLE REQUEST
+
+#!/bin/sh
+# Make sure you replace the API and/or APP key below
+# with the ones for your account
+
+api_key=9775a026f1ca7d1c6c5af9d94d9595a4
+app_key=87ce4a24b5553d2e482ea8a8500e71b8ad4554ff
+
+curl -X POST -H "Content-type: application/json" \
+-d '{
+      "message": "Muting this host for a test!"
+  }' "https://app.datadoghq.com/api/v1/host/test.host/mute?api_key=${api_key}&application_key=${app_key}"
+EXAMPLE RESPONSE
+
+{
+    "action": "Muted",
+    "hostname": "test.host",
+    "message": "Muting this host for a test!"
+}
+UNMUTE A HOST
+
+ARGUMENTS
+
+This end point takes no JSON arguments.'
+SIGNATURE
+
+POST /api/v1/host/:hostname/unmute
+EXAMPLE REQUEST
+
+#!/bin/sh
+# Make sure you replace the API and/or APP key below
+# with the ones for your account
+
+api_key=9775a026f1ca7d1c6c5af9d94d9595a4
+app_key=87ce4a24b5553d2e482ea8a8500e71b8ad4554ff
+
+curl -X POST -H "Content-type: application/json" "https://app.datadoghq.com/api/v1/host/test.host/unmute?api_key=${api_key}&application_key=${app_key}"
+EXAMPLE RESPONSE
+
+{
+    "action": "Unmuted",
+    "hostname": "test.host"
+}
+*** TAGS
+
+The tag end point allows you to tag hosts with keywords meaningful to you - like role:database. All metrics sent from a host will have its tags applied.
+When fetching and applying tags to a particular host, you can refer to hosts by name (yourhost.example.com).
+
+The component of your infrastructure responsible for a tag is identified by a source.
+Valid sources are: nagios, hudson, jenkins, users, feed, chef, puppet, git, bitbucket, fabric, capistrano.
+
+GET TAGS
+
+Return a mapping of tags to hosts for your whole infrastructure.
+
+ARGUMENTS
+
+source [optional, default=None]
+Only show tags from a particular source. Otherwise shows all tags.
+SIGNATURE
+
+GET /api/v1/tags/hosts
+EXAMPLE REQUEST
+
+#!/bin/sh
+# Make sure you replace the API and/or APP key below
+# with the ones for your account
+
+api_key=9775a026f1ca7d1c6c5af9d94d9595a4
+app_key=87ce4a24b5553d2e482ea8a8500e71b8ad4554ff
+
+curl "https://app.datadoghq.com/api/v1/tags/hosts?api_key=${api_key}&application_key=${app_key}"
+EXAMPLE RESPONSE
+
+{
+    "tags": {
+        "environment:production": [
+            "test.another.example.com",
+            "test.host"
+        ],
+        "environment:test": [
+            "test.metric.host"
+        ],
+        "role:database": [
+            "test.metric.host"
+        ],
+        "role:webserver": [
+            "test.another.example.com",
+            "test.host"
+        ]
+    }
+}
+GET HOST TAGS
+
+Return the list of tags that apply to a given host.
+
+ARGUMENTS
+
+source [optional, default=None]
+Only show tags from a particular source. Otherwise shows all tags.
+by_source [optional, default=False]
+Return tags grouped by source.
+SIGNATURE
+
+GET /api/v1/tags/hosts/:host_name
+EXAMPLE REQUEST
+
+#!/bin/sh
+# Make sure you replace the API and/or APP key below
+# with the ones for your account
+
+api_key=9775a026f1ca7d1c6c5af9d94d9595a4
+app_key=87ce4a24b5553d2e482ea8a8500e71b8ad4554ff
+
+# pass a single hostname as an argument to search for the specified host
+host=$1
+
+# Find a host to add a tag to
+host_name=$(curl -G "https://app.datadoghq.com/api/v1/search" \
+    -d "api_key=${api_key}" \
+    -d "application_key=${app_key}" \
+	-d "q=hosts:$host" | cut -d'"' -f6)
+
+curl "https://app.datadoghq.com/api/v1/tags/hosts/${host_name}?api_key=${api_key}&application_key=${app_key}"
+EXAMPLE RESPONSE
+
+{
+    "tags": [
+        "role:database",
+        "environment:test"
+    ]
+}
+ADD TAGS TO A HOST
+
+This end point allows you to add tags to a host.
+
+ARGUMENTS
+
+tags [required]
+A list of tags to apply to the host
+source [optional, default=users]
+The source of the tags (e.g. chef, puppet).
+SIGNATURE
+
+POST /api/v1/tags/hosts/:host_name
+EXAMPLE REQUEST
+
+#!/bin/sh
+# Make sure you replace the API and/or APP key below
+# with the ones for your account
+
+api_key=9775a026f1ca7d1c6c5af9d94d9595a4
+app_key=87ce4a24b5553d2e482ea8a8500e71b8ad4554ff
+host=YourHostName
+
+# Find a host to add a tag to
+host_name=$(curl -G "https://app.datadoghq.com/api/v1/search" \
+    -d "api_key=${api_key}" \
+    -d "application_key=${app_key}" \
+    -d "q=hosts:$host" | cut -d'"' -f6)
+
+curl  -X POST -H "Content-type: application/json" \
+-d "{
+      \"tags\" : [\"environment:production\", \"role:webserver\"]
+    }" \
+"https://app.datadoghq.com/api/v1/tags/hosts/${host_name}?api_key=${api_key}&application_key=${app_key}"
+EXAMPLE RESPONSE
+
+{
+    "host": "test.host",
+    "tags": [
+        "role:database",
+        "environment:test"
+    ]
+}
+UPDATE HOST TAGS
+
+This end point allows you to update all tags for a given host.
+
+ARGUMENTS
+
+tags [required]
+A list of tags
+source [optional, default=users]
+The source of the tags (e.g. chef, puppet).
+SIGNATURE
+
+PUT /api/v1/tags/hosts/:host_name
+EXAMPLE REQUEST
+
+#!/bin/sh
+# Make sure you replace the API and/or APP key below
+# with the ones for your account
+
+api_key=9775a026f1ca7d1c6c5af9d94d9595a4
+app_key=87ce4a24b5553d2e482ea8a8500e71b8ad4554ff
+host_name=test.host
+
+curl -X PUT -H "Content-type: application/json" \
+-d '{
+      "tags" : ["environment:production", "role:webserver"]
+    }' \
+"https://app.datadoghq.com/api/v1/tags/hosts/${host_name}?api_key=${api_key}&application_key=${app_key}"
+EXAMPLE RESPONSE
+
+{
+    "host": "test.host",
+    "tags": [
+        "environment:production",
+        "role:webserver"
+    ]
+}
+
+REMOVE HOST TAGS
+
+This end point allows you to remove all tags for a given host.
+
+ARGUMENTS
+
+source [optional, default=users]
+The source of the tags (e.g. chef, puppet).
+SIGNATURE
+
+DELETE /api/v1/tags/hosts/:host_name
+EXAMPLE REQUEST
+
+#!/bin/sh
+# Make sure you replace the API and/or APP key below
+# with the ones for your account
+
+api_key=9775a026f1ca7d1c6c5af9d94d9595a4
+app_key=87ce4a24b5553d2e482ea8a8500e71b8ad4554ff
+
+# Find a host to remove a tag from
+host_name=$(curl -G "https://app.datadoghq.com/api/v1/search" \
+    -d "api_key=${api_key}" \
+    -d "application_key=${app_key}" \
+    -d "q=hosts:" | jq -r '.results.hosts[0]')
+# Add tags to the host
+curl  -X POST -H "Content-type: application/json" \
+-d "{\"tags\" : [\"environment:production\", \"role:webserver\"]}" \
+"https://app.datadoghq.com/api/v1/tags/hosts/${host_name}?api_key=${api_key}&application_key=${app_key}"
+
+
+curl -X DELETE "https://app.datadoghq.com/api/v1/tags/hosts/${host_name}?api_key=${api_key}&application_key=${app_key}"
+EXAMPLE RESPONSE
+
+This end point does not return JSON on successful requests.
+*** SEARCH
+
+This end point allows you to search for entities from the last 24 hours in Datadog. The currently searchable entities are:
+
+hosts
+metrics
+ARGUMENTS
+
+q [required]
+The query string
+QUERY LANGUAGE
+
+Search queries allow for limited faceting. Available facets are:
+
+hosts
+metrics
+Faceting your search limits your results to only matches of the specified type. Un-faceted queries return results for all possible types.
+
+Un-faceted queries are of the form:
+
+query_string
+Faceted queries are of the form:
+
+facet:query_string
+SIGNATURE
+
+GET /api/v1/search
+EXAMPLE REQUEST
+
+#!/bin/sh
+# Make sure you replace the API and/or APP key below
+# with the ones for your account
+
+api_key=9775a026f1ca7d1c6c5af9d94d9595a4
+app_key=87ce4a24b5553d2e482ea8a8500e71b8ad4554ff
+
+curl -G "https://app.datadoghq.com/api/v1/search" \
+    -d "api_key=${api_key}" \
+    -d "application_key=${app_key}" \
+    -d "q=test"
+EXAMPLE RESPONSE
+
+{
+    "results": {
+        "hosts": [
+            "test.another.example.com",
+            "test.example.com",
+            "test.host",
+            "test.metric.host",
+            "test.tag.host"
+        ],
+        "metrics": [
+            "test.metric"
+        ]
+    }
+}
+*** COMMENTS
+
+Comments are how discussion happens on Datadog. You can create, edit, delete and reply to comments.
+
+CREATE A COMMENT
+
+Comments are essentially special forms of events that appear in the stream. They can start a new discussion thread or optionally, reply in another thread.
+
+ARGUMENTS
+
+message [required]
+The comment text.
+handle [optional, default=application key owner]
+The handle of the user making the comment.
+related_event_id [optional, default=None]
+The id of another comment or event to reply to
+SIGNATURE
+
+POST api/v1/comments
+EXAMPLE REQUEST
+
+#!/bin/sh
+# Make sure you replace the API and/or APP key below
+# with the ones for your account
+
+api_key=9775a026f1ca7d1c6c5af9d94d9595a4
+app_key=87ce4a24b5553d2e482ea8a8500e71b8ad4554ff
+
+curl  -X POST -H "Content-type: application/json" \
+-d '{
+        "message" : "There is a problem with the database."
+    }' \
+"https://app.datadoghq.com/api/v1/comments?api_key=${api_key}&application_key=${app_key}"
+EXAMPLE RESPONSE
+
+{
+    "comment": {
+        "handle": "mattp+org-carlotest141@datadoghq.com",
+        "id": 1382561676571697516,
+        "message": "There is a problem with the database.",
+        "resource": "/api/v1/comments/1382561676571697516",
+        "url": "/event/jump_to?event_id=1382561676571697516"
+    }
+}
+EDIT A COMMENT
+
+ARGUMENTS
+
+message [optional, default=original message]
+The comment text.
+handle [optional, default=application key owner]
+The handle of the user making the comment.
+SIGNATURE
+
+PUT api/v1/comments/:comment_id
+EXAMPLE REQUEST
+
+#!/bin/sh
+# Make sure you replace the API and/or APP key below
+# with the ones for your account
+
+api_key=9775a026f1ca7d1c6c5af9d94d9595a4
+app_key=87ce4a24b5553d2e482ea8a8500e71b8ad4554ff
+comment_id=1382557387240472966
+
+# Create a comment to edit. Use jq (http://stedolan.github.io/jq/download/) to get the comment id.
+comment_id=$(curl -X POST -H "Content-type: application/json" -d '{"message" : "This comment was submitted and will be edited by the api."}' "https://app.datadoghq.com/api/v1/comments?api_key=${api_key}&application_key=${app_key}" | jq -r '.comment.resource|ltrimstr("/api/v1/comments/")')
+
+curl -X PUT -H "Content-type: application/json" \
+-d '{
+        "message" : "Actually, I am changing my mind."
+    }' \
+"https://app.datadoghq.com/api/v1/comments/${comment_id}?api_key=${api_key}&application_key=${app_key}"
+EXAMPLE RESPONSE
+
+{
+    "comment": {
+        "handle": "mattp+org-carlotest141@datadoghq.com",
+        "id": 1382557387240472966,
+        "message": "Actually, I am changing my mind.",
+        "resource": "/api/v1/comments/1382557387240472966",
+        "url": "/event/jump_to?event_id=1382557387240472966"
+    }
+}
+DELETE A COMMENT
+
+ARGUMENTS
+
+This end point takes no JSON arguments.'
+SIGNATURE
+
+DELETE api/v1/comments/:comment_id
+EXAMPLE REQUEST
+
+#!/bin/sh
+# Make sure you replace the API and/or APP key below
+# with the ones for your account
+
+api_key=9775a026f1ca7d1c6c5af9d94d9595a4
+app_key=87ce4a24b5553d2e482ea8a8500e71b8ad4554ff
+# comment_id=1382559936236196216
+
+# Create a comment to delete. Use jq (http://stedolan.github.io/jq/download/) to get the comment id.
+comment_id=$(curl -X POST -H "Content-type: application/json" -d '{"message" : "This comment was submitted and will be deleted by the api."}' "https://app.datadoghq.com/api/v1/comments?api_key=${api_key}&application_key=${app_key}" | jq -r '.comment.resource|ltrimstr("/api/v1/comments/")')
+sleep 1
+curl -X DELETE "https://app.datadoghq.com/api/v1/comments/${comment_id}?api_key=${api_key}&application_key=${app_key}"
+EXAMPLE RESPONSE
+
+This end point does not return JSON on successful requests.
+*** USERS
+
+You can create, edit, and disable users.
+
+CREATE USER
+
+ARGUMENTS
+
+handle [required]
+The user handle, must be a valid email.
+name [optional, default=None]
+The name of the user.
+access_role [optional, default=st]
+The access role of the user. Choose from 'st' (standard user), 'adm' (admin user), or 'ro' (read-only user). Note: users can be created with admin access role only with application keys belonging to administrators.
+SIGNATURE
+
+POST api/v1/user
+EXAMPLE REQUEST
+
+#!/bin/sh
+# Make sure you replace the API and/or APP key below
+# with the ones for your account
+
+api_key=9775a026f1ca7d1c6c5af9d94d9595a4
+app_key=87ce4a24b5553d2e482ea8a8500e71b8ad4554ff
+
+curl -X POST -H "Content-type: application/json" \
+    -d '{"handle":"test@datadoghq.com","name":"test user"}' \
+    "https://app.datadoghq.com/api/v1/user?api_key=${api_key}&application_key=${app_key}"
+EXAMPLE RESPONSE
+
+{"user": {"handle": "test@datadoghq.com", "name": "test user", "access_role": "st", "verified": false, "disabled": false, "role": null, "is_admin": false, "email": "test@datadoghq.com"}}
+GET USER
+
+ARGUMENTS
+
+[required]
+The handle of the user.
+SIGNATURE
+
+GET api/v1/user/:handle
+EXAMPLE REQUEST
+
+#!/bin/sh
+# Make sure you replace the API and/or APP key below
+# with the ones for your account
+
+api_key=9775a026f1ca7d1c6c5af9d94d9595a4
+app_key=87ce4a24b5553d2e482ea8a8500e71b8ad4554ff
+user=test@datadoghq.com
+
+curl -X GET "https://app.datadoghq.com/api/v1/user/${user}?api_key=${api_key}&application_key=${app_key}"
+EXAMPLE RESPONSE
+
+{"user": {"handle": "test@datadoghq.com", "name": "test user", "access_role": "st", "verified": false, "disabled": false, "role": null, "is_admin": false, "email": "test@datadoghq.com"}}
+GET ALL USERS
+
+ARGUMENTS
+
+This end point takes no JSON arguments.'
+SIGNATURE
+
+GET api/v1/user
+EXAMPLE REQUEST
+
+#!/bin/sh
+# Make sure you replace the API and/or APP key below
+# with the ones for your account
+
+api_key=9775a026f1ca7d1c6c5af9d94d9595a4
+app_key=87ce4a24b5553d2e482ea8a8500e71b8ad4554ff
+
+curl -X GET "https://app.datadoghq.com/api/v1/user?api_key=${api_key}&application_key=${app_key}"
+EXAMPLE RESPONSE
+
+{"users": [{"handle": "test@datadoghq.com", "name": "test user", "access_role": "st", "verified": false, "disabled": false, "role": null, "is_admin": false, "email": "test@datadoghq.com"},{"handle": "test2@datadoghq.com", "name": "alt name", "access_role": "ro", "verified": false, "disabled": false, "role": null, "is_admin": false, "email": "test+1@datadoghq.com"}]}
+UPDATE USER
+
+Can only be used with application keys belonging to administrators.
+
+ARGUMENTS
+
+handle [required]
+The handle of the user.
+name [optional, default=None]
+The new name of the user.
+email [optional, default=None]
+The new email of the user.
+disabled [optional, default=None]
+The new disabled status of the user.
+access_role [optional, default=st]
+The new access role of the user. Choose from 'st' (standard user), 'adm' (admin user), or 'ro' (read-only user).
+SIGNATURE
+
+PUT api/v1/user/:handle
+EXAMPLE REQUEST
+
+#!/bin/sh
+# Make sure you replace the API and/or APP key below
+# with the ones for your account
+
+api_key=9775a026f1ca7d1c6c5af9d94d9595a4
+app_key=87ce4a24b5553d2e482ea8a8500e71b8ad4554ff
+user=test@datadoghq.com
+
+curl -X PUT -H "Content-type: application/json" \
+    -d '{"email":"test+1@datadoghq.com","name":"alt user", "access_role":"ro"}' \
+    "https://app.datadoghq.com/api/v1/user/${user}?api_key=${api_key}&application_key=${app_key}"
+EXAMPLE RESPONSE
+
+{"user": {"handle": "test@datadoghq.com", "name": "alt user", "access_role": "ro", "verified": false, "disabled": false, "role": null, "is_admin": false, "email": "test+1@datadoghq.com"}}
+DISABLE USER
+
+Can only be used with application keys belonging to administrators.
+
+ARGUMENTS
+
+handle [required]
+The handle of the user.
+SIGNATURE
+
+DELETE api/v1/user/:handle
+EXAMPLE REQUEST
+
+#!/bin/sh
+# Make sure you replace the API and/or APP key below
+# with the ones for your account
+
+api_key=9775a026f1ca7d1c6c5af9d94d9595a4
+app_key=87ce4a24b5553d2e482ea8a8500e71b8ad4554ff
+user=test@datadoghq.com
+
+curl -X DELETE "https://app.datadoghq.com/api/v1/user/${user}?api_key=${api_key}&application_key=${app_key}"
+EXAMPLE RESPONSE
+
+{"message": "User test@datadoghq.com disabled"}
+*** GRAPHS
+
+You can take graph snapshots using the API.
+
+GRAPH SNAPSHOT
+
+ARGUMENTS
+
+metric_query [required]
+The metric query.
+start [required]
+The POSIX timestamp of the start of the query.
+end [required]
+The POSIX timestamp of the end of the query.
+event_query [optional, default=None]
+A query that will add event bands to the graph.
+graph_def [optional, default=None]
+A JSON document defining the graph. graph_def can be used instead of metric_query. The JSON document uses the grammar defined here and should be formatted to a single line then URLEncoded. The graph_def argument is only available in the REST API and not using the Ruby or Python wrappers.
+title [optional, default=None]
+A title for the graph. If no title is specified, the graph will not have a title.
+SIGNATURE
+
+GET api/v1/graph/snapshot
+EXAMPLE REQUEST
+
+#!/bin/sh
+# Make sure you replace the API and/or APP key below
+# with the ones for your account
+
+currenttime=$(date +%s)
+currenttime2=$(date -v -1d +%s)
+curl -G -H "Content-type: application/json" \
+    -d "metric_query=system.load.1{*}" \
+    -d "start=${currenttime2}" \
+    -d "end=${currenttime}" \
+    -d "api_key=9775a026f1ca7d1c6c5af9d94d9595a4" \
+    -d "application_key=87ce4a24b5553d2e482ea8a8500e71b8ad4554ff" \
+    'https://app.datadoghq.com/api/v1/graph/snapshot'
+EXAMPLE RESPONSE
+
+{
+    "metric_query": "system.load.1{*}",
+    "snapshot_url": "https://s3.amazonaws.com/dd-snapshots-prod/org_1499/2013-07-19/53fd79f024e7796f4ca399f1d90adf3cf95a9bb8.png"
+}
+*** EMBEDDABLE GRAPHS
+
+You can interact with embeddable graphs through the API.
+
+GET ALL EMBEDS
+
+Gets a list of previously created embeddable graphs.
+
+Returns: A JSON list containing information on previously created embeds from both the UI and the API. Each JSON graph response is in the same format as returned by GET api/v1/graph/embed/:embed_id.
+
+ARGUMENTS
+
+This end point takes no JSON arguments.'
+SIGNATURE
+
+GET api/v1/graph/embed
+EXAMPLE REQUEST
+
+#!/bin/sh
+# Make sure you replace the API and/or APP key below
+# with the ones for your account
+
+api_key="9775a026f1ca7d1c6c5af9d94d9595a4"
+app_key="87ce4a24b5553d2e482ea8a8500e71b8ad4554ff"
+
+curl -X GET "https://app.datadoghq.com/api/v1/graph/embed?api_key=${api_key}&application_key=${app_key}"
+EXAMPLE RESPONSE
+
+{ "embedded_graphs": [
+    {
+      "embed_id": "5f585b01c81b12ecdf5f40df0382738d0919170639985d3df5e2fc4232865b0c",
+      "template_variables": [],
+      "html": "<iframe src=\"https://app.datadoghq.com/graph/embed?token=5f585b01c81b12ecdf5f40df0382738d0919170639985d3df5e2fc4232865b0c&height=300&width=600&legend=true\" width=\"600\" height=\"300\" frameBorder=\"0\"></iframe>",
+      "graph_title": "Embed created through API",
+      "revoked": false,
+      "dash_url": null,
+      "shared_by": 3658,
+      "dash_name": null
+    }
+  ]
+}
+CREATE EMBED
+
+Creates a new embeddable graph.
+
+Returns: A JSON consisting of the same elements returned by GET api/v1/graph/embed/:embed_id. On failure, the return value will be a JSON containing an error message {errors: [messages]}.
+
+Note: If an embed already exists for the exact same query in a given organization, the older embed will be returned instead of creating a new embed.
+
+ARGUMENTS
+
+graph_json [required]
+The graph definition in JSON. Same format that is available on the JSON tab of the graph editor
+timeframe [optional, default=1_hour]
+The timegrame for the graph. Must be one of 1_hour, 4_hours, 1_day, 2_days, and 1_week.
+size [optional, default=medium]
+The size of the graph. Must be one of small, medium, large, and xlarge.
+legend [optional, default=no]
+The flag determining if the graph includes a legend. Must be one of yes or no.
+title [optional, default=Embed created through API]
+Determines graph title. Must be at least 1 character.
+SIGNATURE
+
+POST api/v1/graph/embed
+EXAMPLE REQUEST
+
+#!/bin/sh
+# Make sure you replace the API and/or APP key below
+# with the ones for your account
+
+api_key="9775a026f1ca7d1c6c5af9d94d9595a4"
+app_key="87ce4a24b5553d2e482ea8a8500e71b8ad4554ff"
+
+curl -POST \
+    -d 'graph_json={"requests":[{"q":"avg:system.load.1{*}"}],"viz":"timeseries","events":[]}' \
+    -d "timeframe=1_hour" \
+    -d "size=medium" \
+    -d "legend=yes" \
+    "https://app.datadoghq.com/api/v1/graph/embed?api_key=${api_key}&application_key=${app_key}"
+EXAMPLE RESPONSE
+
+{
+  "embed_id": "5f585b01c81b12ecdf5f40df0382738d0919170639985d3df5e2fc4232865b0c",
+  "template_variables": [],
+  "html": "<iframe src=\"https://app.datadoghq.com/graph/embed?token=5f585b01c81b12ecdf5f40df0382738d0919170639985d3df5e2fc4232865b0c&height=300&width=600&legend=true\" width=\"600\" height=\"300\" frameBorder=\"0\"></iframe>",
+  "graph_title": "Embed created through API",
+  "revoked": false,
+  "dash_url": null,
+  "shared_by": 3658,
+  "dash_name": null
+}
+GET SPECIFIC EMBED
+
+Get the HTML fragment for a previously generated embed with embed_id.
+
+Returns: A JSON object with 8 elements:
+
+embed_id: Token of the embed
+graph_title: Tile of the graph
+dash_name: Name of the dashboard the graph is on (null if none)
+dash_url: URL of the dashboard the graph is on (null if none)
+shared_by: ID of the use who shared the embed
+html: HTML fragment for the embed (iframe)
+revoked: Boolean flag for whther or not the embed is revoked
+On failure, the return value will be a JSON containing an error message {errors: [messages]}.
+
+ARGUMENTS
+
+size [optional, default=medium]
+The size of the graph. Must be one of small, medium, large, and xlarge.
+legend [optional, default=no]
+The flag determining if the graph includes a legend. Must be one of yes or no.
+template_variables [optional, default=None]
+Replace template variables in queries with form $var. To replace $var with val, use var=val as a parameter for each template variable you wish to replace. If any template variables are missing values in the iframe source url, then (*) will be used as the value.
+SIGNATURE
+
+GET api/v1/graph/embed/:embed_id
+EXAMPLE REQUEST
+
+#!/bin/sh
+# Make sure you replace the API and/or APP key below
+# with the ones for your account
+
+api_key="9775a026f1ca7d1c6c5af9d94d9595a4"
+app_key="87ce4a24b5553d2e482ea8a8500e71b8ad4554ff"
+embed_id="5f585b01c81b12ecdf5f40df0382738d0919170639985d3df5e2fc4232865b0c"
+
+curl -X GET "https://app.datadoghq.com/api/v1/graph/embed/${embed_id}?api_key=${api_key}&application_key=${app_key}"
+EXAMPLE RESPONSE
+
+{
+  "embed_id": "5f585b01c81b12ecdf5f40df0382738d0919170639985d3df5e2fc4232865b0c",
+  "template_variables": [],
+  "html": "<iframe src=\"https://app.datadoghq.com/graph/embed?token=5f585b01c81b12ecdf5f40df0382738d0919170639985d3df5e2fc4232865b0c&height=300&width=600&legend=true\" width=\"600\" height=\"300\" frameBorder=\"0\"></iframe>",
+  "graph_title": "Embed created through API",
+  "revoked": false,
+  "dash_url": null,
+  "shared_by": 3658,
+  "dash_name": null
+}
+ENABLE EMBED
+
+Enable a specified embed.
+
+Returns: A JSON containing the success message {success: [message]}. On failure, the return value will be a JSON containing an error message {errors: [messages]}.
+
+ARGUMENTS
+
+This end point takes no JSON arguments.'
+SIGNATURE
+
+GET api/v1/graph/embed/:embed_id/enable
+EXAMPLE REQUEST
+
+#!/bin/sh
+# Make sure you replace the API and/or APP key below
+# with the ones for your account
+
+api_key="9775a026f1ca7d1c6c5af9d94d9595a4"
+app_key="87ce4a24b5553d2e482ea8a8500e71b8ad4554ff"
+embed_id="5f585b01c81b12ecdf5f40df0382738d0919170639985d3df5e2fc4232865b0c"
+
+curl -X GET "https://app.datadoghq.com/api/v1/graph/embed/${embed_id}/enable?api_key=${api_key}&application_key=${app_key}"
+EXAMPLE RESPONSE
+
+{
+  "success": "Embed 5f585b01c81b12ecdf5f40df0382738d0919170639985d3df5e2fc4232865b0c successfully enabled."
+}
+REVOKE EMBED
+
+Revoke a specified embed.
+
+Returns: A JSON containing the success message {success: [message]}. On failure, the return value will be a JSON containing an error message {errors: [messages]}.
+
+ARGUMENTS
+
+This end point takes no JSON arguments.'
+SIGNATURE
+
+GET api/v1/graph/embed/:embed_id/revoke
+EXAMPLE REQUEST
+
+#!/bin/sh
+# Make sure you replace the API and/or APP key below
+# with the ones for your account
+
+api_key="9775a026f1ca7d1c6c5af9d94d9595a4"
+app_key="87ce4a24b5553d2e482ea8a8500e71b8ad4554ff"
+embed_id="5f585b01c81b12ecdf5f40df0382738d0919170639985d3df5e2fc4232865b0c"
+
+curl -X GET "https://app.datadoghq.com/api/v1/graph/embed/${embed_id}/revoke?api_key=${api_key}&application_key=${app_key}"
+EXAMPLE RESPONSE
+
+{
+  "success": "Embed 5f585b01c81b12ecdf5f40df0382738d0919170639985d3df5e2fc4232865b0c successfully revoked."
+}
+*** USAGE METERING
+
+This API is available to all customers. Python and Ruby clients are not yet supported.
+
+The usage metering end-point allows you to:
+
+Get Hourly Usage For Hosts and Containers
+Get Hourly Usage For Custom Metrics
+Get Top Custom Metrics By Hourly Average
+
+Usage data is delayed by up to 72 hours from when it was incurred. It is retained for the past 15 months.
+
+GET HOURLY USAGE FOR HOSTS AND CONTAINERS
+
+Get Hourly Usage For Hosts and Containers.
+
+ARGUMENTS
+
+start_hr [required]
+datetime in ISO-8601 format, UTC, precise to hour: [YYYY-MM-DDThh] for usage beginning at this hour
+end_hr [optional, default=1d+start_hr]
+datetime in ISO-8601 format, UTC, precise to hour: [YYYY-MM-DDThh] for usage ending BEFORE this hour
+
+RESPONSE
+
+container_count
+shows the total number of containers reporting via the Docker integration during the hour.
+
+host_count
+contains the total number of billable infrastructure hosts reporting during a given hour. This is the sum of agent_host_count, aws_host_count, and gcp_host_count.
+
+hour
+the hour for the usage.
+
+apm_host_count:
+shows the total number of hosts using APM during the hour. For Pro plans, these will be counted as billable (except during trial periods). For Enterprise plans, APM hosts are included in the price of infrastructure hosts (see host_count) and not billed separately.
+
+agent_host_count
+contains the total number of infrastructure hosts reporting during a given hour that were running the Datadog Agent.
+
+gcp_host_count
+contains the total number of hosts that reported via the Google Cloud integration (and were NOT running the Datadog Agent).
+
+aws_host_count
+contains the total number of hosts that reported via the AWS integration (and were NOT running the Datadog Agent).
+
+When AWS or GCP hosts are also running the Datadog Agent, they will be counted as Agent hosts, NOT as AWS or GCP.
+SIGNATURE
+
+GET https://app.datadoghq.com/api/v1/usage/hosts
+EXAMPLE REQUEST
+
+#!/bin/sh
+# Make sure you replace the API and/or APP key below
+# with the ones for your account
+
+api_key=9775a026f1ca7d1c6c5af9d94d9595a4
+app_key=87ce4a24b5553d2e482ea8a8500e71b8ad4554ff
+
+start_hr=$(date -v -10d +%Y-%m-%dT%H)
+end_hr=$(date +%Y-%m-%dT%H)
+
+curl -G \
+    "https://app.datadoghq.com/api/v1/usage/hosts" \
+    -d "api_key=${api_key}" \
+    -d "application_key=${app_key}" \
+    -d "start_hr=${start_hr}" \
+    -d "end_hr=${end_hr}"
+EXAMPLE RESPONSE
+
+{
+  usage: [
+  {
+    "container_count": 14,
+    "host_count": 618,
+    "hour": "2017-04-24T00",
+    "apm_host_count": 588,
+    "agent_host_count": 590,
+    "gcp_host_count": 0,
+    "aws_host_count": 28
+   },
+   {
+     "container_count": 15,
+     "host_count": 614,
+     "hour": "2017-04-24T01",
+     "apm_host_count": 588,
+     "agent_host_count": 590,
+     "gcp_host_count": 0,
+     "aws_host_count": 24
+   }
+  ]
+}
+GET HOURLY USAGE FOR CUSTOM METRICS.
+
+Get Hourly Usage For Custom Metrics.
+
+ARGUMENTS
+
+start_hr [required]
+datetime in ISO-8601 format, UTC, precise to hour: [YYYY-MM-DDThh] for usage beginning at this hour
+end_hr [optional, default=1d+start_hr]
+datetime in ISO-8601 format, UTC, precise to hour: [YYYY-MM-DDThh] for usage ending BEFORE this hour
+SIGNATURE
+
+GET https://app.datadoghq.com/api/v1/usage/timeseries
+EXAMPLE REQUEST
+
+#!/bin/sh
+# Make sure you replace the API and/or APP key below
+# with the ones for your account
+
+api_key=9775a026f1ca7d1c6c5af9d94d9595a4
+app_key=87ce4a24b5553d2e482ea8a8500e71b8ad4554ff
+
+start_hr=$(date -v -10d +%Y-%m-%dT%H)
+end_hr=$(date +%Y-%m-%dT%H)
+
+curl -G \
+    "https://app.datadoghq.com/api/v1/usage/timeseries" \
+    -d "api_key=${api_key}" \
+    -d "application_key=${app_key}" \
+    -d "start_hr=${start_hr}" \
+    -d "end_hr=${end_hr}"
+EXAMPLE RESPONSE
+
+{
+  usage: [
+  {
+      "num_custom_timeseries": 11,
+      "hour": "2017-05-01T14"
+    },
+    {
+      "num_custom_timeseries": 247743,
+      "hour": "2017-05-01T15"
+    }
+  ]
+}
+GET TOP 500 CUSTOM METRICS BY HOURLY AVERAGE
+
+Get Top Custom Metrics By Hourly Average.
+
+ARGUMENTS
+
+month [required]
+datetime in ISO-8601 format, UTC, precise to month: [YYYY-MM] for usage beginning at this hour
+names [optional, default=None]
+comma-separated list of metric names
+SIGNATURE
+
+GET https://app.datadoghq.com/api/v1/usage/top_avg_metrics
+EXAMPLE REQUEST
+
+#!/bin/sh
+# Make sure you replace the API and/or APP key below
+# with the ones for your account
+
+api_key=9775a026f1ca7d1c6c5af9d94d9595a4
+app_key=87ce4a24b5553d2e482ea8a8500e71b8ad4554ff
+
+month=$(date +%Y-%m)
+
+curl -G \
+    "https://app.datadoghq.com/api/v1/usage/top_avg_metrics" \
+    -d "api_key=${api_key}" \
+    -d "application_key=${app_key}" \
+    -d "month=${month}" \
+    -d "names=aws.ec2.spot_history,system.processes.number"
+EXAMPLE RESPONSE
+
+{
+  usage: [
+      {
+      "metric_category": "custom",
+      "max_metric_hour": 7549,
+      "avg_metric_hour": 7479,
+      "metric_name": "aws.ec2.spot_history"
+    },
+    {
+      "metric_category": "custom",
+      "max_metric_hour": 6386,
+      "avg_metric_hour": 4760,
+      "metric_name": "system.processes.number"
+    }
+  ]
+}
+TROUBLESHOOTING
+
+We do very minimal error checking on the API front-end, as we queue all data for asynchronous processing (the goal being to always, always accept your data in production situations and decouple our systems from yours).
+
+Thus it is possible you could receive a 202 'success' response but not see your data in Datadog. The cause of this is most likely:
+
+Problems with the timestamp (either not in seconds or in the past, etc.)
+Using the application key instead of API key
+Events are succeeding, but because success events are low priority, they don't show up in the event stream until it is switched to priority 'all'
+To check your timestamp is correct run:
+date -u && curl -s -v https://app.datadoghq.com 2>&1 | grep Date
+This will output the current system’s date, and then make a request to our endpoint and grab the date on our end. If these are more than a few minutes apart, you may want to look at the time settings on your server.
+
+
+There are also certain fields which are not mandatory for submission, but do require a valid input. For example, in submitting an event the priority field must be one of the four given options. Any other text will result in a 202 'success' but no event showing up. Having an invalid source_type_name will not prevent the event from showing up, but that field will be dropped upon submission.
+
+Need some help? Get in touch. • Mistake in the docs? Feel free to contribute!
