@@ -3,7 +3,6 @@
 
 (declare (not optimize-dead-definitions))
 (import
-  :ober/datadog
   :gerbil/gambit
   :scheme/base
   :std/crypto/cipher
