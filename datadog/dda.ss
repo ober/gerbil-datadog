@@ -219,39 +219,6 @@
       (displayln text)
       (displayln (format "Failure on delete. Status:~a Text:~a~%" status text)))))
 
-(def (submit-dp-hash db dp-hash)
-  (let* ((headers '(("Host" . datadog-host)
-		    ("Content-type" . "application/json")))
-	 (dd-max-retries 3)
-	 (ip (resolve-ipv4 datadog-host))
-	 ;;(ip datadog-host)
-	 (adds "series")
-	 (uri (make-dd-uri ip adds))
-	 (tried 0)
-	 (data (json-object->string dp-hash))
-	 (query (sql-prepare db "insert into bundle(data) values($1)"))
-	 (binding (sql-bind query data)))
-    (sql-exec query)
-    (sql-finalize query)))
-
-(def (submit-dp metric time points type host tags)
-  (let* ((headers '(("Content-type" . "application/json")))
-	 (ip  datadog-host)
-	 (uri (make-dd-uri ip "series"))
-	 (data (json-object->string
-		(hash
-		 ("series"
-		  [
-		   (hash
-		    ("metric" metric)
-		    ("points" (list time points))
-		    ("type" type)
-		    ("host" host)
-		    ("tags"
-		     [tags]))])))))
-    (displayln "json is: " data)
-    (do-post uri headers data)))
-
 (def (print-opts t)
   (let-hash t
     (displayln
