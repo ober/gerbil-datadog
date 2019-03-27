@@ -1,6 +1,6 @@
 ;; -*- Gerbil -*-
-package: datadog
-namespace: datadog
+package: dda
+namespace: dda
 
 (export #t)
 (declare (not optimize-dead-definitions))
@@ -100,7 +100,7 @@ namespace: datadog
 	(set! count 0))
       (unless (= (length args2) count)
 	(usage-verb verb))
-      (apply (eval (string->symbol (string-append "datadog#" verb))) args2))))
+      (apply (eval (string->symbol (string-append "dda#" verb))) args2))))
 
 (def (load-config)
   (let ((config (hash)))
