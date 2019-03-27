@@ -1,7 +1,5 @@
 ;; -*- Gerbil -*-
-package: datadog
-namespace: datadog
-(export main)
+(export #t)
 
 (declare (not optimize-dead-definitions))
 (import
