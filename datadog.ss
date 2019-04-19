@@ -304,13 +304,13 @@ namespace: dda
        ((string=? type "get")
 	(if (string=? "" data)
 	  (displayln (format "curl -X GET -H \'~a\' ~a" heads uri))
-	  (displayln (format "curl -X GET -H \'~a\' -d \'~a\' ~a" heads data uri))))
+	  (displayln (format "curl -X GET -H \'~a\' -d \'~a\' \'~a\'" heads data uri))))
        ((string=? type "put")
-	(displayln (format "curl -X PUT -H \'~a\' -d \'~a\' ~a" heads data uri)))
+	(displayln (format "curl -X PUT -H \'~a\' -d \'~a\' \'~a\'" heads data uri)))
        ((string=? type "post")
-	(displayln (format "curl -X POST -H \'~a\' -d \'~a\' ~a" heads data uri)))
+	(displayln (format "curl -X POST -H \'~a\' -d \'~a\' \'~a\'" heads data uri)))
        ((string=? type "delete")
-	(displayln (format "curl -X DELETE -H \'~a\' -d \'~a\' ~a" heads data uri)))
+	(displayln (format "curl -X DELETE -H \'~a\' -d \'~a\' \'~a\'" heads data uri)))
        (else
 	(displayln "unknown format " type))))))
 
@@ -1170,10 +1170,7 @@ namespace: dda
     (make-aes-256-ctr-cipher)
     (base64-string->u8vector key)
     (base64-string->u8vector iv)
-    (base64-string->u8vector password)
-    )
-   )
-  )
+    (base64-string->u8vector password))))
 
 (def (get-keys-from-config api-key api-iv api-password app-key app-iv app-password)
   (hash
