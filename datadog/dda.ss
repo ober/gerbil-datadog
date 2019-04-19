@@ -1,5 +1,4 @@
 ;; -*- Gerbil -*-
-
 namespace: dda
 
 (export #t)
