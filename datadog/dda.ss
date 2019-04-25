@@ -1,5 +1,5 @@
 ;; -*- Gerbil -*-
-namespace: dda
+namespace: datadog
 
 (export #t)
 (declare (not optimize-dead-definitions))
