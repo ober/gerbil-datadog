@@ -1,5 +1,5 @@
 ;; -*- Gerbil -*-
-namespace: datadog
+namespace: dda
 
 (export main)
 (declare (not optimize-dead-definitions))
@@ -19,6 +19,7 @@ namespace: datadog
   :std/misc/ports
   :std/net/address
   :std/net/request
+  :std/net/uri
   :std/pregexp
   :std/srfi/13
   :std/srfi/19
@@ -29,6 +30,9 @@ namespace: datadog
   :std/text/utf8
   :std/text/yaml
   :std/xml/ssax
+  :std/text/zlib
+  :std/error
+  :gerbil/gambit/ports
   )
 
 (def config-file "~/.datadog.yaml")
@@ -51,6 +55,8 @@ namespace: datadog
 (def interactives
   (hash
    ("config" (hash (description: "Configure credentials for datadog.") (usage: "config") (count: 0)))
+   ("datadog-web-login" (hash (description: "Configure credentials for datadog.") (usage: "config") (count: 0)))
+   ("get-tags-for-metric" (hash (description: "get-tags-for-metric <metric>.") (usage: "get-tags-for-metric <metric>") (count: 1)))
    ("del-monitor" (hash (description: "Delete monitor.") (usage: "del-monitor <monitor id>") (count: 1)))
    ("dump" (hash (description: "Dump: dump json defintion of tboard ") (usage: "dump <tboard id>") (count: 1)))
    ("edit-monitor" (hash (description: "Update a monitor with new values.") (usage: "edit-monitor <id> <new query> <new name> <new message>") (count: 4)))
@@ -479,7 +485,7 @@ namespace: datadog
   (get-events-last-secs 3600 tags))
 
 (def (events-min tags)
-  (get-events-last-secs 3600 tags))
+  (get-events-last-secs 60 tags))
 
 (def (events-day tags)
   (get-events-last-secs 86400 tags))
@@ -946,9 +952,9 @@ namespace: datadog
 	 (metrics (hash-get results 'metrics)))
     (for-each
       (lambda (m)
-	(displayln (format "(pregexp-match \"~a\" ~a)" pattern m))
-	(if (pregexp-match pattern m)
-	  (set! metrics-matched (append metrics-matched [m]))))
+	(dp (format "(pregexp-match \"~a\" ~a)" pattern m))
+	(when (pregexp-match pattern m)
+	  (set! metrics-matched (cons m metrics-matched))))
       metrics)
     metrics-matched))
 
@@ -1176,3 +1182,92 @@ namespace: datadog
   (hash
    ("api" (decrypt-password api-key api-iv api-password))
    ("app" (decrypt-password app-key app-iv app-password))))
+
+(def (get-dogwebu)
+  (displayln "-")
+  (let-hash (load-config)
+    (let* ((results
+	    (shell-command
+	     (format "curl -m 3 -q --http1.1 -4 -X POST --cookie - --cookie-jar - \"https://app.datadoghq.com/account/login?redirect=f\" --data \"username=~a&password=~a\" 2>/dev/null|grep dogwebu|awk '{print $NF}'" .username .password) #t)))
+      (string-trim-both (cdr results)))))
+
+(def (get-dogweb dogwebu)
+  (displayln "+")
+  (let-hash (load-config)
+    (let* ((cmd (format "curl -q --http1.1 -4 -X POST --cookie - --cookie-jar - \"https://app.datadoghq.com/account/login?redirect=f\" -H \"Cookie: dogwebu=~a; intercom-session=please-add-flat_tags_for_metric-to-your-api-thanks;\" --data \"username=~a&password=~a&_authentication_token=~a\"  2>/dev/null|grep -w dogweb|awk '{print $NF}'" dogwebu .username .password dogwebu))
+	   (results (string-trim-both (cdr (shell-command cmd #t)))))
+      results)))
+
+(def (get-tags-for-metric metric)
+  (displayln "/")
+  (let-hash (load-config)
+    (let* ((secs 3600)
+	   (dogwebu (get-dogwebu))
+	   (dogweb (get-dogweb dogwebu))
+	   (cmd (format "curl -m4 -q -H \"Cookie: dogwebu=~a; dogweb=~a;\" \"https://app.datadoghq.com/metric/flat_tags_for_metric?metric=~a&window=~a\" 2>/dev/null" dogwebu dogweb metric secs))
+	   (results (string-trim-both (cdr (shell-command cmd #t))))
+	   (myjson (from-json results)))
+      (for-each
+	(lambda (tag)
+	  (displayln tag))
+	(hash-ref myjson 'tags)))))
+
+;; (def (get-tags-for-metric metric)
+;;   (let-hash (load-config)
+;;     (let* ((creds (datadog-web-login))
+;; 	   (dogwebu (hash-ref creds "dogwebu"))
+;; 	   (dogweb (hash-ref creds "dogweb"))
+;; 	   (url (format "https://app.datadoghq.com/metric/flat_tags_for_metric?metric=~a&window=86400" metric))
+;; 	   (headers [[ "Cookie:" :: (format "dogwebu=~a; dogweb=~a" dogwebu dogweb) ]])
+;; 	   (cookies '(( "dogwebu" . dogwebu)
+;; 		      ("dogweb" . dogweb)))
+;; 	   (reply (http-get url
+;; 			    headers: headers
+;; 			    cookies: cookies)))
+;;       (displayln (request-text reply))
+;;       (displayln (request-status reply))
+;;       (displayln (request-cookies reply))
+;;       (displayln (request-headers reply)))))
+
+;; (def (datadog-get-dogwebu)
+;;   (let-hash (load-config)
+;;     (let* ((dogwebu #f)
+;; 	   (uri "https://app.datadoghq.com/account/login?redirect=f")
+;; 	   (data (json-object->string (hash
+;; 				       ("username" .username)
+;; 				       ("password" .password))))
+;; 	   (cookies (request-cookies
+;; 		     (http-post uri
+;; 				headers: []
+;; 				data: data))))
+;;       (displayln "data1: " data)
+;;       (displayln "cookies1: " cookies)
+;;       (for-each
+;;       	(lambda (c)
+;;       	  (when
+;;       	      (pregexp-match "^dogwebu=" c)
+;;       	    (set! dogwebu (car (pregexp-split ";" (cadr (pregexp-split "=" c)))))))
+;;       	cookies)
+;;       dogwebu)))
+
+;; (def (datadog-get-token dogwebu)
+;;   (let-hash (load-config)
+;;     (let* ((uri "https://app.datadoghq.com/account/login?redirect=f")
+;; 	   (data (json-object->string
+;; 		  (hash
+;; 		   ("username" .username)
+;; 		   ("password" .password)
+;; 		   ("_authentication_token" dogwebu))))
+;; 	   (data2 (format "username=~a&password=~a&_authentication_token=~a" .username .password dogwebu))
+;; 	   (reply (http-post uri
+;; 			     cookies: [[ "dogwebu" :: dogwebu ]
+;; 			    	       [ "intercom-session" :: "please-add-flat_tags_for_metric-to-your-api-thanks" ]]
+;; 			     data: data))
+;; 			     ;; params: [[ "username" :: .username ]
+;; 	   ;; 	    [ "password" :: .password ]
+;; 	   ;; 	    [ "_authentication_token" :: dogwebu ]]))
+;; 	   (cookies2 (request-cookies reply)))
+;;       (displayln "get-token: " (request-text reply))
+;;       (displayln (request-status reply))
+;;       (displayln "headers: " (request-headers reply))
+;;       (displayln "cookies2: " cookies2))))
