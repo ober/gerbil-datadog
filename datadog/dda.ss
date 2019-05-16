@@ -56,7 +56,6 @@ namespace: dda
 (def interactives
   (hash
    ("config" (hash (description: "Configure credentials for datadog.") (usage: "config") (count: 0)))
-   ("get-tags-for-metric" (hash (description: "get-tags-for-metric <metric>.") (usage: "get-tags-for-metric <metric>") (count: 1)))
    ("del-monitor" (hash (description: "Delete monitor.") (usage: "del-monitor <monitor id>") (count: 1)))
    ("dump" (hash (description: "Dump: dump json defintion of tboard ") (usage: "dump <tboard id>") (count: 1)))
    ("edit-monitor" (hash (description: "Update a monitor with new values.") (usage: "edit-monitor <id> <new query> <new name> <new message>") (count: 4)))
@@ -67,8 +66,9 @@ namespace: dda
    ("events-month" (hash (description: "List all events for the past month") (usage: "events-month <tags string>") (count: 1)))
    ("events-raw" (hash (description: "List all events for the past day") (usage: "events-raw <secs>") (count: 1)))
    ("events-week" (hash (description: "List all events for the past week") (usage: "events-week <tags string>") (count: 1)))
+   ("metric-tags" (hash (description: "get-tags-for-metric <metric>.") (usage: "get-tags-for-metric <metric>") (count: 1)))
    ("graph-min" (hash (description: "Create a graph from query.") (usage: "graph-min <query>") (count: 1)))
-   ("metrics" (hash (description: "List Datadog Metrics and search on argument 1.") (usage: "metrics") (count: 1)))
+   ("metrics" (hash (description: "List Datadog Metrics and search on argument 1.") (usage: "metrics <pattern of metric to search for>") (count: 1)))
    ("monitor" (hash (description: "Describe Monitor.") (usage: "monitor <monitor id>") (count: 1)))
    ("monitors" (hash (description: "List all monitors.") (usage: "monitors") (count: 0)))
    ("new-monitor" (hash (description: "Create new monitor.") (usage: "new-monitor <type> <query> <name> <message> <tags>") (count: 5)))
@@ -1079,10 +1079,11 @@ namespace: dda
      (displayln "error parsing json " e))))
 
 (def (monitor id)
+  (displayln (format "* Datadog Monitor: ~a" id))
   (let* ((ip datadog-host)
 	 (uri (make-dd-uri ip (format "monitor/~a" id)))
 	 (mon (from-json (do-get uri))))
-    (print-monitor mon)))
+    (print-monitor-long mon)))
 
 (def (print-monitor monitor)
   (let-hash monitor
@@ -1220,7 +1221,7 @@ namespace: dda
 
 (def datadog-auth-url "https://app.datadoghq.com/account/login?redirect=f")
 
-(def (get-tags-for-metric metric)
+(def (metric-tags metric)
   (let-hash (load-config)
     (let* ((dogwebu (datadog-get-dogwebu))
 	   (dogweb (datadog-get-dogweb dogwebu))
