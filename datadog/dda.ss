@@ -1099,15 +1099,50 @@ namespace: dda
      "|" .created
      "|" .modified "|")))
 
+(def (print-monitor-long monitor)
+  (let-hash monitor
+    (displayln "** Query: " .query)
+    (displayln "*** Id: " .id)
+    (displayln "*** Message:")
+    (displayln .message)
+    (displayln "*** Tags: " .tags)
+    (displayln "*** Creator: " (if (table? .creator) (let-hash .creator .name " " .email " " .handle) "N/A"))
+    (displayln "*** Options: ")
+    (let-hash .options
+      (displayln "	- require_full_window: " .?require_full_window)
+      (displayln "	- include_tags: " .?include_tags)
+      (displayln "	- renotify_interval: " .?renotify_interval)
+      (displayln "	- notify_audit: " .?notify_audit)
+      (displayln "	- notify_no_data: " .?notify_no_data)
+      (displayln "	- no_data_timeframe: " .?no_data_timeframe)
+      (displayln "	- locked: " .?locked)
+      (displayln "	- silenced: ")
+      (when (and .?silenced (table? .silenced))
+	(hash-for-each
+	 (lambda (k v)
+	   (displayln "	- " k ": " v))
+	 .silenced))
+      (when (and .?thresholds (table? .silenced))
+	(hash-for-each
+	 (lambda (k v)
+	   (displayln "	- " k ": " v))
+	 .thresholds))
+      (displayln "	- new_host_delay: " .?new_host_delay)
+      (displayln "	- timeout_h: " .?timeout_h)
+      (displayln "	- escalation_message: " .?escalation_message))
+    (displayln "*** Created: " .?created)
+    (displayln "*** Modified: " .?modified)))
+
 (def (monitors)
   (let* ((ip datadog-host)
 	 (uri (make-dd-uri ip "monitor"))
 	 (results (from-json (do-get uri))))
-    (displayln "|ID|Creator|Query|Message|Tags|Options|Org_id|Type|Multi?|Created|Modified|")
-    (displayln "|--|-----|-------|-------|------|----|------|-------|--------|")
+;;    (displayln "|ID|Creator|Query|Message|Tags|Options|Org_id|Type|Multi?|Created|Modified|")
+;;    (displayln "|--|-----|-------|-------|------|----|------|-------|--------|")
+    (displayln "* Datadog Monitors")
     (for-each
       (lambda (monitor)
-	(print-monitor monitor))
+	(print-monitor-long monitor))
       results)))
 
 (def (epoch->date epoch)
@@ -1184,7 +1219,6 @@ namespace: dda
    ("app" (decrypt-password app-key app-iv app-password))))
 
 (def (get-dogwebu)
-  (displayln "-")
   (let-hash (load-config)
     (let* ((results
 	    (shell-command
@@ -1192,14 +1226,12 @@ namespace: dda
       (string-trim-both (cdr results)))))
 
 (def (get-dogweb dogwebu)
-  (displayln "+")
   (let-hash (load-config)
-    (let* ((cmd (format "curl -q --http1.1 -4 -X POST --cookie - --cookie-jar - \"https://app.datadoghq.com/account/login?redirect=f\" -H \"Cookie: dogwebu=~a; intercom-session=please-add-flat_tags_for_metric-to-your-api-thanks;\" --data \"username=~a&password=~a&_authentication_token=~a\"  2>/dev/null|grep -w dogweb|awk '{print $NF}'" dogwebu .username .password dogwebu))
+    (let* ((cmd (format "curl -m 3 -q --http1.1 -4 -X POST --cookie - --cookie-jar - \"https://app.datadoghq.com/account/login?redirect=f\" -H \"Cookie: dogwebu=~a; intercom-session=please-add-flat_tags_for_metric-to-your-api-thanks;\" --data \"username=~a&password=~a&_authentication_token=~a\"  2>/dev/null|grep -w dogweb|awk '{print $NF}'" dogwebu .username .password dogwebu))
 	   (results (string-trim-both (cdr (shell-command cmd #t)))))
       results)))
 
 (def (get-tags-for-metric metric)
-  (displayln "/")
   (let-hash (load-config)
     (let* ((secs 3600)
 	   (dogwebu (get-dogwebu))
@@ -1210,7 +1242,8 @@ namespace: dda
       (for-each
 	(lambda (tag)
 	  (displayln tag))
-	(hash-ref myjson 'tags)))))
+	(hash-ref myjson 'tags))))
+  (displayln ""))
 
 ;; (def (get-tags-for-metric metric)
 ;;   (let-hash (load-config)
