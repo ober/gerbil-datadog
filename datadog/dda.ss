@@ -116,9 +116,10 @@ namespace: dda
      (car (yaml-load config-file)))
     (let-hash config
       (when .?secrets
+	(displayln (hash-keys (u8vector->object (base64-decode .secrets))))
 	(let-hash (u8vector->object (base64-decode .secrets))
-	  (hash-put! config 'datadog-api-key (decrypt-bundle .api))
-	  (hash-put! config 'datadog-app-key (decrypt-bundle .app))
+	  (hash-put! config 'datadog-api-key (decrypt-bundle .api-key))
+	  (hash-put! config 'datadog-app-key (decrypt-bundle .app-key))
 	  (hash-put! config 'username (decrypt-bundle .username))
 	  (hash-put! config 'password (decrypt-bundle .password)))))
     config))
@@ -155,7 +156,6 @@ namespace: dda
       (string-concatenate [ datadog-base-url adds (format "?api_key=~a&application_key=~a" datadog-api-key datadog-app-key)]))))
 
 (def (make-test-uri ip adds)
-  (ensure-api-keys)
   (let* ((datadog-base-url (format "http://~a/headers" ip)))
     (if (string-contains adds "?")
       (string-concatenate [ datadog-base-url adds (format "&api_key=~a&application_key=~a" datadog-api-key datadog-app-key)])
@@ -1223,13 +1223,6 @@ namespace: dda
 (def (decrypt-bundle bundle)
   (let-hash bundle
     (decrypt-password .key .iv .password)))
-
-(def (get-keys-from-config api-key api-iv api-password app-key app-iv app-password username-key username-iv username-password password-key password-iv password-password)
-  (hash
-   ("api" (decrypt-password api-key api-iv api-password))
-   ("app" (decrypt-password app-key app-iv app-password))
-   ("username" (decrypt-password username-key username-iv username-password))
-   ("password" (decrypt-password password-key password-iv password-password))))
 
 (def datadog-auth-url "https://app.datadoghq.com/account/login?redirect=f")
 
