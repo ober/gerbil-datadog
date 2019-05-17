@@ -70,6 +70,9 @@ namespace: dda
    ("graph-min" (hash (description: "Create a graph from query.") (usage: "graph-min <query>") (count: 1)))
    ("metric-tags" (hash (description: "get-tags-for-metric <metric>.") (usage: "get-tags-for-metric <metric>") (count: 1)))
    ("metrics" (hash (description: "List Datadog Metrics and search on argument 1.") (usage: "metrics <pattern of metric to search for>") (count: 1)))
+   ("live-metrics" (hash (description: "List Datadog live metrics for host.") (usage: "live-metrics <hostname>") (count: 1)))
+   ("totals" (hash (description: "Host Totals.") (usage: "totals") (count: 0)))
+   ("hosts" (hash (description: "List Datadog Hosts that match argument 1.") (usage: "hosts <pattern of host to search for>") (count: 1)))
    ("monitor" (hash (description: "Describe Monitor.") (usage: "monitor <monitor id>") (count: 1)))
    ("monitors" (hash (description: "List all monitors.") (usage: "monitors") (count: 0)))
    ("new-monitor" (hash (description: "Create new monitor.") (usage: "new-monitor <type> <query> <name> <message> <tags>") (count: 5)))
@@ -648,7 +651,7 @@ namespace: dda
    ("title" title)
    ("definition"
     (hash
-     ("events" '())
+     ("events" [])
      ("requests"
       [
        (hash
@@ -729,7 +732,7 @@ namespace: dda
 	      ("description" (hash-get dash 'description)))))))
 
 (def (make-query-for-hosts metric hosts)
-  (let ((results '()))
+  (let ((results []))
     (for-each
       (lambda (host)
 	(set! results (append results [(format "avg:~a{host:~a}" metric host)]))
@@ -745,7 +748,7 @@ namespace: dda
 	 (dash (hash-get tbinfo 'dash))
 	 (graphs (hash-get dash 'graphs))
 	 (title (hash-get dash 'title))
-	 (new-graphs '())
+	 (new-graphs [])
 	 (headers '(("Content-type" . "application/json"))))
     (unless (string=? replace "t")
       (set! new-graphs graphs))
@@ -939,7 +942,7 @@ namespace: dda
 (def (search-metrics pattern)
   (let* ((ip datadog-host)
 	 (uri (make-dd-uri ip (format "search?q=~a" pattern)))
-	 (metrics-matched '())
+	 (metrics-matched [])
 	 (results (hash-get (from-json (do-get uri)) 'results))
 	 (metrics (hash-get results 'metrics)))
     (for-each
@@ -950,10 +953,18 @@ namespace: dda
       metrics)
     metrics-matched))
 
+(def (hosts pattern)
+  (let ((results (search-hosts pattern)))
+    (when (list? results)
+      (for-each
+	(lambda (r)
+	  (displayln r))
+	results))))
+
 (def (search-hosts pattern)
   (let* ((ip datadog-host)
 	 (uri (make-dd-uri ip (format "search?q=~a" pattern)))
-	 (hosts-matched '())
+	 (hosts-matched [])
 	 (results (hash-get (from-json (do-get uri)) 'results))
 	 (hosts (hash-get results 'hosts)))
     (dp (format "search-hosts pattern:~a host:~a results:~a" pattern hosts results))
@@ -962,7 +973,7 @@ namespace: dda
 	(if (string-contains h pattern)
 	  (begin
 	    (dp (format "host: ~a matches ~a)" h pattern))
-	    (set! hosts-matched (append hosts-matched [h])))
+	    (set! hosts-matched (cons h hosts-matched)))
 	  (begin
 	    (dp (format "host:~a does NOT match ~a" h pattern)))))
       hosts)
@@ -1159,7 +1170,7 @@ namespace: dda
   (string->number (date->string (string->date mydate "~Y-~m-~d ~H:~M:~S") "~s")))
 
 (def (flatten x)
-  (cond ((null? x) '())
+  (cond ((null? x) [])
 	((pair? x) (append (flatten (car x)) (flatten (cdr x))))
 	(else [x])))
 
@@ -1227,16 +1238,23 @@ namespace: dda
 
 (def (metric-tags metric)
   (let-hash (load-config)
-    (let* ((dogwebu (datadog-get-dogwebu))
-	   (dogweb (datadog-get-dogweb dogwebu))
-	   (url (format "https://app.datadoghq.com/metric/flat_tags_for_metric?metric=~a&window=86400" metric))
-	   (headers [[ "Cookie:" :: (format "dogwebu=~a; dogweb=~a" dogwebu dogweb) ]])
+    (let-hash (datadog-web-login)
+    (let* ((url (format "https://app.datadoghq.com/metric/flat_tags_for_metric?metric=~a&window=86400" metric))
+	   (headers [[ "Cookie:" :: (format "dogwebu=~a; dogweb=~a" .dogwebu .dogweb) ]])
 	   (reply (http-get url headers: headers))
 	   (tags (let-hash (from-json (request-text reply)) .tags)))
       (for-each
 	(lambda (tag)
 	  (displayln tag))
-	tags))))
+	tags)))))
+
+(def (datadog-web-login)
+  (let-hash (load-config)
+    (let* ((dogwebu (datadog-get-dogwebu))
+	   (dogweb (datadog-get-dogweb dogwebu)))
+      (hash
+       (dogwebu dogwebu)
+       (dogweb dogweb)))))
 
 (def (datadog-get-dogwebu)
   (let-hash (load-config)
@@ -1275,3 +1293,22 @@ namespace: dda
   (if (string? str)
     (string-trim-both str)
     str))
+
+(def (live-metrics host)
+  (let-hash (load-config)
+    (let* ((adds (format "hosts/live_metrics?hosts[]=~a" host))
+	   (ip datadog-host)
+	   (uri (make-dd-uri ip adds))
+	   (results (do-get uri))
+	   (myjson (from-json results)))
+      (displayln results))))
+
+(def (totals)
+  (let-hash (load-config)
+    (let* ((adds "hosts/totals")
+	   (ip datadog-host)
+	   (uri (make-dd-uri ip adds))
+	   (results (do-get uri))
+	   (myjson (from-json results)))
+      (let-hash myjson
+	(displayln "Total Up: " .total_up " Total Active: " .total_active)))))
