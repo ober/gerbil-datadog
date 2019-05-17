@@ -116,7 +116,6 @@ namespace: dda
      (car (yaml-load config-file)))
     (let-hash config
       (when .?secrets
-	(displayln (hash-keys (u8vector->object (base64-decode .secrets))))
 	(let-hash (u8vector->object (base64-decode .secrets))
 	  (hash-put! config 'datadog-api-key (decrypt-bundle .api-key))
 	  (hash-put! config 'datadog-app-key (decrypt-bundle .app-key))
