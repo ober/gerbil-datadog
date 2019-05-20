@@ -75,6 +75,7 @@ namespace: dda
    ("indexes" (hash (description: "List Log Indexes.") (usage: "indexes") (count: 0)))
    ("livetail" (hash (description: "List Log Indexes.") (usage: "indexes") (count: 0)))
    ("stories" (hash (description: "stories") (usage: "stories") (count: 0)))
+   ("host" (hash (description: "host") (usage: "host <host pattern>") (count: 1)))
    ("hosts" (hash (description: "List Datadog Hosts that match argument 1.") (usage: "hosts <pattern of host to search for>") (count: 1)))
    ("monitor" (hash (description: "Describe Monitor.") (usage: "monitor <monitor id>") (count: 1)))
    ("monitors" (hash (description: "List all monitors.") (usage: "monitors") (count: 0)))
@@ -1352,3 +1353,52 @@ namespace: dda
   [
    ["Accept" :: "*/*"]
    ["Content-type" :: "application/json"]])
+
+(def (host hst (start 0))
+  (let-hash (datadog-web-login)
+    (let* ((url (format "https://app.datadoghq.com/api/v1/hosts?filter=~a&group=&start=~a&count=100&sort_field=cpu&sort_dir=desc&discovery=true" hst start))
+    	   (reply (http-get url headers: .headers))
+	   (myjson (from-json (request-text reply)))
+	   (hosts (let-hash myjson .host_list)))
+      (let-hash myjson
+	(when (> start 0)
+	  (displayln "|Name|host name|Id|Apps|Muted?|Sources|Meta|Tags By Source| aliases| up?|metrics|")
+	  (displayln "|-|-|"))
+	(for-each
+	  (lambda (host)
+	    (display-host host))
+	  .host_list)
+	(when (> .total_matching (+ start .total_returned))
+	  (host hst (+ start .total_returned)))))))
+
+ (def (display-host host)
+   (let-hash host
+     (displayln "|" .name
+		"|" .host_name
+		"|" .id
+		"|" (jif .apps ",")
+		"|" (if .is_muted "True" "False")
+		"|" (jif .sources ",")
+		"|" (hash->str .meta)
+		"|" (hash->str .tags_by_source)
+		"|" (jif .aliases ",")
+		"|" (if .up "True" "False")
+		"|" (hash->str .metrics)
+		"|" )))
+
+(def (jif lst sep)
+  "If we get a list, join it on sep"
+  (if (list? lst)
+    (string-join lst sep)
+    lst))
+
+(def (hash->str h)
+  (let ((results []))
+    (if (table? h)
+      (begin
+	(hash-for-each
+	 (lambda (k v)
+	   (set! results (append results (list (format " ~a->" k) (format "~a   " v)))))
+	 h)
+	(append-strings results))
+      "N/A")))
