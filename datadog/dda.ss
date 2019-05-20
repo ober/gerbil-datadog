@@ -1361,7 +1361,7 @@ namespace: dda
 	   (myjson (from-json (request-text reply)))
 	   (hosts (let-hash myjson .host_list)))
       (let-hash myjson
-	(when (> start 0)
+	(when (= start 0)
 	  (displayln "|Name|host name|Id|Apps|Muted?|Sources|Meta|Tags By Source| aliases| up?|metrics|")
 	  (displayln "|-|-|"))
 	(for-each
