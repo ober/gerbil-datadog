@@ -1354,22 +1354,23 @@ namespace: dda
    ["Accept" :: "*/*"]
    ["Content-type" :: "application/json"]])
 
-(def (host hst (start 0))
+(def (host hst)
   (let-hash (datadog-web-login)
-    (let* ((url (format "https://app.datadoghq.com/api/v1/hosts?filter=~a&group=&start=~a&count=100&sort_field=cpu&sort_dir=desc&discovery=true" hst start))
-    	   (reply (http-get url headers: .headers))
-	   (myjson (from-json (request-text reply)))
-	   (hosts (let-hash myjson .host_list)))
-      (let-hash myjson
-	(when (= start 0)
-	  (displayln "|Name|host name|Id|Apps|Muted?|Sources|Meta|Tags By Source| aliases| up?|metrics|")
-	  (displayln "|-|-|"))
-	(for-each
-	  (lambda (host)
-	    (display-host host))
-	  .host_list)
-	(when (> .total_matching (+ start .total_returned))
-	  (host hst (+ start .total_returned)))))))
+    (let lp ((start 0))
+      (let* ((url (format "https://app.datadoghq.com/api/v1/hosts?filter=~a&group=&start=~a&count=100&sort_field=cpu&sort_dir=desc&discovery=true" hst start))
+    	     (reply (http-get url headers: .headers))
+	     (myjson (from-json (request-text reply)))
+	     (hosts (let-hash myjson .host_list)))
+	(let-hash myjson
+	  (when (= start 0)
+	    (displayln "|Name|host name|Id|Apps|Muted?|Sources|Meta|Tags By Source| aliases| up?|metrics|")
+	    (displayln "|-|-|"))
+	  (for-each
+	    (lambda (host)
+	      (display-host host))
+	    .host_list)
+	  (when (> .total_matching (+ start .total_returned))
+	    (lp (+ start .total_returned))))))))
 
  (def (display-host host)
    (let-hash host
