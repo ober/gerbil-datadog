@@ -72,9 +72,13 @@ namespace: dda
    ("metrics" (hash (description: "List Datadog Metrics and search on argument 1.") (usage: "metrics <pattern of metric to search for>") (count: 1)))
    ("live-metrics" (hash (description: "List Datadog live metrics for host.") (usage: "live-metrics <hostname>") (count: 1)))
    ("totals" (hash (description: "Host Totals.") (usage: "totals") (count: 0)))
+   ("indexes" (hash (description: "List Log Indexes.") (usage: "indexes") (count: 0)))
+   ("livetail" (hash (description: "List Log Indexes.") (usage: "indexes") (count: 0)))
+   ("stories" (hash (description: "stories") (usage: "stories") (count: 0)))
    ("hosts" (hash (description: "List Datadog Hosts that match argument 1.") (usage: "hosts <pattern of host to search for>") (count: 1)))
    ("monitor" (hash (description: "Describe Monitor.") (usage: "monitor <monitor id>") (count: 1)))
    ("monitors" (hash (description: "List all monitors.") (usage: "monitors") (count: 0)))
+   ("status" (hash (description: "Get Datadog Status.") (usage: "status") (count: 0)))
    ("new-monitor" (hash (description: "Create new monitor.") (usage: "new-monitor <type> <query> <name> <message> <tags>") (count: 5)))
    ("query-day" (hash (description: "<query>: Query metrics for last day.") (usage: "query-day") (count: 1)))
    ("query-hour" (hash (description: "<query>: Query metrics for last hour.") (usage: "query-hour") (count: 1)))
@@ -1237,22 +1241,22 @@ namespace: dda
 (def datadog-auth-url "https://app.datadoghq.com/account/login?redirect=f")
 
 (def (metric-tags metric)
-  (let-hash (load-config)
-    (let-hash (datadog-web-login)
+  (let-hash (datadog-web-login)
     (let* ((url (format "https://app.datadoghq.com/metric/flat_tags_for_metric?metric=~a&window=86400" metric))
-	   (headers [[ "Cookie:" :: (format "dogwebu=~a; dogweb=~a" .dogwebu .dogweb) ]])
-	   (reply (http-get url headers: headers))
-	   (tags (let-hash (from-json (request-text reply)) .tags)))
+    	   (reply (http-get url headers: .headers))
+    	   (tags (let-hash (from-json (request-text reply)) .tags)))
       (for-each
-	(lambda (tag)
-	  (displayln tag))
-	tags)))))
+    	(lambda (tag)
+    	  (displayln tag))
+    	tags))))
 
 (def (datadog-web-login)
   (let-hash (load-config)
     (let* ((dogwebu (datadog-get-dogwebu))
-	   (dogweb (datadog-get-dogweb dogwebu)))
+	   (dogweb (datadog-get-dogweb dogwebu))
+	   (headers [[ "Cookie:" :: (format "dogwebu=~a; dogweb=~a" dogwebu dogweb) ]]))
       (hash
+       (headers headers)
        (dogwebu dogwebu)
        (dogweb dogweb)))))
 
@@ -1312,3 +1316,39 @@ namespace: dda
 	   (myjson (from-json results)))
       (let-hash myjson
 	(displayln "Total Up: " .total_up " Total Active: " .total_active)))))
+
+(def (stories)
+  (let-hash (datadog-web-login)
+    (let* ((url "https://app.datadoghq.com/watchdog/stories?page_size=100&stories_api_v2=true")
+	   (reply (http-get url headers: .headers)))
+      (displayln (request-text reply)))))
+
+(def (livetail)
+  (let-hash (datadog-web-login)
+    (let* ((url "https://app.datadoghq.com/logs/livetail")
+	   (reply (http-get url headers: .headers)))
+      (displayln (request-text reply)))))
+
+(def (indexes)
+  (let-hash (datadog-web-login)
+    (let* ((url "https://app.datadoghq.com/api/v1/logs/indexes?type=logs")
+	   (reply (http-get url headers: .headers))
+	   (myjson (from-json (request-text reply))))
+      (let-hash myjson
+	(for-each
+	  (lambda (index)
+	    (displayln (hash->list index)))
+	  .indexes)))))
+
+(def (status)
+  (let* ((url "https://1k6wzpspjf99.statuspage.io/api/v2/status.json")
+	(reply (http-get url headers: default-headers))
+	(myjson (from-json (request-text reply))))
+    (let-hash myjson
+      (displayln (let-hash .page .name " Url: " .url " Updated: " .updated_at))
+      (displayln "Status: " (let-hash .status " Indicator: " .indicator " Description: " .description)))))
+
+(def (default-headers basic)
+  [
+   ["Accept" :: "*/*"]
+   ["Content-type" :: "application/json"]])
