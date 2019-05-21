@@ -74,6 +74,7 @@ namespace: dda
    ("totals" (hash (description: "Host Totals.") (usage: "totals") (count: 0)))
    ("indexes" (hash (description: "List Log Indexes.") (usage: "indexes") (count: 0)))
    ("livetail" (hash (description: "List Log Indexes.") (usage: "indexes") (count: 0)))
+   ("contexts" (hash (description: ".") (usage: "contexts") (count: 0)))
    ("stories" (hash (description: "stories") (usage: "stories") (count: 0)))
    ("host" (hash (description: "host") (usage: "host <host pattern>") (count: 1)))
    ("hosts" (hash (description: "List Datadog Hosts that match argument 1.") (usage: "hosts <pattern of host to search for>") (count: 1)))
@@ -1403,3 +1404,26 @@ namespace: dda
 	 h)
 	(append-strings results))
       "N/A")))
+
+(def (contexts)
+  (let-hash (datadog-web-login)
+    (let* ((url "https://app.datadoghq.com/check/contexts?names_only=true")
+	   (headers [[ "Cookie" :: (format "dogwebu=~a; dogweb=~a; intercom-session=please-add-flat_tags_for_metric-to-your-api-thanks" .dogwebu .dogweb) ]] )
+	   (reply (http-get url headers:  headers))
+	   (text (request-text reply))
+	   (contexts (from-json text)))
+      (for-each
+	(lambda (context)
+	  (display-context context))
+	contexts))))
+
+(def (display-context context)
+  (when (table? context)
+    (let-hash context
+      (displayln "*** " .name)
+      (displayln "**** Groups")
+      (for-each
+	(lambda (group)
+	  (let-hash group
+	    (displayln "****** " .status " " .message " " .tags " " .modified)))
+	.groups))))
