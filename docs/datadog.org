@@ -330,7 +330,7 @@ EXAMPLE RESPONSE
 
 The events service allows you to programatically post events to the stream and fetch events from the stream.
 
-POST AN EVENT
+**** POST AN EVENT
 
 This end point allows you to post events to the stream. You can tag them, set priority and event aggregate them with other events.
 
@@ -392,7 +392,7 @@ EXAMPLE RESPONSE
     },
     "status": "ok"
 }
-GET AN EVENT
+**** GET AN EVENT
 
 This end point allows you to query for event details.
 
@@ -437,7 +437,7 @@ EXAMPLE RESPONSE
         "url": "/event/jump_to?event_id=1377281704830403917"
     }
 }
-DELETE AN EVENT
+**** DELETE AN EVENT
 
 This end point allows you to delete an event.
 
@@ -461,7 +461,7 @@ curl -X DELETE "https://app.datadoghq.com/api/v1/events/${event_id}?api_key=${ap
 EXAMPLE RESPONSE
 
 {"deleted_event_id": "1377281704830403917"}
-QUERY THE EVENT STREAM
+**** QUERY THE EVENT STREAM
 
 The event stream can be queried and filtered by time, priority, sources and tags.
 
@@ -1238,296 +1238,296 @@ EXAMPLE RESPONSE
     "created": "2015-12-18T16:34:14.014039+00:00",
     "modified": "2015-12-18T18:39:24.391207+00:00"
 }
-*** DOWNTIMES
+**** DOWNTIMES
 
-Downtiming gives you greater control over monitor notifications by allowing you to globally exclude scopes from alerting. Downtime settings, which can be scheduled with start and end times, prevent all alerting related to specified Datadog tags.
+ Downtiming gives you greater control over monitor notifications by allowing you to globally exclude scopes from alerting. Downtime settings, which can be scheduled with start and end times, prevent all alerting related to specified Datadog tags.
 
-SCHEDULE MONITOR DOWNTIME
+ SCHEDULE MONITOR DOWNTIME
 
-ARGUMENTS
+ ARGUMENTS
 
-scope [required]
-The scope(s) to which the downtime will apply, e.g. 'host:app2'. Provide multiple scopes as a comma-separated list, e.g. 'env:dev,env:prod'. The resulting downtime applies to sources that matches ALL provided scopes (i.e. env:dev AND env:prod), NOT any of them.
-monitor_id [optional, default=None]
-A single monitor to which the downtime will apply. If not provided, the downtime will apply to all monitors.
-start [optional, default=None]
-POSIX timestamp to start the downtime. If not provided, the downtime starts the moment it is created.
-end [optional, default=None]
-POSIX timestamp to end the downtime. If not provided, the downtime will be in effect indefinitely (i.e. until you cancel it).
-message [optional, default=None]
-A message to include with notifications for this downtime. Email notifications can be sent to specific users by using the same '@username' notation as events
-monitor_id [optional, default=None]
-The id of a specific monitor to apply the downtime to.
-recurrence [optional, default=None]
-An object defining the recurrence of the downtime with a variety of parameters:
-type the type of recurrence. Choose from: days, weeks, months, years.
-period how often to repeat as an integer. For example to repeat every 3 days, select a type of days and a period of 3.
-week_days (optional) a list of week days to repeat on. Choose from: Mon, Tue, Wed, Thu, Fri, Sat or Sun. Only applicable when type is weeks. First letter must be capitalized.
-until_occurrences (optional) how many times the downtime will be rescheduled. until_occurences and until_date are mutually exclusive
-until_date (optional) the date at which the recurrence should end as a POSIX timestmap. until_occurences and until_date are mutually exclusive
-timezone [optional, default=UTC]
-The timezone for the downtime.
-SIGNATURE
+ scope [required]
+ The scope(s) to which the downtime will apply, e.g. 'host:app2'. Provide multiple scopes as a comma-separated list, e.g. 'env:dev,env:prod'. The resulting downtime applies to sources that matches ALL provided scopes (i.e. env:dev AND env:prod), NOT any of them.
+ monitor_id [optional, default=None]
+ A single monitor to which the downtime will apply. If not provided, the downtime will apply to all monitors.
+ start [optional, default=None]
+ POSIX timestamp to start the downtime. If not provided, the downtime starts the moment it is created.
+ end [optional, default=None]
+ POSIX timestamp to end the downtime. If not provided, the downtime will be in effect indefinitely (i.e. until you cancel it).
+ message [optional, default=None]
+ A message to include with notifications for this downtime. Email notifications can be sent to specific users by using the same '@username' notation as events
+ monitor_id [optional, default=None]
+ The id of a specific monitor to apply the downtime to.
+ recurrence [optional, default=None]
+ An object defining the recurrence of the downtime with a variety of parameters:
+ type the type of recurrence. Choose from: days, weeks, months, years.
+ period how 3often to repeat as an integer. For example to repeat every 3 days, select a type of days and a period of 3.
+ week_days (optional) a list of week days to repeat on. Choose from: Mon, Tue, Wed, Thu, Fri, Sat or Sun. Only applicable when type is weeks. First letter must be capitalized.
+ until_occurrences (optional) how many times the downtime will be rescheduled. until_occurences and until_date are mutually exclusive
+ until_date (optional) the date at which the recurrence should end as a POSIX timestmap. until_occurences and until_date are mutually exclusive
+ timezone [optional, default=UTC]
+ The timezone for the downtime.
+ SIGNATURE
 
-POST /api/v1/downtime
-EXAMPLE REQUEST
+ POST /api/v1/downtime
+ EXAMPLE REQUEST
 
-#!/bin/sh
-# Make sure you replace the API and/or APP key below
-# with the ones for your account
+ #!/bin/sh
+ # Make sure you replace the API and/or APP key below
+ # with the ones for your account
 
-api_key=9775a026f1ca7d1c6c5af9d94d9595a4
-app_key=87ce4a24b5553d2e482ea8a8500e71b8ad4554ff
+ api_key=9775a026f1ca7d1c6c5af9d94d9595a4
+ app_key=87ce4a24b5553d2e482ea8a8500e71b8ad4554ff
 
-start=$(date +%s)
-end=$(date -v+3H +%s)
-end_recurrence=$(date -v+21d +%s)
+ start=$(date +%s)
+ end=$(date -v+3H +%s)
+ end_recurrence=$(date -v+21d +%s)
 
-curl -X POST -H "Content-type: application/json" \
--d '{
-      "scope": "env:prod",
-      "start": '"${start}"',
-      "end": '"${end}"',
-      "recurrence": {
-        "type": "weeks",
-        "period": 1,
-        "week_days": ["Mon", "Tue", "Wed", "Thu", "Fri"],
-        "until_date": '"${end_recurrence}"'
-      }
-    }' \
-    "https://app.datadoghq.com/api/v1/downtime?api_key=${api_key}&application_key=${app_key}"
-EXAMPLE RESPONSE
+ curl -X POST -H "Content-type: application/json" \
+ -d '{
+       "scope": "env:prod",
+       "start": '"${start}"',
+       "end": '"${end}"',
+       "recurrence": {
+         "type": "weeks",
+         "period": 1,
+         "week_days": ["Mon", "Tue", "Wed", "Thu", "Fri"],
+         "until_date": '"${end_recurrence}"'
+       }
+     }' \
+     "https://app.datadoghq.com/api/v1/downtime?api_key=${api_key}&application_key=${app_key}"
+ EXAMPLE RESPONSE
 
-{
-    "active": true,
-    "canceled": null,
-    "creator_id": 3658,
-    "disabled": false,
-    "end": 1445979093,
-    "id": 169267786,
-    "message": null,
-    "monitor_id": null,
-    "parent_id": null,
-    "recurrence": {
-        "period": 1,
-        "type": "weeks",
-        "until_date": 1447786293,
-        "until_occurrences": null,
-        "week_days": [
-            "Mon",
-            "Tue",
-            "Wed",
-            "Thu",
-            "Fri"
-        ]
-    },
-    "scope": [
-        "env:prod"
-    ],
-    "start": 1445968293,
-    "updater_id": null
-}
-UPDATE MONITOR DOWNTIME
+ {
+     "active": true,
+     "canceled": null,
+     "creator_id": 3658,
+     "disabled": false,
+     "end": 1445979093,
+     "id": 169267786,
+     "message": null,
+     "monitor_id": null,
+     "parent_id": null,
+     "recurrence": {
+         "period": 1,
+         "type": "weeks",
+         "until_date": 1447786293,
+         "until_occurrences": null,
+         "week_days": [
+             "Mon",
+             "Tue",
+             "Wed",
+             "Thu",
+             "Fri"
+         ]
+     },
+     "scope": [
+         "env:prod"
+     ],
+     "start": 1445968293,
+     "updater_id": null
+ }
+ UPDATE MONITOR DOWNTIME
 
-ARGUMENTS
+ ARGUMENTS
 
-id [required]
-The integer id of the downtime to be updated
-scope [optional, default=original scope]
-The scope to which the downtime will apply, e.g. 'host:app2'. Provide multiple scopes as a comma-separated list, e.g. 'env:dev,env:prod'. The resulting downtime applies to sources that matches ALL provided scopes (i.e. env:dev AND env:prod), NOT any of them.
-monitor_id [optional, default=None]
-A single monitor to which the downtime will apply. If not provided, the downtime will apply to all monitors.
-start [optional, default=original]
-POSIX timestamp to start the downtime.
-end [optional, default=original end]
-POSIX timestamp to end the downtime. If not provided, the downtime will be in effect indefinitely (i.e. until you cancel it).
-message [optional, default=original message]
-A message to include with notifications for this downtime. Email notifications can be sent to specific users by using the same '@username' notation as events
-recurrence [optional, default=original recurrence]
-An object defining the recurrence of the downtime with a variety of parameters:
-type the type of recurrence. Choose from: days, weeks, months, years.
-period how often to repeat as an integer. For example to repeat every 3 days, select a type of days and a period of 3.
-week_days (optional) a list of week days to repeat on. Choose from: Mon, Tue, Wed, Thu, Fri, Sat or Sun. Only applicable when type is weeks. First letter must be capitalized.
-until_occurrences (optional) how many times the downtime will be rescheduled. until_occurences and until_date are mutually exclusive
-until_date (optional) the date at which the recurrence should end as a POSIX timestmap. until_occurences and until_date are mutually exclusive
-timezone [optional, default=original timezone]
-The timezone for the downtime.
-SIGNATURE
+ id [required]
+ The integer id of the downtime to be updated
+ scope [optional, default=original scope]
+ The scope to which the downtime will apply, e.g. 'host:app2'. Provide multiple scopes as a comma-separated list, e.g. 'env:dev,env:prod'. The resulting downtime applies to sources that matches ALL provided scopes (i.e. env:dev AND env:prod), NOT any of them.
+ monitor_id [optional, default=None]
+ A single monitor to which the downtime will apply. If not provided, the downtime will apply to all monitors.
+ start [optional, default=original]
+ POSIX timestamp to start the downtime.
+ end [optional, default=original end]
+ POSIX timestamp to end the downtime. If not provided, the downtime will be in effect indefinitely (i.e. until you cancel it).
+ message [optional, default=original message]
+ A message to include with notifications for this downtime. Email notifications can be sent to specific users by using the same '@username' notation as events
+ recurrence [optional, default=original recurrence]
+ An object defining the recurrence of the downtime with a variety of parameters:
+ type the type of recurrence. Choose from: days, weeks, months, years.
+ period how often to repeat as an integer. For example to repeat every 3 days, select a type of days and a period of 3.
+ week_days (optional) a list of week days to repeat on. Choose from: Mon, Tue, Wed, Thu, Fri, Sat or Sun. Only applicable when type is weeks. First letter must be capitalized.
+ until_occurrences (optional) how many times the downtime will be rescheduled. until_occurences and until_date are mutually exclusive
+ until_date (optional) the date at which the recurrence should end as a POSIX timestmap. until_occurences and until_date are mutually exclusive
+ timezone [optional, default=original timezone]
+ The timezone for the downtime.
+ SIGNATURE
 
-PUT /api/v1/downtime/:downtime_id
-EXAMPLE REQUEST
+ PUT /api/v1/downtime/:downtime_id
+ EXAMPLE REQUEST
 
-#!/bin/sh
-# Make sure you replace the API and/or APP key below
-# with the ones for your account
+ #!/bin/sh
+ # Make sure you replace the API and/or APP key below
+ # with the ones for your account
 
-api_key=9775a026f1ca7d1c6c5af9d94d9595a4
-app_key=87ce4a24b5553d2e482ea8a8500e71b8ad4554ff
-downtime_id=4336
+ api_key=9775a026f1ca7d1c6c5af9d94d9595a4
+ app_key=87ce4a24b5553d2e482ea8a8500e71b8ad4554ff
+ downtime_id=4336
 
-# Create a downtime to update
-currenttime=$(date +%s)
-downtime_id=$(curl -X POST -H "Content-type: application/json" \
--d "{
-      \"scope\": \"env:prod\",
-      \"start\": \"${currenttime}\"
+ # Create a downtime to update
+ currenttime=$(date +%s)
+ downtime_id=$(curl -X POST -H "Content-type: application/json" \
+ -d "{
+       \"scope\": \"env:prod\",
+       \"start\": \"${currenttime}\"
+     }" \
+     "https://app.datadoghq.com/api/v1/downtime?api_key=${api_key}&application_key=${app_key}" | jq '.id')
+
+ curl -X PUT -H "Content-type: application/json" \
+ -d '{
+       "scope": "env:staging",
+       "message": "Doing some testing on staging"
+     }' \
+     "https://app.datadoghq.com/api/v1/downtime/${downtime_id}?api_key=${api_key}&application_key=${app_key}"
+ EXAMPLE RESPONSE
+
+ {
+     "active": true,
+     "disabled": false,
+     "end": 1418303372,
+     "id": 4336,
+     "message": "Doing some testing on staging",
+     "scope": [
+         "env:staging"
+     ],
+     "start": 1418224729
+ }
+ CANCEL MONITOR DOWNTIME
+
+ ARGUMENTS
+
+ id [required]
+ The integer id of the downtime to be canceled
+ SIGNATURE
+
+ DELETE /api/v1/downtime/:downtime_id
+ EXAMPLE REQUEST
+
+ #!/bin/sh
+ # Make sure you replace the API and/or APP key below
+ # with the ones for your account
+
+ api_key=9775a026f1ca7d1c6c5af9d94d9595a4
+ app_key=87ce4a24b5553d2e482ea8a8500e71b8ad4554ff
+ downtime_id=1656
+
+ # Create a downtime to delete
+ currenttime=$(date +%s)
+ downtime_id=$(curl -X POST -H "Content-type: application/json" \
+ -d "{
+       \"scope\": \"env:prod\",
+       \"start\": \"${currenttime}\"
+     }" \
+     "https://app.datadoghq.com/api/v1/downtime?api_key=${api_key}&application_key=${app_key}" | jq '.id')
+
+ curl -X DELETE -H "Content-type: application/json" "https://app.datadoghq.com/api/v1/downtime/${downtime_id}?api_key=${api_key}&application_key=${app_key}"
+ EXAMPLE RESPONSE
+
+ This end point does not return JSON on successful requests.
+ CANCEL MONITOR DOWNTIMES BY SCOPE
+
+ ARGUMENTS
+
+ scope [required]
+ Cancel all downtimes with the given scope(s), e.g. 'env:prod', 'role:db,role:db-slave'.
+ SIGNATURE
+
+ POST /api/v1/downtime/cancel/by_scope
+ EXAMPLE REQUEST
+
+ #!/bin/sh
+ # Make sure you replace the API and/or APP key below
+ # with the ones for your account
+
+ #!/bin/bash
+
+ api_key="9775a026f1ca7d1c6c5af9d94d9595a4"
+ app_key="87ce4a24b5553d2e482ea8a8500e71b8ad4554ff"
+
+ curl -X POST -H "Content-type: application/json" -H "Accept: application/json" \
+ -d "{
+       \"scope\": \"host:i-123\"
     }" \
-    "https://app.datadoghq.com/api/v1/downtime?api_key=${api_key}&application_key=${app_key}" | jq '.id')
+    "https://app.datadoghq.com/api/v1/downtime/cancel/by_scope?api_key=${api_key}&application_key=${app_key}"
+ EXAMPLE RESPONSE
 
-curl -X PUT -H "Content-type: application/json" \
--d '{
-      "scope": "env:staging",
-      "message": "Doing some testing on staging"
-    }' \
-    "https://app.datadoghq.com/api/v1/downtime/${downtime_id}?api_key=${api_key}&application_key=${app_key}"
-EXAMPLE RESPONSE
+ {
+	 "cancelled_ids":[123456789,123456790]
+ }
+ GET A MONITOR DOWNTIME
 
-{
-    "active": true,
-    "disabled": false,
-    "end": 1418303372,
-    "id": 4336,
-    "message": "Doing some testing on staging",
-    "scope": [
-        "env:staging"
-    ],
-    "start": 1418224729
-}
-CANCEL MONITOR DOWNTIME
+ ARGUMENTS
 
-ARGUMENTS
+ This end point takes no JSON arguments.'
+ SIGNATURE
 
-id [required]
-The integer id of the downtime to be canceled
-SIGNATURE
+ GET /api/v1/downtime/:downtime_id
+ EXAMPLE REQUEST
 
-DELETE /api/v1/downtime/:downtime_id
-EXAMPLE REQUEST
+ #!/bin/sh
+ # Make sure you replace the API and/or APP key below
+ # with the ones for your account
 
-#!/bin/sh
-# Make sure you replace the API and/or APP key below
-# with the ones for your account
+ api_key=9775a026f1ca7d1c6c5af9d94d9595a4
+ app_key=87ce4a24b5553d2e482ea8a8500e71b8ad4554ff
+ downtime_id=2473
 
-api_key=9775a026f1ca7d1c6c5af9d94d9595a4
-app_key=87ce4a24b5553d2e482ea8a8500e71b8ad4554ff
-downtime_id=1656
+ curl "https://app.datadoghq.com/api/v1/downtime/${downtime_id}?api_key=${api_key}&application_key=${app_key}"
+ EXAMPLE RESPONSE
 
-# Create a downtime to delete
-currenttime=$(date +%s)
-downtime_id=$(curl -X POST -H "Content-type: application/json" \
--d "{
-      \"scope\": \"env:prod\",
-      \"start\": \"${currenttime}\"
-    }" \
-    "https://app.datadoghq.com/api/v1/downtime?api_key=${api_key}&application_key=${app_key}" | jq '.id')
+ {'active': True,
+  'disabled': False,
+  'end': 1420447087,
+  'id': 2910,
+  'message': 'Doing some testing on staging.',
+  'scope': ['env:staging'],
+  'start': 1420387032}
+ GET ALL MONITOR DOWNTIMES
 
-curl -X DELETE -H "Content-type: application/json" "https://app.datadoghq.com/api/v1/downtime/${downtime_id}?api_key=${api_key}&application_key=${app_key}"
-EXAMPLE RESPONSE
+ ARGUMENTS
 
-This end point does not return JSON on successful requests.
-CANCEL MONITOR DOWNTIMES BY SCOPE
+ current_only [optional, default=false]
+ Only return downtimes that are activewhen the request is made.
+ SIGNATURE
 
-ARGUMENTS
+ GET /api/v1/downtime
+ EXAMPLE REQUEST
 
-scope [required]
-Cancel all downtimes with the given scope(s), e.g. 'env:prod', 'role:db,role:db-slave'.
-SIGNATURE
+ #!/bin/sh
+ # Make sure you replace the API and/or APP key below
+ # with the ones for your account
 
-POST /api/v1/downtime/cancel/by_scope
-EXAMPLE REQUEST
+ api_key=9775a026f1ca7d1c6c5af9d94d9595a4
+ app_key=87ce4a24b5553d2e482ea8a8500e71b8ad4554ff
 
-#!/bin/sh
-# Make sure you replace the API and/or APP key below
-# with the ones for your account
+ curl -G "https://app.datadoghq.com/api/v1/downtime" \
+      -d "api_key=${api_key}" \
+      -d "application_key=${app_key}"
+ EXAMPLE RESPONSE
 
-#!/bin/bash
-
-api_key="9775a026f1ca7d1c6c5af9d94d9595a4"
-app_key="87ce4a24b5553d2e482ea8a8500e71b8ad4554ff"
-
-curl -X POST -H "Content-type: application/json" -H "Accept: application/json" \
--d "{
-      \"scope\": \"host:i-123\"
-   }" \
-   "https://app.datadoghq.com/api/v1/downtime/cancel/by_scope?api_key=${api_key}&application_key=${app_key}"
-EXAMPLE RESPONSE
-
-{
-	"cancelled_ids":[123456789,123456790]
-}
-GET A MONITOR DOWNTIME
-
-ARGUMENTS
-
-This end point takes no JSON arguments.'
-SIGNATURE
-
-GET /api/v1/downtime/:downtime_id
-EXAMPLE REQUEST
-
-#!/bin/sh
-# Make sure you replace the API and/or APP key below
-# with the ones for your account
-
-api_key=9775a026f1ca7d1c6c5af9d94d9595a4
-app_key=87ce4a24b5553d2e482ea8a8500e71b8ad4554ff
-downtime_id=2473
-
-curl "https://app.datadoghq.com/api/v1/downtime/${downtime_id}?api_key=${api_key}&application_key=${app_key}"
-EXAMPLE RESPONSE
-
-{'active': True,
- 'disabled': False,
- 'end': 1420447087,
- 'id': 2910,
- 'message': 'Doing some testing on staging.',
- 'scope': ['env:staging'],
- 'start': 1420387032}
-GET ALL MONITOR DOWNTIMES
-
-ARGUMENTS
-
-current_only [optional, default=false]
-Only return downtimes that are activewhen the request is made.
-SIGNATURE
-
-GET /api/v1/downtime
-EXAMPLE REQUEST
-
-#!/bin/sh
-# Make sure you replace the API and/or APP key below
-# with the ones for your account
-
-api_key=9775a026f1ca7d1c6c5af9d94d9595a4
-app_key=87ce4a24b5553d2e482ea8a8500e71b8ad4554ff
-
-curl -G "https://app.datadoghq.com/api/v1/downtime" \
-     -d "api_key=${api_key}" \
-     -d "application_key=${app_key}"
-EXAMPLE RESPONSE
-
-[
-    {
-        "active": false,
-        "disabled": true,
-        "end": 1412793983,
-        "id": 1625,
-        "scope": [
-            "env:staging"
-        ],
-        "start": 1412792983
-    },
-    {
-        "active": false,
-        "disabled": true,
-        "end": null,
-        "id": 1626,
-        "scope": [
-            "*"
-        ],
-        "start": 1412792985
-    }
-]
+ [
+     {
+         "active": false,
+         "disabled": true,
+         "end": 1412793983,
+         "id": 1625,
+         "scope": [
+             "env:staging"
+         ],
+         "start": 1412792983
+     },
+     {
+         "active": false,
+         "disabled": true,
+         "end": null,
+         "id": 1626,
+         "scope": [
+             "*"
+         ],
+         "start": 1412792985
+     }
+ ]
 *** TIMEBOARDS
 
 This endpoint allows you to programmatically create, update delete and query timeboards.
@@ -2320,6 +2320,7 @@ EXAMPLE RESPONSE
     "action": "Unmuted",
     "hostname": "test.host"
 }
+
 *** TAGS
 
 The tag end point allows you to tag hosts with keywords meaningful to you - like role:database. All metrics sent from a host will have its tags applied.
@@ -2341,6 +2342,7 @@ SIGNATURE
 GET /api/v1/tags/hosts
 EXAMPLE REQUEST
 
+#+BEGIN_SRC sh
 #!/bin/sh
 # Make sure you replace the API and/or APP key below
 # with the ones for your account
@@ -2349,6 +2351,7 @@ api_key=9775a026f1ca7d1c6c5af9d94d9595a4
 app_key=87ce4a24b5553d2e482ea8a8500e71b8ad4554ff
 
 curl "https://app.datadoghq.com/api/v1/tags/hosts?api_key=${api_key}&application_key=${app_key}"
+#+END_SRC
 EXAMPLE RESPONSE
 
 {
@@ -2384,6 +2387,9 @@ SIGNATURE
 GET /api/v1/tags/hosts/:host_name
 EXAMPLE REQUEST
 
+#+BEGIN_SRC sh
+
+
 #!/bin/sh
 # Make sure you replace the API and/or APP key below
 # with the ones for your account
@@ -2401,14 +2407,17 @@ host_name=$(curl -G "https://app.datadoghq.com/api/v1/search" \
 	-d "q=hosts:$host" | cut -d'"' -f6)
 
 curl "https://app.datadoghq.com/api/v1/tags/hosts/${host_name}?api_key=${api_key}&application_key=${app_key}"
-EXAMPLE RESPONSE
+#+END_SRC
 
+EXAMPLE RESPONSE
+#+BEGIN_SRC js
 {
     "tags": [
         "role:database",
         "environment:test"
     ]
 }
+#+END_SRC
 ADD TAGS TO A HOST
 
 This end point allows you to add tags to a host.
@@ -2423,6 +2432,9 @@ SIGNATURE
 
 POST /api/v1/tags/hosts/:host_name
 EXAMPLE REQUEST
+
+#+BEGIN_SRC sh
+
 
 #!/bin/sh
 # Make sure you replace the API and/or APP key below
@@ -2443,7 +2455,10 @@ curl  -X POST -H "Content-type: application/json" \
       \"tags\" : [\"environment:production\", \"role:webserver\"]
     }" \
 "https://app.datadoghq.com/api/v1/tags/hosts/${host_name}?api_key=${api_key}&application_key=${app_key}"
+#+END_SRC
 EXAMPLE RESPONSE
+#+BEGIN_SRC js
+
 
 {
     "host": "test.host",
@@ -2452,6 +2467,7 @@ EXAMPLE RESPONSE
         "environment:test"
     ]
 }
+#+END_SRC
 UPDATE HOST TAGS
 
 This end point allows you to update all tags for a given host.

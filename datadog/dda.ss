@@ -1160,8 +1160,49 @@ namespace: dda
     (for-each
       (lambda (monitor)
 	(let-hash monitor
-	  (yaml-dump (format "~a/~a.yaml" dir .id) monitor)))
+	  (yaml-dump (format "~a/~a.yaml" dir .id) (format-monitor monitor))))
       results)))
+
+(def (format-monitor monitor)
+  "Try to order the keys in this hash to consistently represent them in yaml"
+  (let-hash monitor
+    (hash
+     (name .name)
+     (query .query)
+     (id .id)
+     (multi .multi)
+     (created .created)
+     (created_at .created_at)
+     (overall_state .overall_state)
+     (creator (let-hash .creator
+		(hash
+		 (name .name)
+		 (email .email)
+		 (id .id)
+		 (handle .handle))))
+     (type .type)
+     (org_id .org_id)
+     (options (let-hash .options
+		(hash
+		 (notify_no_data (sis .?notify_no_data))
+		 (timeout_h (sis .?timeout_h))
+		 (silenced (sis .?silenced))
+		 (renotify_interval (sis .?renotify_interval))
+		 (notify_audit (sis .?notify_audit))
+		 (locked (sis .?locked))
+		 (new_host_delay (sis .?new_host_delay))
+		 (no_data_timeframe (sis .?no_data_timeframe)))))
+     (deleted .deleted)
+     (matching_downtimes .matching_downtimes)
+     (modified .modified)
+     (overall_state_modified .overall_state_modified)
+     (tags .tags)
+     (message .message))))
+
+(def (sis item)
+  (if item
+    item
+    "N/A"))
 
 (def (epoch->date epoch)
   (cond
@@ -1425,5 +1466,5 @@ namespace: dda
       (for-each
 	(lambda (group)
 	  (let-hash group
-	    (displayln "****** " .status " " .message " " .tags " " .modified)))
+	    (displayln "****** " .status " message: " (or .message "None") " " .tags " " .modified)))
 	.groups))))
