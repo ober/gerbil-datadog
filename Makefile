@@ -30,3 +30,8 @@ fast: $(eval CPPFLAGS := "-I$(SSL-BASE)include -I$(LIBYAML-BASE)include -I/usr/l
 fast: $(eval LDFLAGS := "-L$(SSL-BASE)lib -L$(LIBYAML-BASE)lib -lz -lssl -lyaml -L/usr/local/lib")
 fast:
 	gxc -O -o dda -exe -g -genv -cc-options $(CPPFLAGS) -ld-options $(LDFLAGS) -gsrc -gsc-flag -keep-c datadog/dda.ss
+
+docker:
+	docker build --rm=true -t datadog .
+	docker tag jira jaimef/datadog
+	docker push jaimef/datadog
