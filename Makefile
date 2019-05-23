@@ -33,5 +33,5 @@ fast:
 
 docker:
 	docker build --rm=true -t datadog .
-	docker tag jira jaimef/datadog
+	docker tag datadog jaimef/datadog
 	docker push jaimef/datadog
