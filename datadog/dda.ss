@@ -1234,27 +1234,26 @@ namespace: dda
     (displayln "not a table. got " data)))
 
 (def (config)
-  (let-hash (load-config)
-    (displayln "Please enter your DataDog API Key:")
-    (def api-key (read-line (current-input-port)))
-    (displayln "Please enter your DataDog Application Key:")
-    (def app-key (read-line (current-input-port)))
-    (displayln "Please enter your DataDog Username:")
-    (def username (read-line (current-input-port)))
-    (displayln "Please enter your DataDog Password:")
-    (def password (read-line (current-input-port)))
-    (def secrets (base64-encode
-		  (object->u8vector
-		   (hash
-		    (api-key (encrypt-string api-key))
-		    (app-key (encrypt-string app-key))
-		    (username (encrypt-string username))
-		    (password (encrypt-string password))))))
+  (displayln "Please enter your DataDog API Key:")
+  (def api-key (read-line (current-input-port)))
+  (displayln "Please enter your DataDog Application Key:")
+  (def app-key (read-line (current-input-port)))
+  (displayln "Please enter your DataDog Username:")
+  (def username (read-line (current-input-port)))
+  (displayln "Please enter your DataDog Password:")
+  (def password (read-line (current-input-port)))
+  (def secrets (base64-encode
+		(object->u8vector
+		 (hash
+		  (api-key (encrypt-string api-key))
+		  (app-key (encrypt-string app-key))
+		  (username (encrypt-string username))
+		  (password (encrypt-string password))))))
 
-    (displayln "Add the following lines to your " config-file)
-    (displayln "-----------------------------------------")
-    (displayln "secrets: " secrets)
-    (displayln "-----------------------------------------")))
+  (displayln "Add the following lines to your " config-file)
+  (displayln "-----------------------------------------")
+  (displayln "secrets: " secrets)
+  (displayln "-----------------------------------------"))
 
 (def (encrypt-string str)
   (let* ((cipher (make-aes-256-ctr-cipher))
