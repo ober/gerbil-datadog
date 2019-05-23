@@ -75,7 +75,7 @@ namespace: dda
    ("indexes" (hash (description: "List Log Indexes.") (usage: "indexes") (count: 0)))
    ("livetail" (hash (description: "List Log Indexes.") (usage: "indexes") (count: 0)))
    ("contexts" (hash (description: "List all contexts") (usage: "contexts") (count: 0)))
-   ("procs" (hash (description: "List all processes for host") (usage: "procs <hostname>") (count: 1)))
+   ("procs" (hash (description: "List all processes for host") (usage: "procs <hostname> < How many seconds ago?>") (count: 2)))
    ("stories" (hash (description: "stories") (usage: "stories") (count: 0)))
    ("host" (hash (description: "host") (usage: "host <host pattern>") (count: 1)))
    ("hosts" (hash (description: "List Datadog Hosts that match argument 1.") (usage: "hosts <pattern of host to search for>") (count: 1)))
@@ -1380,9 +1380,9 @@ namespace: dda
 	   (reply (http-get url headers: .headers)))
       (displayln (request-text reply)))))
 
-(def (procs host)
+(def (procs host secs)
   (let-hash (datadog-web-login)
-    (let* ((secs 100)
+    (let* ((secs 300)
 	   (start (float->int (* (- (time->seconds (builtin-current-time)) secs) 1000)))
 	   (end (float->int (* (time->seconds (builtin-current-time)) 1000)))
 	   (url (format "https://app.datadoghq.com/proc/query?from=~a&to=~a&size_by=pct_mem&group_by=family&color_by=user&q=processes{host:~a}" start end host))
@@ -1405,8 +1405,8 @@ namespace: dda
     (let-hash snapshot
       (for-each
 	(lambda (proc)
-	  (with ([ ppid user pct1 pctmem start big1 zero1 zero2 name ppid2 ] proc)
-	    (displayln (format "ppid?:~a user:~a pct1?:~a pctmem:~a start?:~a big1?:~a zero1?:~a zero2?:~a name:~a ppid2?:~a" ppid user pct1 pctmem start big1 zero1 zero2 name ppid2))))
+	  (with ([ ppid user pct1 pctmem vsz rss zero1 zero2 name nprocs ] proc)
+	    (displayln (format "ppid?:~a user:~a pct1?:~a pctmem:~a vsz:~a rss:~a zero1?:~a zero2?:~a name:~a nprocs:~a" ppid user pct1 pctmem vsz rss zero1 zero2 name nprocs))))
 	.pslist))))
 
 (def (indexes)
@@ -1446,17 +1446,17 @@ namespace: dda
 	    (displayln "|-|-|"))
 	  (for-each
 	    (lambda (host)
-	      (display-host host))
+	      (format-host host))
 	    .host_list)
 	  (when (> .total_matching (+ start .total_returned))
 	    (lp (+ start .total_returned))))))))
 
- (def (display-host host)
+ (def (format-host host)
    (let-hash host
      (displayln "|" .name
 		"|" .host_name
 		"|" .id
-		"|" (jif .apps ",")
+		"|" (jif (sort! .apps string<?) ",")
 		"|" (if .is_muted "True" "False")
 		"|" (jif .sources ",")
 		"|" (hash->str .meta)
