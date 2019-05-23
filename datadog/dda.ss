@@ -74,7 +74,8 @@ namespace: dda
    ("totals" (hash (description: "Host Totals.") (usage: "totals") (count: 0)))
    ("indexes" (hash (description: "List Log Indexes.") (usage: "indexes") (count: 0)))
    ("livetail" (hash (description: "List Log Indexes.") (usage: "indexes") (count: 0)))
-   ("contexts" (hash (description: ".") (usage: "contexts") (count: 0)))
+   ("contexts" (hash (description: "List all contexts") (usage: "contexts") (count: 0)))
+   ("procs" (hash (description: "List all processes for host") (usage: "procs <hostname>") (count: 1)))
    ("stories" (hash (description: "stories") (usage: "stories") (count: 0)))
    ("host" (hash (description: "host") (usage: "host <host pattern>") (count: 1)))
    ("hosts" (hash (description: "List Datadog Hosts that match argument 1.") (usage: "hosts <pattern of host to search for>") (count: 1)))
@@ -1346,8 +1347,16 @@ namespace: dda
 	   (ip datadog-host)
 	   (uri (make-dd-uri ip adds))
 	   (results (do-get uri))
-	   (myjson (from-json results)))
-      (displayln results))))
+	   (hosts (from-json results)))
+      (let-hash hosts
+	(for-each
+      	  (lambda (host)
+	    (displayln (hash->list host))
+      	    (let-hash host
+      	      (display .name)
+      	      (let-hash .live_metrics
+      		(displayln ": iowait: " .?iowait " load15: " .?load15 " cpu: " .?cpu))))
+      	  .host_list)))))
 
 (def (totals)
   (let-hash (load-config)
@@ -1370,6 +1379,35 @@ namespace: dda
     (let* ((url "https://app.datadoghq.com/logs/livetail")
 	   (reply (http-get url headers: .headers)))
       (displayln (request-text reply)))))
+
+(def (procs host)
+  (let-hash (datadog-web-login)
+    (let* ((secs 100)
+	   (start (float->int (* (- (time->seconds (builtin-current-time)) secs) 1000)))
+	   (end (float->int (* (time->seconds (builtin-current-time)) 1000)))
+	   (url (format "https://app.datadoghq.com/proc/query?from=~a&to=~a&size_by=pct_mem&group_by=family&color_by=user&q=processes{host:~a}" start end host))
+	   (headers [[ "cookie" :: (format "dogweb=~a; intercom-session=please-add-flat_tags_for_metric-to-your-api-thanks" .dogweb) ]
+		     [ "authority" :: "app.datadoghq.com" ]
+		     ] )
+	   (reply (http-get url headers:  headers))
+	   (text (request-text reply))
+	   (procs (from-json text)))
+      (let-hash procs
+	(for-each
+	  (lambda (snapshot)
+	    (format-snapshot snapshot))
+	  .snapshots)))))
+
+(def (format-snapshot snapshot)
+  "Snapshots are lists of pslists."
+  ;; [ 1, "rabbitmq", "0.0", "25.84", 14841081856, 8697987072, 0, 0, "beam.smp", 1 ],
+  (when (table? snapshot)
+    (let-hash snapshot
+      (for-each
+	(lambda (proc)
+	  (with ([ ppid user pct1 pctmem start big1 zero1 zero2 name ppid2 ] proc)
+	    (displayln (format "ppid?:~a user:~a pct1?:~a pctmem:~a start?:~a big1?:~a zero1?:~a zero2?:~a name:~a ppid2?:~a" ppid user pct1 pctmem start big1 zero1 zero2 name ppid2))))
+	.pslist))))
 
 (def (indexes)
   (let-hash (datadog-web-login)
