@@ -6,16 +6,19 @@ namespace: dda
 
 (import
   :gerbil/gambit
+  :gerbil/gambit/ports
   :scheme/base
   :std/crypto/cipher
   :std/crypto/etc
   :std/crypto/libcrypto
   :std/db/dbi
   :std/debug/heap
+  :std/error
   :std/format
   :std/generic
   :std/generic/dispatch
   :std/misc/channel
+  :std/misc/list
   :std/misc/ports
   :std/net/address
   :std/net/request
@@ -29,10 +32,8 @@ namespace: dda
   :std/text/json
   :std/text/utf8
   :std/text/yaml
-  :std/xml/ssax
   :std/text/zlib
-  :std/error
-  :gerbil/gambit/ports
+  :std/xml/ssax
   )
 
 (def config-file "~/.datadog.yaml")
@@ -56,6 +57,7 @@ namespace: dda
 (def interactives
   (hash
    ("config" (hash (description: "Configure credentials for datadog.") (usage: "config") (count: 0)))
+   ("contexts" (hash (description: "List all contexts") (usage: "contexts") (count: 0)))
    ("del-monitor" (hash (description: "Delete monitor.") (usage: "del-monitor <monitor id>") (count: 1)))
    ("dump" (hash (description: "Dump: dump json defintion of tboard ") (usage: "dump <tboard id>") (count: 1)))
    ("dump-monitors" (hash (description: "Dump all monitors to yaml definitions in directory passed.") (usage: "dump-monitors <directory>") (count: 1)))
@@ -68,21 +70,18 @@ namespace: dda
    ("events-raw" (hash (description: "List all events for the past day") (usage: "events-raw <secs>") (count: 1)))
    ("events-week" (hash (description: "List all events for the past week") (usage: "events-week <tags string>") (count: 1)))
    ("graph-min" (hash (description: "Create a graph from query.") (usage: "graph-min <query>") (count: 1)))
-   ("metric-tags" (hash (description: "get-tags-for-metric <metric>.") (usage: "get-tags-for-metric <metric>") (count: 1)))
-   ("metrics" (hash (description: "List Datadog Metrics and search on argument 1.") (usage: "metrics <pattern of metric to search for>") (count: 1)))
-   ("live-metrics" (hash (description: "List Datadog live metrics for host.") (usage: "live-metrics <hostname>") (count: 1)))
-   ("totals" (hash (description: "Host Totals.") (usage: "totals") (count: 0)))
-   ("indexes" (hash (description: "List Log Indexes.") (usage: "indexes") (count: 0)))
-   ("livetail" (hash (description: "List Log Indexes.") (usage: "indexes") (count: 0)))
-   ("contexts" (hash (description: "List all contexts") (usage: "contexts") (count: 0)))
-   ("procs" (hash (description: "List all processes for host") (usage: "procs <hostname> < How many seconds ago?>") (count: 2)))
-   ("stories" (hash (description: "stories") (usage: "stories") (count: 0)))
    ("host" (hash (description: "host") (usage: "host <host pattern>") (count: 1)))
    ("hosts" (hash (description: "List Datadog Hosts that match argument 1.") (usage: "hosts <pattern of host to search for>") (count: 1)))
+   ("hps" (hash (description: "Hosts Process Search.") (usage: "hps <host pattern> <process pattern>") (count: 2)))
+   ("indexes" (hash (description: "List Log Indexes.") (usage: "indexes") (count: 0)))
+   ("live-metrics" (hash (description: "List Datadog live metrics for host.") (usage: "live-metrics <hostname>") (count: 1)))
+   ("livetail" (hash (description: "List Log Indexes.") (usage: "indexes") (count: 0)))
+   ("metric-tags" (hash (description: "get-tags-for-metric <metric>.") (usage: "get-tags-for-metric <metric>") (count: 1)))
+   ("metrics" (hash (description: "List Datadog Metrics and search on argument 1.") (usage: "metrics <pattern of metric to search for>") (count: 1)))
    ("monitor" (hash (description: "Describe Monitor.") (usage: "monitor <monitor id>") (count: 1)))
    ("monitors" (hash (description: "List all monitors.") (usage: "monitors") (count: 0)))
-   ("status" (hash (description: "Get Datadog Status.") (usage: "status") (count: 0)))
    ("new-monitor" (hash (description: "Create new monitor.") (usage: "new-monitor <type> <query> <name> <message> <tags>") (count: 5)))
+   ("procs" (hash (description: "List all processes for host") (usage: "procs <hostname> < How many seconds ago?>") (count: 2)))
    ("query-day" (hash (description: "<query>: Query metrics for last day.") (usage: "query-day") (count: 1)))
    ("query-hour" (hash (description: "<query>: Query metrics for last hour.") (usage: "query-hour") (count: 1)))
    ("query-metrics" (hash (description: "<query>: Query metrics for last min.") (usage: "query-metrics") (count: 1)))
@@ -90,6 +89,8 @@ namespace: dda
    ("screen" (hash (description: "Descript existing screen") (usage: "screen <screen id>") (count: 1)))
    ("screens" (hash (description: "List all Screenboards") (usage: "screens") (count: 0)))
    ("search" (hash (description: "list all metrics or hosts matching pattern") (usage: "search <pattern>") (count: 1)))
+   ("status" (hash (description: "Get Datadog Status.") (usage: "status") (count: 0)))
+   ("stories" (hash (description: "stories") (usage: "stories") (count: 0)))
    ("tag" (hash (description: "Add a tag to a hostname") (usage: "tag <host> <tag name:value>") (count: 2)))
    ("tags" (hash (description: "list all tags and hosts") (usage: "tags") (count: 0)))
    ("tboard" (hash (description: "Get info on timeboard.") (usage: "timeboards <timeboard id>")(count: 1)))
@@ -98,6 +99,7 @@ namespace: dda
    ("tboard-mass-add" (hash (description: "Add charts matching regexp metrics to a timeboard.") (usage: "tboard-add-chart <timeboard id> <pattern> <host clause> <Group by clause> <replace all charts? ? t or f>")(count: 5)))
    ("tboard-mass-add-many" (hash (description: "Add charts matching regexp metrics to a timeboard. Useful for multiple hosts.") (usage: "tboard-add-chart <timeboard id> <pattern> <host clause 'host1 host2 host3'> <replace all charts? t/f>  ")(count: 4)))
    ("tboards" (hash (description: "List all timeboards") (usage: "timeboards")(count: 0)))
+   ("totals" (hash (description: "Host Totals.") (usage: "totals") (count: 0)))
    ("verify-account" (hash (description: "Verify account credentials") (usage: "validate") (count: 0)))
    ("view-md" (hash (description: "Describe metric metadata") (usage: "view-md") (count: 1)))
    ))
@@ -1380,8 +1382,8 @@ namespace: dda
 	   (reply (http-get url headers: .headers)))
       (displayln (request-text reply)))))
 
-(def (procs host secs)
-  (let-hash (datadog-web-login)
+(def (get-procs-by-host host secs dwl)
+  (let-hash dwl
     (let* ((secs 300)
 	   (start (float->int (* (- (time->seconds (builtin-current-time)) secs) 1000)))
 	   (end (float->int (* (time->seconds (builtin-current-time)) 1000)))
@@ -1392,11 +1394,41 @@ namespace: dda
 	   (reply (http-get url headers:  headers))
 	   (text (request-text reply))
 	   (procs (from-json text)))
-      (let-hash procs
-	(for-each
-	  (lambda (snapshot)
-	    (format-snapshot snapshot))
-	  .snapshots)))))
+      procs)))
+
+(def (hps host pattern)
+  (hosts-proc-search host pattern))
+
+(def (hosts-proc-search host procpat)
+  (let ((dwl (datadog-web-login)))
+    (let ((hosts (search-hosts host)))
+      (for-each
+	(lambda (host)
+	  (displayln "doing " host)
+	  (let ((results (flatten (proc host procpat dwl))))
+	    (when (length>n? results 0)
+	      (displayln "- " host ": " (string-join results ",")))))
+	hosts))))
+
+(def (procs host secs)
+  "Return all processes for a given host in last n seconds"
+  (let ((dwl (datadog-web-login)))
+    (let-hash (get-procs-by-host host secs dwl)
+      (for-each
+	(lambda (snapshot)
+	  (format-snapshot snapshot))
+	.snapshots))))
+
+(def (proc host pattern dwl)
+  "Find any processes who's name matches pattern on the given host and seconds window"
+  (let-hash (get-procs-by-host host 300 dwl)
+    (let ((results #f)
+	  (matches []))
+    (for-each
+      (lambda (snapshot)
+	(set! matches (cons (match-snapshot snapshot pattern) matches)))
+      .snapshots)
+    matches)))
 
 (def (format-snapshot snapshot)
   "Snapshots are lists of pslists."
@@ -1408,6 +1440,20 @@ namespace: dda
 	  (with ([ ppid user pct1 pctmem vsz rss zero1 zero2 name nprocs ] proc)
 	    (displayln (format "ppid?:~a user:~a pct1?:~a pctmem:~a vsz:~a rss:~a zero1?:~a zero2?:~a name:~a nprocs:~a" ppid user pct1 pctmem vsz rss zero1 zero2 name nprocs))))
 	.pslist))))
+
+(def (match-snapshot snapshot pattern)
+  "Snapshots are lists of pslists."
+  ;; [ 1, "rabbitmq", "0.0", "25.84", 14841081856, 8697987072, 0, 0, "beam.smp", 1 ],
+  (when (table? snapshot)
+    (let ((results []))
+      (let-hash snapshot
+	(for-each
+	  (lambda (proc)
+	    (with ([ ppid user pct1 pctmem vsz rss zero1 zero2 name nprocs ] proc)
+	      (when (pregexp-match pattern name)
+		(set! results (cons name results)))))
+	  .pslist)
+	results))))
 
 (def (indexes)
   (let-hash (datadog-web-login)
