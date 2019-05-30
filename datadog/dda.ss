@@ -1487,6 +1487,7 @@ namespace: dda
    ["Content-type" :: "application/json"]])
 
 (def (host hst)
+  "We do not support regexp as hst here as this is used on the api directly to return matching hosts on pattern"
   (let-hash (datadog-web-login)
     (let lp ((start 0))
       (let* ((url (format "https://app.datadoghq.com/api/v1/hosts?filter=~a&group=&start=~a&count=100&sort_field=cpu&sort_dir=desc&discovery=true" hst start))
