@@ -1500,14 +1500,14 @@ namespace: dda
          (displayln host))))
 
 (def (hosts-with-agent)
-  (host-with-app "agent"))
+  (hosts-with-app "agent"))
 
 (def (find-app app)
   "Return a list of hosts with app listed in it's apps"
   (for (host (hosts-with-app app))
        (displayln host)))
 
-(def (host-with-app app)
+(def (hosts-with-app app)
   "Return a list of hostnames for all servers with agent listed in their apps. Used with proc search to avoid hitting hosts without proc info"
   (let ((secret-agents [])
 	(hosts (get-meta-by-host "")))
