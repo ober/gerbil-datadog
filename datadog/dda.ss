@@ -1438,7 +1438,7 @@ namespace: dda
 	   (procs (from-json text)))
       procs)))
 
-(def (hps host pattern)
+(def (sproc host pattern)
   (hosts-proc-search host pattern))
 
 (def (hosts-proc-search host procpat)
