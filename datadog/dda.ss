@@ -970,21 +970,28 @@ namespace: dda
 	  (displayln r))
 	results))))
 
+(def (regexp->str regexp)
+  (let ((str regexp)
+	(regexps [ #\^
+		   #\$
+		   ]))
+    (for-each
+      (lambda (remove)
+	(set! str (string-delete remove str)))
+      regexps)
+    str))
+
 (def (search-hosts pattern)
-  (let* ((ip datadog-host)
-	 (uri (make-dd-uri ip (format "search?q=~a" pattern)))
+  (let* ((safe-str (regexp->str pattern))
+	 (uri (make-dd-uri datadog-host (format "search?q=~a" safe-str)))
 	 (hosts-matched [])
 	 (results (hash-get (from-json (do-get uri)) 'results))
 	 (hosts (hash-get results 'hosts)))
-    (dp (format "search-hosts pattern:~a host:~a results:~a" pattern hosts results))
     (for-each
       (lambda (h)
-	(if (string-contains h pattern)
-	  (begin
-	    (dp (format "host: ~a matches ~a)" h pattern))
-	    (set! hosts-matched (cons h hosts-matched)))
-	  (begin
-	    (dp (format "host:~a does NOT match ~a" h pattern)))))
+	(let ((matches (pregexp-match pattern h)))
+	  (when matches
+	    (set! hosts-matched (cons h hosts-matched)))))
       hosts)
     hosts-matched))
 
