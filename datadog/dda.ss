@@ -72,6 +72,7 @@ namespace: dda
    ("events-month" (hash (description: "List all events for the past month") (usage: "events-month <tags string>") (count: 1)))
    ("events-raw" (hash (description: "List all events for the past day") (usage: "events-raw <secs>") (count: 1)))
    ("events-week" (hash (description: "List all events for the past week") (usage: "events-week <tags string>") (count: 1)))
+   ("find-app" (hash (description: "List all servers with app") (usage: "find-app <application name>") (count: 1)))
    ("graph-min" (hash (description: "Create a graph from query.") (usage: "graph-min <query>") (count: 1)))
    ("host" (hash (description: "host") (usage: "host <host pattern>") (count: 1)))
    ("hosts" (hash (description: "List Datadog Hosts that match argument 1.") (usage: "hosts <pattern of host to search for>") (count: 1)))
@@ -1357,7 +1358,7 @@ namespace: dda
 		  (else
 		   (displayln "unknown state: " (thread-state thread))
 		   (set! threads (cdr threads))))))
-	  (dp (format "loop: total: ~a running: ~a waiting: ~a terminated: ~a" (length threads) running_t waiting_t terminated_t))
+	  (dp (format "loop: total: ~a running: ~a waiting: ~a terminated: ~a abnormal_terminated: ~a" (length threads) running_t waiting_t terminated_t abterminated_t))
 	  (thread-sleep! 1)))
       data)))
 
@@ -1374,10 +1375,10 @@ namespace: dda
 	   (procs (from-json text)))
       procs)))
 
-(def (sproc host pattern)
-  (hosts-proc-search host pattern))
+(def (sproc pattern)
+  (hosts-proc-search pattern))
 
-(def (hosts-proc-search host procpat)
+(def (hosts-proc-search procpat)
   (let* ((dwl (datadog-web-login))
 	 (hosts (hosts-with-agent))
 	 (threads (spawn-proc-collectors hosts 300 dwl))
@@ -1499,12 +1500,20 @@ namespace: dda
          (displayln host))))
 
 (def (hosts-with-agent)
+  (host-with-app "agent"))
+
+(def (find-app app)
+  "Return a list of hosts with app listed in it's apps"
+  (for (host (hosts-with-app app))
+       (displayln host)))
+
+(def (host-with-app app)
   "Return a list of hostnames for all servers with agent listed in their apps. Used with proc search to avoid hitting hosts without proc info"
   (let ((secret-agents [])
 	(hosts (get-meta-by-host "")))
     (for (host hosts)
 	 (let-hash host
-	   (when (member "agent" .apps)
+	   (when (member app .apps)
 	     (set! secret-agents (flatten (cons .host_name secret-agents))))))
     secret-agents))
 
