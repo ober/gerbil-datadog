@@ -1485,7 +1485,6 @@ namespace: dda
 	.snapshots)
       (when (length>n? (flatten matches) 0)
 	(let ((host (car (pregexp-split "\\}" (cadr (pregexp-split "\\{" .query))))))
-	  (displayln "host: is " host)
 	  (displayln host ": " (string-join (flatten matches) ",")))))))
 
 (def (format-snapshot snapshot)
