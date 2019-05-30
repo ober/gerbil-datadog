@@ -1445,7 +1445,7 @@ namespace: dda
 (def (hosts-proc-search host procpat)
   (let* ((dwl (datadog-web-login))
 	 (hosts (search-hosts host))
-	 (threads (spawn-proc-collectors hosts 100 dwl))
+	 (threads (spawn-proc-collectors hosts 300 dwl))
 	 (results (collect-from-pool threads)))
     (for-each
       (lambda (result)
