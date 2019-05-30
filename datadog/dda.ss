@@ -249,14 +249,12 @@ namespace: dda
     (print-points .pointlist)))
 
 (def (print-points points)
-  (for-each
-    (lambda (point)
-      (let ((date (car point))
-	    (datum (car (cdr point))))
-	(unless (fixnum? datum)
-	  (set! datum (float->int datum)))
-	(displayln (date->string (epoch->date date) "~s") " " datum)))
-    points))
+  (for (point points)
+       (let ((date (car point))
+	     (datum (car (cdr point))))
+	 (unless (fixnum? datum)
+	   (set! datum (float->int datum)))
+	 (displayln (date->string (epoch->date date) "~s") " " datum))))
 
 (def (stringify-hash h)
   (let ((results []))
@@ -283,11 +281,9 @@ namespace: dda
 	 (status (hash-ref myjson 'status)))
     (if (string= "ok" status)
       (begin
-	(for-each
-	  (lambda (p)
-	    (displayln p)
-	    (print-opts p))
-	  (hash-get myjson 'series)))
+	(for (p (hash-get myjson 'series))
+	     (displayln p)
+	     (print-opts p)))
       (begin ;; failure to find stuff
 	(displayln "Failed with status:" status)))))
 
@@ -370,12 +366,10 @@ namespace: dda
 	  (hash-get
 	   (from-json results)
 	   'metrics)))
-    (for-each
-      (lambda (m)
-	(if pattern
-	  (if (string-contains m pattern)
-	    (displayln m))))
-      metrics)))
+    (for (m metrics)
+	 (if pattern
+	   (if (string-contains m pattern)
+	     (displayln m))))))
 
 (def (usage-verb verb)
   (let ((howto (hash-get interactives verb)))
@@ -386,10 +380,8 @@ namespace: dda
 (def (usage)
   (displayln "Usage: datadog <verb>")
   (displayln "Verbs:")
-  (for-each
-    (lambda (k)
-      (displayln (format "~a: ~a" k (hash-get (hash-get interactives k) description:))))
-    (sort! (hash-keys interactives) string<?))
+  (for (k (sort! (hash-keys interactives) string<?))
+       (displayln (format "~a: ~a" k (hash-get (hash-get interactives k) description:))))
   (exit 2))
 
 (def (nth n l)
@@ -501,8 +493,7 @@ namespace: dda
   (get-events-last-secs (* 30 86400) tags))
 
 (def (print-events events)
-  (for-each
-    (lambda (event)
+  (for (event events)
       (let-hash event
 	(displayln
 	 " source: " .source
@@ -520,62 +511,58 @@ namespace: dda
 	 " text: " .text
 	 " comments: " .comments
 	 (if (hash-key? event 'children)
-	   (print-children .children)))))
-    events))
+	   (print-children .children))))))
 
 (def (print-date date)
   (date->string date "~c"))
 
 (def (print-children children)
-  (for-each
-    (lambda (child)
-      (let-hash child
-	(displayln
-	 " -: " (print-date (epoch->date .date_happened))
-	 " alert_type: " .alert_type
-	 " id: " .id)))
-    children))
+  (for (child children)
+       (let-hash child
+	 (displayln
+	  " -: " (print-date (epoch->date .date_happened))
+	  " alert_type: " .alert_type
+	  " id: " .id))))
 
 (def (downtimes)
   (let* ((ip datadog-host)
 	 (uri (make-dd-uri ip "downtime"))
 	 (dts (from-json (do-get uri))))
-    (for-each
-      (lambda (dt)
-	(let
-	    ((start (hash-get dt 'start))
-	     (parent_id (hash-get dt 'parent_id))
-	     (scope (hash-get dt 'scope))
-	     (downtime_type (hash-get dt 'downtime_type))
-	     (timezone (hash-get dt 'timezone))
-	     (id (hash-get dt 'id))
-	     (message (hash-get dt 'message))
-	     (updater_id (hash-get dt 'updater_id))
-	     (recurrence (hash-get dt 'recurrence))
-	     (canceled (hash-get dt 'canceled))
-	     (disabled (hash-get dt 'disabled))
-	     (creator_id (hash-get dt 'creator_id))
-	     (end (hash-get dt 'end))
-	     (active (hash-get dt 'active))
-	     (monitor_id (hash-get dt 'monitor_id)))
-	  (displayln
-	   " start:" start
-	   " parent_id:" parent_id
-	   " scope:" scope
-	   " downtime_type:" downtime_type
-	   " timezone:" timezone
-	   " id:" id
-	   " message:" message
-	   " updater_id:" updater_id
-	   " recurrence:" recurrence
-	   " canceled:" canceled
-	   " disabled:" disabled
-	   " creator_id:" creator_id
-	   " end:" end
-	   " active:" active
-	   " monitor_id:" monitor_id
-	   )))
-      dts)))
+
+    (for (dt dts)
+	 (let
+	     ((start (hash-get dt 'start))
+	      (parent_id (hash-get dt 'parent_id))
+	      (scope (hash-get dt 'scope))
+	      (downtime_type (hash-get dt 'downtime_type))
+	      (timezone (hash-get dt 'timezone))
+	      (id (hash-get dt 'id))
+	      (message (hash-get dt 'message))
+	      (updater_id (hash-get dt 'updater_id))
+	      (recurrence (hash-get dt 'recurrence))
+	      (canceled (hash-get dt 'canceled))
+	      (disabled (hash-get dt 'disabled))
+	      (creator_id (hash-get dt 'creator_id))
+	      (end (hash-get dt 'end))
+	      (active (hash-get dt 'active))
+	      (monitor_id (hash-get dt 'monitor_id)))
+	   (displayln
+	    " start:" start
+	    " parent_id:" parent_id
+	    " scope:" scope
+	    " downtime_type:" downtime_type
+	    " timezone:" timezone
+	    " id:" id
+	    " message:" message
+	    " updater_id:" updater_id
+	    " recurrence:" recurrence
+	    " canceled:" canceled
+	    " disabled:" disabled
+	    " creator_id:" creator_id
+	    " end:" end
+	    " active:" active
+	    " monitor_id:" monitor_id
+	    )))))
 
 (def (screen id)
   (let* ((ip datadog-host)
@@ -598,27 +585,23 @@ namespace: dda
      )))
 
 (def (print-widgets widgets)
-  (for-each
-    (lambda (widget)
-      (let-hash
-	  widget
-	(if (string=? .type "query_value")
-	  (let-hash
-	      .tile_def
-	    (print-widget-requests .requests)))))
-    widgets))
+  (for (widget widgets)
+       (let-hash
+	   widget
+	 (if (string=? .type "query_value")
+	   (let-hash
+	       .tile_def
+	     (print-widget-requests .requests))))))
 
 (def (print-widget-requests requests)
-  (for-each
-    (lambda (request)
-      (let-hash
-	  request
-	(displayln
-	 (when (hash-key? request 'style)" style: " (print-widget-style .style))
-	 " aggregator: " .aggregator
-	 " q: " .q)
-	(print-widget-conditional-formats .conditional_formats)))
-    requests))
+  (for (request requests)
+       (let-hash
+	   request
+	 (displayln
+	  (when (hash-key? request 'style)" style: " (print-widget-style .style))
+	  " aggregator: " .aggregator
+	  " q: " .q)
+	 (print-widget-conditional-formats .conditional_formats))))
 
 (def (print-widget-style style)
   (let-hash
@@ -626,12 +609,10 @@ namespace: dda
     (format " width: ~a type: ~a palette: ~a" .width .type .palette)))
 
 (def (print-widget-conditional-formats formats)
-  (for-each
-    (lambda (cformat)
+  (for (cformat formats)
       (let-hash
 	  cformat
-	(displayln (format "	 value: ~a comparator: ~a palette: ~a" .value .comparator .palette))))
-    formats))
+	(displayln (format "	 value: ~a comparator: ~a palette: ~a" .value .comparator .palette)))))
 
 (def (print-screen screen)
   (let-hash
@@ -697,14 +678,12 @@ namespace: dda
 	 (headers [["Content-type" :: "application/json"]]))
     (unless (string=? replace "t")
       (set! new-graphs graphs))
-    (for-each
-      (lambda (m)
-	(let ((new-graph
-	       (make-graph
-		(metric-name-to-title m)
-		(format "avg:~a{~a}by{~a}" m host-clause groupby) "timeseries")))
-	  (set! new-graphs (append new-graphs [new-graph]))))
-      (sort! (search-metrics metric-pattern) string<?))
+    (for (m (sort! (search-metrics metric-pattern) string<?))
+	 (let ((new-graph
+		(make-graph
+		 (metric-name-to-title m)
+		 (format "avg:~a{~a}by{~a}" m host-clause groupby) "timeseries")))
+	   (set! new-graphs (append new-graphs [new-graph]))))
 
     (do-put uri headers
 	    (json-object->string
@@ -724,14 +703,13 @@ namespace: dda
 	 (headers [["Content-type" :: "application/json"]]))
     (unless (string=? replace "t")
       (set! new-graphs graphs))
-    (for-each
-      (lambda (m)
-	(let ((new-graph
-	       (make-graph
-		(metric-name-to-title m)
-		(format "avg:~a{~a}by{~a}" m host-clause groupby) "timeseries")))
-	  (set! new-graphs (append new-graphs [new-graph]))))
-      (sort! (search-metrics metric-pattern) string<?))
+    (for (m (sort! (search-metrics metric-pattern) string<?))
+	 (let ((new-graph
+		(make-graph
+		 (metric-name-to-title m)
+		 (format "avg:~a{~a}by{~a}" m host-clause groupby) "timeseries")))
+	   (set! new-graphs (append new-graphs [new-graph]))))
+
 
     (do-put uri headers
 	    (json-object->string
@@ -1406,6 +1384,7 @@ namespace: dda
       (while (> (length threads) 0)
 	(let ((running_t 0)
 	      (waiting_t 0)
+	      (abterminated_t 0)
 	      (terminated_t 0))
 	  (for-each
 	    (lambda (thread)
@@ -1414,6 +1393,7 @@ namespace: dda
 		(cond
 		 ((thread-state-running? state) (set! running_t (+ running_t 1)))
 		 ((thread-state-waiting? state) (set! waiting_t (+ waiting_t 1)))
+		 ((thread-state-abnormally-terminated? state) (set! abterminated_t (+ abterminated_t 1)))
 		 ((thread-state-normally-terminated? state) (set! terminated_t (+ terminated_t 1))
 		  (let* ((results (thread-state-normally-terminated-result state)))
 		    (set! data (cons results data))
@@ -1421,9 +1401,9 @@ namespace: dda
 		 (else
 		  (displayln "unknown state: " (thread-state thread))
 		  (set! threads (cdr threads))))))
-	    threads))
-;;	  (displayln "loop: total: " (length threads) " running: " running_t " waiting: " waiting_t " terminated: " terminated_t)
-	(thread-sleep! 1))
+	    threads)
+	(dp (format "loop: total: ~a running: ~a waiting: ~a terminated: ~a" (length threads) running_t waiting_t terminated_t))
+	(thread-sleep! 1)))
       data)))
 
 (def (get-procs-by-host host secs dwl)
