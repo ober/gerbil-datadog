@@ -39,7 +39,7 @@ namespace: dda
 (def config-file "~/.datadog.yaml")
 
 (import (rename-in :gerbil/gambit/os (current-time builtin-current-time)))
-(import (rename-in :gerbil/gambit/os (time builtin-time)))
+(import (rename-in :gerbil/gambit/os (time mytime)))
 
 (def DEBUG (getenv "DEBUG" #f))
 
@@ -1389,10 +1389,46 @@ namespace: dda
 	   (reply (http-get url headers: .headers)))
       (displayln (request-text reply)))))
 
+(def (spawn-proc-collectors hosts secs dwl)
+  (let ((threads []))
+    (for-each
+      (lambda (host)
+	(let ((thread (spawn
+		       (lambda ()
+			 (get-procs-by-host host secs dwl)))))
+	  (set! threads (cons thread threads))))
+      hosts)
+    threads))
+
+(def (collect-from-pool threads)
+  (when (list? threads)
+    (let ((data []))
+      (while (> (length threads) 0)
+	(let ((running_t 0)
+	      (waiting_t 0)
+	      (terminated_t 0))
+	  (for-each
+	    (lambda (thread)
+	      (let* ((thread (car threads))
+		     (state (thread-state thread)))
+		(cond
+		 ((thread-state-running? state) (set! running_t (+ running_t 1)))
+		 ((thread-state-waiting? state) (set! waiting_t (+ waiting_t 1)))
+		 ((thread-state-normally-terminated? state) (set! terminated_t (+ terminated_t 1))
+		  (let* ((results (thread-state-normally-terminated-result state)))
+		    (set! data (cons results data))
+		    (set! threads (cdr threads))))
+		 (else
+		  (displayln "unknown state: " (thread-state thread))
+		  (set! threads (cdr threads))))))
+	    threads))
+;;	  (displayln "loop: total: " (length threads) " running: " running_t " waiting: " waiting_t " terminated: " terminated_t)
+	(thread-sleep! 1))
+      data)))
+
 (def (get-procs-by-host host secs dwl)
   (let-hash dwl
-    (let* ((secs 300)
-	   (start (float->int (* (- (time->seconds (builtin-current-time)) secs) 1000)))
+    (let* ((start (float->int (* (- (time->seconds (builtin-current-time)) secs) 1000)))
 	   (end (float->int (* (time->seconds (builtin-current-time)) 1000)))
 	   (url (format "https://app.datadoghq.com/proc/query?from=~a&to=~a&size_by=pct_mem&group_by=family&color_by=user&q=processes{host:~a}" start end host))
 	   (headers [[ "cookie" :: (format "dogweb=~a; intercom-session=please-add-flat_tags_for_metric-to-your-api-thanks" .dogweb) ]
@@ -1407,15 +1443,15 @@ namespace: dda
   (hosts-proc-search host pattern))
 
 (def (hosts-proc-search host procpat)
-  (let ((dwl (datadog-web-login)))
-    (let ((hosts (search-hosts host)))
-      (for-each
-	(lambda (host)
-	  (displayln "doing " host)
-	  (let ((results (flatten (proc host procpat dwl))))
-	    (when (length>n? results 0)
-	      (displayln "- " host ": " (string-join results ",")))))
-	hosts))))
+  (let* ((dwl (datadog-web-login))
+	 (hosts (search-hosts host))
+	 (threads (spawn-proc-collectors hosts 100 dwl))
+	 (results (collect-from-pool threads)))
+    (for-each
+      (lambda (result)
+	(when (table? result)
+	  (proc-format result procpat)))
+	results)))
 
 (def (procs host secs)
   "Return all processes for a given host in last n seconds"
@@ -1428,14 +1464,29 @@ namespace: dda
 
 (def (proc host pattern dwl)
   "Find any processes who's name matches pattern on the given host and seconds window"
-  (let-hash (get-procs-by-host host 300 dwl)
+  (let ((procs (mytime (get-procs-by-host host 100 dwl))))
+    (let-hash procs
+      (let ((results #f)
+	    (matches []))
+	(for-each
+	  (lambda (snapshot)
+	    (set! matches (cons (match-snapshot snapshot pattern) matches)))
+	  .snapshots)
+	matches))))
+
+(def (proc-format procs procpat)
+  "Find any processes who's name matches pattern on the given host and seconds window"
+  (let-hash procs
     (let ((results #f)
 	  (matches []))
-    (for-each
-      (lambda (snapshot)
-	(set! matches (cons (match-snapshot snapshot pattern) matches)))
-      .snapshots)
-    matches)))
+      (for-each
+	(lambda (snapshot)
+	  (set! matches (flatten (cons (match-snapshot snapshot procpat) matches))))
+	.snapshots)
+      (when (length>n? (flatten matches) 0)
+	(let ((host (car (pregexp-split "\\}" (cadr (pregexp-split "\\{" .query))))))
+	  (displayln "host: is " host)
+	  (displayln host ": " (string-join (flatten matches) ",")))))))
 
 (def (format-snapshot snapshot)
   "Snapshots are lists of pslists."
@@ -1475,8 +1526,8 @@ namespace: dda
 
 (def (status)
   (let* ((url "https://1k6wzpspjf99.statuspage.io/api/v2/status.json")
-	(reply (http-get url headers: default-headers))
-	(myjson (from-json (request-text reply))))
+	 (reply (http-get url headers: default-headers))
+	 (myjson (from-json (request-text reply))))
     (let-hash myjson
       (displayln (let-hash .page .name " Url: " .url " Updated: " .updated_at))
       (displayln "Status: " (let-hash .status " Indicator: " .indicator " Description: " .description)))))
@@ -1505,20 +1556,20 @@ namespace: dda
 	  (when (> .total_matching (+ start .total_returned))
 	    (lp (+ start .total_returned))))))))
 
- (def (format-host host)
-   (let-hash host
-     (displayln "|" .name
-		"|" .host_name
-		"|" .id
-		"|" (jif (sort! .apps string<?) ",")
-		"|" (if .is_muted "True" "False")
-		"|" (jif .sources ",")
-		"|" (hash->str .meta)
-		"|" (hash->str .tags_by_source)
-		"|" (jif .aliases ",")
-		"|" (if .up "True" "False")
-		"|" (hash->str .metrics)
-		"|" )))
+(def (format-host host)
+  (let-hash host
+    (displayln "|" .name
+	       "|" .host_name
+	       "|" .id
+	       "|" (jif (sort! .apps string<?) ",")
+	       "|" (if .is_muted "True" "False")
+	       "|" (jif .sources ",")
+	       "|" (hash->str .meta)
+	       "|" (hash->str .tags_by_source)
+	       "|" (jif .aliases ",")
+	       "|" (if .up "True" "False")
+	       "|" (hash->str .metrics)
+	       "|" )))
 
 (def (jif lst sep)
   "If we get a list, join it on sep"
