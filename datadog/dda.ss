@@ -24,6 +24,7 @@ namespace: dda
   :std/net/request
   :std/net/uri
   :std/pregexp
+  :std/srfi/1
   :std/srfi/13
   :std/srfi/19
   :std/srfi/95
@@ -1484,7 +1485,7 @@ namespace: dda
 	.snapshots)
       (when (length>n? (flatten matches) 0)
 	(let ((host (car (pregexp-split "\\}" (cadr (pregexp-split "\\{" .query))))))
-	  (displayln host ": " (string-join (flatten matches) ",")))))))
+	  (displayln host ": " (string-join (delete-duplicates (flatten matches)) ",")))))))
 
 (def (format-snapshot snapshot)
   "Snapshots are lists of pslists."
