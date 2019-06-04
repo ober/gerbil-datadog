@@ -1611,11 +1611,11 @@ namespace: dda
 	     (let (found (hash-get metas .instance_id))
 	       (if found
 		 (format-host found)
-		 (format-no-host .instance_id)))
-	     (let (found (hash-get metas .name))
+		 (format-no-host (format "~a ~a ~a" .instance_id .ip .host))))
+	     (let (found (hash-get metas .host))
 	       (if found
-		 (format-host (hash-get metas .name))
-		 (format-no-host .name))))))))
+		 (format-host (hash-get metas .host))
+		 (format-no-host (format "~a ~a" .host .ip)))))))))
 
 (def (convert-metas-hash metas)
   (let ((meta-hash (hash)))
