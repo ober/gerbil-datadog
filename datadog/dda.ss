@@ -92,6 +92,7 @@ namespace: dda
    ("screens" (hash (description: "List all Screenboards") (usage: "screens") (count: 0)))
    ("search" (hash (description: "list all metrics or hosts matching pattern") (usage: "search <pattern>") (count: 1)))
    ("sproc" (hash (description: "Hosts Process Search.") (usage: "sproc <process pattern>") (count: 1)))
+   ("run-agent-report" (hash (description: "Hosts Process Search.") (usage: "run-agent-report <inventory>") (count: 1)))
    ("status" (hash (description: "Get Datadog Status.") (usage: "status") (count: 0)))
    ("stories" (hash (description: "stories") (usage: "stories") (count: 0)))
    ("tag" (hash (description: "Add a tag to a hostname") (usage: "tag <host> <tag name:value>") (count: 2)))
@@ -1504,7 +1505,7 @@ namespace: dda
 
 (def (find-app app)
   "Return a list of hosts with app listed in it's apps"
-  (for (host (hosts-with-app app))
+  (for (host (sort! (hosts-with-app app) string<?))
        (displayln host)))
 
 (def (hosts-with-app app)
@@ -1526,15 +1527,32 @@ namespace: dda
     (for (host results)
 	 (format-host host))))
 
+(def (format-no-host host)
+  (displayln "|" host "| Missing from Datadog |"))
+
 (def (format-host host)
   (let-hash host
-    (displayln "|" .name
-	       "|" .host_name
-	       "|" .id
+    (displayln "|" .?name
+	       "|" .?host_name
+	       "|" .?id
 	       "|" (jif (sort! .apps string<?) ",")
 	       "|" (if .is_muted "True" "False")
 	       "|" (jif .sources ",")
 	       "|" (hash->str .meta)
+	       "|" (hash->str .tags_by_source)
+	       "|" (jif .aliases ",")
+	       "|" (if .up "True" "False")
+	       "|" (hash->str .metrics)
+	       "|" )))
+
+(def (format-host-lite host)
+  (let-hash host
+    (displayln "|" .?name
+	       "|" .?host_name
+	       "|" .?id
+	       "|" (jif (sort! .apps string<?) ",")
+	       "|" (if .is_muted "True" "False")
+	       "|" (jif .sources ",")
 	       "|" (hash->str .tags_by_source)
 	       "|" (jif .aliases ",")
 	       "|" (if .up "True" "False")
@@ -1576,3 +1594,36 @@ namespace: dda
       (for (group .groups)
 	   (let-hash group
 	     (displayln "****** " .status " message: " (or .message "None") " " .tags " " .modified))))))
+
+
+;; ********************* Reporting stuff here. todo move to other project
+
+(def (run-agent-report file)
+  "Read in a json inventory and find if they are in Datadog. Identify if they are and spit out the meta info on them"
+  (let* ((raw (read-file-string file))
+	 (inventory (from-json raw))
+	 (metas (convert-metas-hash (get-all-metas))))
+    (displayln "|Name|host name|Id|Apps|Muted?|Sources|Meta|Tags By Source| aliases| up?|metrics|")
+    (displayln "|-|-|")
+    (for (host inventory)
+    	 (let-hash host
+	   (if .?instance_id
+	     (let (found (hash-get metas .instance_id))
+	       (if found
+		 (format-host found)
+		 (format-no-host .instance_id)))
+	     (let (found (hash-get metas .name))
+	       (if found
+		 (format-host (hash-get metas .name))
+		 (format-no-host .name))))))))
+
+(def (convert-metas-hash metas)
+  (let ((meta-hash (hash)))
+    (for (meta metas)
+	 (let-hash meta
+	   (hash-put! meta-hash .name meta)))
+    meta-hash))
+
+(def (get-all-metas)
+  "Get the full inventory"
+  (get-meta-by-host ""))
