@@ -1522,7 +1522,7 @@ namespace: dda
   "We do not support regexp as hst here as this is used on the api directly to return matching hosts on pattern"
   (let ((results (get-meta-by-host hst)))
     (dp results)
-    (displayln "|Name|host name|Id|Apps|Muted?|Sources|Meta|Tags By Source| aliases| up?|metrics|")
+    (displayln "|Name|host name|Id|Apps|Muted?|Sources|Tags By Source| aliases| up?|metrics|")
     (displayln "|-|-|")
     (for (host results)
 	 (format-host host))))
@@ -1531,19 +1531,20 @@ namespace: dda
   (displayln "|" host "| Missing from Datadog |"))
 
 (def (format-host host)
-  (let-hash host
-    (displayln "|" .?name
-	       "|" .?host_name
-	       "|" .?id
-	       "|" (jif (sort! .apps string<?) ",")
-	       "|" (if .is_muted "True" "False")
-	       "|" (jif .sources ",")
-	       "|" (hash->str .meta)
-	       "|" (hash->str .tags_by_source)
-	       "|" (jif .aliases ",")
-	       "|" (if .up "True" "False")
-	       "|" (hash->str .metrics)
-	       "|" )))
+  (when (table? host)
+    (let-hash host
+      (displayln "|" .?name
+		 "|" .?host_name
+		 "|" .?id
+		 "|" (jif (sort! .apps string<?) ",")
+		 "|" (if .is_muted "True" "False")
+		 "|" (jif .sources ",")
+		 ;;	       "|" (hash->str .meta)
+		 "|" (hash->str .tags_by_source)
+		 "|" (jif .aliases ",")
+		 "|" (if .up "True" "False")
+		 "|" (hash->str .metrics)
+		 "|" ))))
 
 (def (format-host-lite host)
   (let-hash host
@@ -1602,26 +1603,52 @@ namespace: dda
   "Read in a json inventory and find if they are in Datadog. Identify if they are and spit out the meta info on them"
   (let* ((raw (read-file-string file))
 	 (inventory (from-json raw))
-	 (metas (convert-metas-hash (get-all-metas))))
+	 (raw (get-all-metas))
+	 (metas (convert-metas-hash-name raw))
+	 (alias-hash (convert-metas-hash-aliases raw)))
     (displayln "|Name|host name|Id|Apps|Muted?|Sources|Meta|Tags By Source| aliases| up?|metrics|")
     (displayln "|-|-|")
     (for (host inventory)
     	 (let-hash host
 	   (if .?instance_id
-	     (let (found (hash-get metas .instance_id))
+	     (let (found (hash-get alias-hash .instance_id))
 	       (if found
 		 (format-host found)
-		 (format-no-host (format "~a ~a ~a" .instance_id .ip .host))))
-	     (let (found (hash-get metas .host))
-	       (if found
-		 (format-host (hash-get metas .host))
-		 (format-no-host (format "~a ~a" .host .ip)))))))))
+		 (begin ;; not found
+		   (if (hash-get alias-hash .host)
+		     (format-host (hash-get alias-hash .host))
+		     (format-no-host (format "~a ~a ~a" .instance_id .ip .host))))))
+	     (begin
+	       (when (and (string? .in_service)(string=? .in_service "t"))
+		 (let ((found (or (hash-get alias-hash .host) (hash-key-like alias-hash .host))))
+		   (if found
+		     (format-host (hash-get alias-hash .host))
+		     (format-no-host (format "~a ~a" .host .ip)))))))))))
 
-(def (convert-metas-hash metas)
+(def (hash-key-like hsh pat)
+  "Search a hash for keys that match a given regexp and return value"
+  (when (table? hsh)
+    (let ((found #f))
+      (hash-map (lambda (k v)
+		  (when (pregexp-match pat k)
+		    (set! found v))) hsh)
+      found)))
+
+(def (convert-metas-hash-name metas)
   (let ((meta-hash (hash)))
     (for (meta metas)
 	 (let-hash meta
 	   (hash-put! meta-hash .name meta)))
+    meta-hash))
+
+(def (convert-metas-hash-aliases metas)
+  (let ((meta-hash (hash)))
+    (for (meta metas)
+	 (let-hash meta
+	   (when (and (list? .?aliases)
+		      (length>n? .aliases 0))
+	     (for (alias .aliases)
+		  (hash-put! meta-hash alias meta)))))
     meta-hash))
 
 (def (get-all-metas)
