@@ -79,7 +79,8 @@ namespace: dda
    ("indexes" (hash (description: "List Log Indexes.") (usage: "indexes") (count: 0)))
    ("live-metrics" (hash (description: "List Datadog live metrics for host.") (usage: "live-metrics <hostname>") (count: 1)))
    ("livetail" (hash (description: "List Log Indexes.") (usage: "indexes") (count: 0)))
-   ("metric-tags" (hash (description: "get-tags-for-metric <metric>.") (usage: "get-tags-for-metric <metric>") (count: 1)))
+   ("metric-tags" (hash (description: "metric-tags <metric>.") (usage: "metric-tags <metric>") (count: 1)))
+   ("metric-tags-from-file" (hash (description: "metric-tags-from-file <file>.") (usage: "metric-tags-from-file <file>") (count: 1)))
    ("metrics" (hash (description: "List Datadog Metrics and search on argument 1.") (usage: "metrics <pattern of metric to search for>") (count: 1)))
    ("monitor" (hash (description: "Describe Monitor.") (usage: "monitor <monitor id>") (count: 1)))
    ("monitors" (hash (description: "List all monitors.") (usage: "monitors") (count: 0)))
@@ -1238,12 +1239,19 @@ namespace: dda
 (def datadog-auth-url "https://app.datadoghq.com/account/login?redirect=f")
 
 (def (metric-tags metric)
-  (let-hash (datadog-web-login)
+  "Return all tags for a given metric"
+  (let* ((dwl (datadog-web-login))
+	 (tags (get-metric-tags metric dwl)))
+    (for (tag tags)
+    	 (displayln tag))))
+
+(def (get-metric-tags metric dwl)
+  "Non-interactive version of metric-tags"
+  (let-hash dwl
     (let* ((url (format "https://app.datadoghq.com/metric/flat_tags_for_metric?metric=~a&window=86400" metric))
     	   (reply (http-get url headers: .headers))
     	   (tags (let-hash (from-json (request-text reply)) .tags)))
-      (for (tag tags)
-    	   (displayln tag)))))
+	  tags)))
 
 (def (datadog-web-login)
   (let-hash (load-config)
@@ -1654,3 +1662,14 @@ namespace: dda
 (def (get-all-metas)
   "Get the full inventory"
   (get-meta-by-host ""))
+
+(def (metric-tags-from-file file)
+  "Read a list of metrics from file and return all metrics associated with each metric"
+  (displayln "| Metric | Tag |")
+  (displayln "|-|")
+  (let* ((metrics (read-file-lines file))
+         (dwl (datadog-web-login)))
+    (for (metric metrics)
+	 (for (tag (get-metric-tags metric dwl))
+	      (displayln "|" metric
+			 "|" tag "|")))))
