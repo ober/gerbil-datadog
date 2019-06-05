@@ -1536,7 +1536,15 @@ namespace: dda
 	 (format-host host))))
 
 (def (format-no-host host)
-  (displayln "|" host "| Missing from Datadog |"))
+  (let* ((split (pregexp-split " " host))
+	 (a (or (car split) "None"))
+	 (b (if (length>n? split 2) (cadr split) "None"))
+	 (c (if (length>n? split 3) (cadr split) "None")))
+    (displayln "|" a
+	       "|" b
+	       "|" c
+	       "| Empty"
+	       )))
 
 (def (format-host host)
   (when (table? host)
