@@ -106,6 +106,7 @@ namespace: dda
    ("tboards" (hash (description: "List all timeboards") (usage: "timeboards")(count: 0)))
    ("totals" (hash (description: "Host Totals.") (usage: "totals") (count: 0)))
    ("verify-account" (hash (description: "Verify account credentials") (usage: "validate") (count: 0)))
+   ("verify-apps" (hash (description: "Verify account credentials") (usage: "verify-apps") (count: 0)))
    ("view-md" (hash (description: "Describe metric metadata") (usage: "view-md") (count: 1)))
    ))
 
@@ -1619,9 +1620,9 @@ namespace: dda
   "Read in a json inventory and find if they are in Datadog. Identify if they are and spit out the meta info on them"
   (let* ((raw (read-file-string file))
 	 (inventory (from-json raw))
-	 (raw (get-all-metas))
-	 (metas (convert-metas-hash-name raw))
-	 (alias-hash (convert-metas-hash-aliases raw)))
+	 (raw2 (get-all-metas))
+	 (metas (convert-metas-hash-name raw2))
+	 (alias-hash (convert-metas-hash-aliases raw2)))
     (displayln "|Name|host name|Id|Apps|Muted?|Sources|Meta|Tags By Source| aliases| up?|metrics|")
     (displayln "|-|-|")
     (for (host inventory)
@@ -1681,3 +1682,26 @@ namespace: dda
 	 (for (tag (get-metric-tags metric dwl))
 	      (displayln "|" metric
 			 "|" tag "|")))))
+
+(def (verify-apps)
+  "Validate all hosts app list against their apps tag, show those out of sync"
+  (let ((hosts (get-all-metas)))
+    (for (host hosts)
+	 (let-hash host
+	   (verify-app-tag host)))))
+
+(def (verify-app-tag host)
+  "Verify all Users App tag is consistent with apps."
+  (when (table? host)
+    (let-hash host
+      (let* ((user-tags (hash-get .tags_by_source 'Users)))
+	(when user-tags
+	  (for (tag user-tags)
+	       (when (pregexp-match "^apps:" tag)
+		 (let* ((want (pregexp-split "_" (cadr (pregexp-split ":" tag))))
+			(missing []))
+		   (for (app want)
+			(unless (member app .apps)
+			  (set! missing (flatten (cons app missing)))))
+		   (when (length>n? missing 0)
+		     (displayln .?name " missing apps: " (jif (sort! missing string<?) ",")))))))))))
