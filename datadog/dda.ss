@@ -101,6 +101,7 @@ namespace: dda
    ("tboard" (hash (description: "Get info on timeboard.") (usage: "timeboards <timeboard id>")(count: 1)))
    ("tboard-add-chart" (hash (description: "Add a chart to a timeboard.") (usage: "tboard-add-chart <timeboard id> <title> <request> <viz>")(count: 4)))
    ("tboard-create" (hash (description: "Create a new timeboard") (usage: "tboard-create <title> <description>") (count: 2)))
+   ("tboard-fancy" (hash (description: "Add charts for metrics which apply to tag provided.") (usage: "tboard-fancy <timeboard id> <metric pattern ^$ supported> <tag clause. key:value> <replace all charts? ? t or f>")(count: 4)))
    ("tboard-mass-add" (hash (description: "Add charts matching regexp metrics to a timeboard.") (usage: "tboard-add-chart <timeboard id> <pattern> <host clause> <Group by clause> <replace all charts? ? t or f>")(count: 5)))
    ("tboard-mass-add-many" (hash (description: "Add charts matching regexp metrics to a timeboard. Useful for multiple hosts.") (usage: "tboard-add-chart <timeboard id> <pattern> <host clause 'host1 host2 host3'> <replace all charts? t/f>  ")(count: 4)))
    ("tboards" (hash (description: "List all timeboards") (usage: "timeboards")(count: 0)))
@@ -222,8 +223,8 @@ namespace: dda
 	 (text (request-text reply)))
 
     (if (success? status)
-      (displayln text)
-      (displayln (format "Failure on post. Status:~a Text:~a~%" status text)))))
+      text
+      (format "Failure on post. Status:~a Text:~a~%" status text))))
 
 (def (do-delete uri headers params)
   (dp (print-curl "delete" uri headers params))
@@ -726,7 +727,7 @@ namespace: dda
 (def (make-query-for-hosts metric hosts)
   (let ((results []))
     (for (host hosts)
-	 (set! results (append results [(format "avg:~a{host:~a}" metric host)])))
+	 (set! results (flatten (cons (format "avg:~a{host:~a}" metric host) results))))
     (string-join results ",")))
 
 (def (tboard-mass-add-many id metric-pattern host-pattern replace)
@@ -755,6 +756,39 @@ namespace: dda
 	      ("graphs" new-graphs)
 	      ("title" title)
 	      ("description" (hash-get dash 'description)))))))
+
+(def (tboard-fancy id metric-pattern tag replace)
+  (if (string-contains tag ":")
+    (let* ((dwl (datadog-web-login))
+	   (groupby (car (pregexp-split ":" tag)))
+	   (tbinfo (get-tboard id))
+	   (ip datadog-host)
+	   (uri (make-dd-uri ip (format "dash/~a" id)))
+	   (dash (hash-get tbinfo 'dash))
+	   (graphs (hash-get dash 'graphs))
+	   (title (hash-get dash 'title))
+	   (new-graphs [])
+	   (headers '(("Content-type" . "application/json"))))
+      (unless (string=? replace "t")
+	(set! new-graphs graphs))
+      (for (m (sort! (search-metrics metric-pattern) string<?))
+	   (let ((new-graph
+		  (make-graph
+		   (metric-name-to-title m)
+		   (format "avg:~a{~a}by{~a}" m tag groupby) "timeseries"))
+		 (found? (tag-in-metric? tag m dwl)))
+	     (when found?
+	       (set! new-graphs (flatten (cons new-graph new-graphs))))))
+      (let-hash (from-json (do-put uri headers
+				   (json-object->string
+				    (hash
+				     ("graphs" new-graphs)
+				     ("title" title)
+				     ("description" (hash-get dash 'description))))))
+	(let-hash .dash
+	  (displayln (format "https://app.datadoghq.com/dashboard/~a" .new_id)))))
+    (displayln "Error: tag must be in the form of 'key:value'")))
+
 
 (def (metric-name-to-title metric)
   (let* ((no-netdata (pregexp-replace "^netdata." metric ""))
@@ -1253,6 +1287,13 @@ namespace: dda
     	   (reply (http-get url headers: .headers))
     	   (tags (let-hash (from-json (request-text reply)) .tags)))
 	  tags)))
+
+(def (tag-in-metric? tag metric dwl)
+  "Get a bool for if the given tag submits to the given metric"
+  (let (tfm (get-metric-tags metric dwl))
+    (if (member tag tfm)
+      #t
+      #f)))
 
 (def (datadog-web-login)
   (let-hash (load-config)
