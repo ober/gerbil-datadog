@@ -758,37 +758,44 @@ namespace: dda
 	      ("description" (hash-get dash 'description)))))))
 
 (def (tboard-fancy id metric-pattern tag replace)
-  (if (string-contains tag ":")
-    (let* ((dwl (datadog-web-login))
-	   (groupby (car (pregexp-split ":" tag)))
-	   (tbinfo (get-tboard id))
-	   (ip datadog-host)
-	   (uri (make-dd-uri ip (format "dash/~a" id)))
-	   (dash (hash-get tbinfo 'dash))
-	   (graphs (hash-get dash 'graphs))
-	   (title (hash-get dash 'title))
-	   (new-graphs [])
-	   (headers '(("Content-type" . "application/json"))))
-      (unless (string=? replace "t")
-	(set! new-graphs graphs))
-      (for (m (sort! (search-metrics metric-pattern) string<?))
-	   (let ((new-graph
-		  (make-graph
-		   (metric-name-to-title m)
-		   (format "avg:~a{~a}by{~a}" m tag groupby) "timeseries"))
-		 (found? (tag-in-metric? tag m dwl)))
-	     (when found?
-	       (set! new-graphs (flatten (cons new-graph new-graphs))))))
-      (let-hash (from-json (do-put uri headers
-				   (json-object->string
-				    (hash
-				     ("graphs" new-graphs)
-				     ("title" title)
-				     ("description" (hash-get dash 'description))))))
-	(let-hash .dash
-	  (displayln (format "https://app.datadoghq.com/dashboard/~a" .new_id)))))
-    (displayln "Error: tag must be in the form of 'key:value'")))
-
+  (let* ((dwl (datadog-web-login))
+	 (tboard (get-tboard id)))
+    (when (table? tboard)
+      (displayln (hash->list tboard))
+      (let-hash tboard
+	(let ((groupby (if (string-contains tag ":")
+			 (car (pregexp-split ":" tag))
+			 tag))
+	      (uri (make-dd-uri datadog-host (format "dash/~a" id)))
+	      (new-graphs [])
+	      (headers '(("Content-type" . "application/json"))))
+	  (when .?dash
+	    (when (table? .dash)
+	      (dp (hash->list .dash))
+	      (let-hash .dash
+		(unless (string=? replace "t")
+		  (set! new-graphs .graphs))
+		(for (m (sort! (search-metrics metric-pattern) string<?))
+		     (dp (format "metric is: ~a" m))
+		     (let* ((new-graph
+			    (make-graph
+			     (metric-name-to-title m)
+			     (format "avg:~a{~a}by{~a}" m tag groupby) "timeseries"))
+			   (found? (tag-in-metric? tag m dwl)))
+		       (when found?
+			 (set! new-graphs (flatten (cons new-graph new-graphs))))))
+		(if (length>n? new-graphs 0)
+		  (let* ((data (json-object->string
+				(hash
+				 ("graphs" new-graphs)
+				 ("title" .title)
+				 ("description" .description))))
+			 (results (do-put uri headers data)))
+		    (dp (format "description: ~a title: ~a graphs: ~a" .description .title new-graphs))
+		    (if (success? (request-status results))
+		      (let-hash (from-json results)
+			(displayln (format "https://app.datadoghq.com/dashboard/~a" .new_id)))))
+		  (displayln (format "No metrics found matching tag ~a for metric ~a" tag metric-pattern)))))))))))
 
 (def (metric-name-to-title metric)
   (let* ((no-netdata (pregexp-replace "^netdata." metric ""))
