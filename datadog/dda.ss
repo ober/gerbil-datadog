@@ -761,7 +761,6 @@ namespace: dda
   (let* ((dwl (datadog-web-login))
 	 (tboard (get-tboard id)))
     (when (table? tboard)
-      (displayln (hash->list tboard))
       (let-hash tboard
 	(let ((groupby (if (string-contains tag ":")
 			 (car (pregexp-split ":" tag))
@@ -775,15 +774,13 @@ namespace: dda
 	      (let-hash .dash
 		(unless (string=? replace "t")
 		  (set! new-graphs .graphs))
-		(for (m (sort! (search-metrics metric-pattern) string<?))
-		     (dp (format "metric is: ~a" m))
+		(for (metric (sort! (metrics-tag-search metric-pattern tag dwl) string<?))
 		     (let* ((new-graph
-			    (make-graph
-			     (metric-name-to-title m)
-			     (format "avg:~a{~a}by{~a}" m tag groupby) "timeseries"))
-			   (found? (tag-in-metric? tag m dwl)))
-		       (when found?
-			 (set! new-graphs (flatten (cons new-graph new-graphs))))))
+			     (make-graph
+			      (metric-name-to-title metric)
+			      (format "avg:~a{~a}by{~a}" metric tag groupby) "timeseries")))
+		       (set! new-graphs (flatten (cons new-graph new-graphs)))))
+
 		(if (length>n? new-graphs 0)
 		  (let* ((data (json-object->string
 				(hash
@@ -1293,7 +1290,7 @@ namespace: dda
     (let* ((url (format "https://app.datadoghq.com/metric/flat_tags_for_metric?metric=~a&window=86400" metric))
     	   (reply (http-get url headers: .headers))
     	   (tags (let-hash (from-json (request-text reply)) .tags)))
-	  tags)))
+      tags)))
 
 (def (tag-in-metric? tag metric dwl)
   "Get a bool for if the given tag submits to the given metric"
@@ -1394,6 +1391,16 @@ namespace: dda
 	   (set! threads (cons thread threads))))
     threads))
 
+(def (spawn-metric-tags metrics tag secs dwl)
+  (let ((threads []))
+    (for (metric metrics)
+	 (let ((thread (spawn
+			(lambda ()
+			  (tag-in-metric? tag metric dwl)))))
+	   ;;			  (get-procs-by-host host secs dwl)))))
+	   (set! threads (cons thread threads))))
+    threads))
+
 (def (collect-from-pool threads)
   (when (list? threads)
     (let ((data []))
@@ -1444,6 +1451,17 @@ namespace: dda
     (for (result results)
 	 (when (table? result)
 	   (proc-format result procpat)))))
+
+
+(def (metrics-tag-search metric-pattern tag dwl)
+  (let* ((found [])
+	 (metrics (search-metrics metric-pattern))
+	 (threads (spawn-metric-tags metrics tag 300 dwl))
+	 (results (collect-from-pool threads)))
+    (for (result results)
+	 (when result
+	   (set! found (flatten (cons result found)))))
+    found))
 
 (def (procs host secs)
   "Return all processes for a given host in last n seconds"
