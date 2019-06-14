@@ -218,14 +218,8 @@ namespace: dda
   (dp (print-curl "put" uri headers data))
   (let* ((reply (http-put uri
 			  headers: headers
-			  data: data))
-	 (status (request-status reply))
-	 (text (request-text reply)))
-
-    text))
-;; (if (success? status)
-;;   text
-;;   (format "Failure on post. Status:~a Text:~a~%" status text))))
+			  data: data)))
+	 reply))
 
 (def (do-delete uri headers params)
   (dp (print-curl "delete" uri headers params))
