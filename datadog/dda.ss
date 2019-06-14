@@ -222,9 +222,10 @@ namespace: dda
 	 (status (request-status reply))
 	 (text (request-text reply)))
 
-    (if (success? status)
-      text
-      (format "Failure on post. Status:~a Text:~a~%" status text))))
+    text))
+;; (if (success? status)
+;;   text
+;;   (format "Failure on post. Status:~a Text:~a~%" status text))))
 
 (def (do-delete uri headers params)
   (dp (print-curl "delete" uri headers params))
@@ -775,6 +776,7 @@ namespace: dda
 		(unless (string=? replace "t")
 		  (set! new-graphs .graphs))
 		(for (metric (sort! (metrics-tag-search metric-pattern tag dwl) string<?))
+		     (dp (format "metric is ~a" metric))
 		     (let* ((new-graph
 			     (make-graph
 			      (metric-name-to-title metric)
@@ -787,12 +789,14 @@ namespace: dda
 				 ("graphs" new-graphs)
 				 ("title" .title)
 				 ("description" .description))))
-			 (results (do-put uri headers data)))
-		    (dp (format "description: ~a title: ~a graphs: ~a" .description .title new-graphs))
-		    (if (success? (request-status results))
-		      (let-hash (from-json results)
-			(displayln (format "https://app.datadoghq.com/dashboard/~a" .new_id)))))
-		  (displayln (format "No metrics found matching tag ~a for metric ~a" tag metric-pattern)))))))))))
+			 (results (do-put uri headers data))
+			 (text (request-text results))
+			 (status (request-status results)))
+		    (if (success? status)
+		      (let-hash text
+			(dp (format "description: ~a title: ~a graphs: ~a" .description .title new-graphs))
+			(displayln (format "https://app.datadoghq.com/dashboard/~a" .new_id)))
+		      (displayln (format "No metrics found matching tag ~a for metric ~a" tag metric-pattern)))))))))))))
 
 (def (metric-name-to-title metric)
   (let* ((no-netdata (pregexp-replace "^netdata." metric ""))
@@ -837,6 +841,7 @@ namespace: dda
 	 " created_by: " (hash-keys .?created_by))
 	;;                      " graphs: " (hash-keys (car .graphs))
 	(print-graphs .?graphs)
+	(displayln (format "https://app.datadoghq.com/dashboard/~a" .new_id))
 	))))
 
 (def (dump id)
@@ -1296,7 +1301,7 @@ namespace: dda
   "Get a bool for if the given tag submits to the given metric"
   (let (tfm (get-metric-tags metric dwl))
     (if (member tag tfm)
-      #t
+      metric
       #f)))
 
 (def (datadog-web-login)
