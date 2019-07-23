@@ -380,6 +380,7 @@ namespace: dda
     (exit 2)))
 
 (def (usage)
+  (displayln "Datadog version: " version)
   (displayln "Usage: datadog <verb>")
   (displayln "Verbs:")
   (for (k (sort! (hash-keys interactives) string<?))
@@ -1701,7 +1702,7 @@ namespace: dda
 		     (format-host (hash-get alias-hash .host))
 		     (format-no-host (format "~a ~a ~a" .instance_id .ip .host))))))
 	     (begin
-	       (when (and (string? .in_service)(string=? .in_service "t"))
+	       (when (and (string? .in_service) (string=? .in_service "t"))
 		 (let ((found (or (hash-get alias-hash .host) (hash-key-like alias-hash .host))))
 		   (if found
 		     (format-host (hash-get alias-hash .host))
