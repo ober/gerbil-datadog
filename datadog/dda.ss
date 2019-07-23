@@ -1,8 +1,10 @@
 ;; -*- Gerbil -*-
 namespace: dda
 
+(def version "0.0.1")
 (export main)
 (declare (not optimize-dead-definitions))
+
 
 (import
   :gerbil/gambit
