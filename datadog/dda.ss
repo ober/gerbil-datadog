@@ -54,9 +54,6 @@ namespace: dda
 
 (def good-ips (hash))
 
-(def (dp msg)
-  (when DEBUG
-    (displayln msg)))
 
 (def interactives
   (hash
@@ -152,14 +149,6 @@ namespace: dda
       (set! datadog-app-key .datadog-app-key)
       (set! datadog-api-key .datadog-api-key)
       )))
-
-(def (resolve-ipv4 host)
-  (if (hash-key? good-ips host)
-    (hash-get good-ips host)
-    (let* ((host-info (host-info-addresses (host-info host))))
-      (dp (format "host-info: ~a type:~a" host-info (type-of host-info)))
-      (ip4-address->string
-       (car host-info)))))
 
 (def (make-dd-uri ip adds)
   (ensure-api-keys)
@@ -333,27 +322,6 @@ namespace: dda
       text
       (displayln (format "Error: got ~a on request. text: ~a~%" status text)))))
 
-(def (do-post-generic uri headers data)
-  (let* ((reply (http-post uri
-			   headers: headers
-			   data: data))
-	 (status (request-status reply))
-	 (text (request-text reply)))
-    (dp (print-curl "post" uri headers data))
-    (if (success? status)
-      text
-      (displayln (format "Error: Failure on a post. got ~a text: ~a~%" status text)))))
-
-(def (do-get-generic uri headers)
-  (let* ((reply (http-get uri
-			  headers: headers))
-	 (status (request-status reply))
-	 (text (request-text reply)))
-    (print-curl "get" uri "" "")
-    (if (success? status)
-      text
-      (displayln (format "Error: got ~a on request. text: ~a~%" status text)))))
-
 (def (metrics pattern)
   (verify-account)
   (let* ((ip datadog-host)
@@ -375,12 +343,6 @@ namespace: dda
 	   (if (string-contains m pattern)
 	     (displayln m))))))
 
-(def (usage-verb verb)
-  (let ((howto (hash-get interactives verb)))
-    (displayln "Wrong number of arguments. Usage is:")
-    (displayln program-name " " (hash-get howto usage:))
-    (exit 2)))
-
 (def (usage)
   (displayln "Datadog version: " version)
   (displayln "Usage: datadog <verb>")
@@ -388,13 +350,6 @@ namespace: dda
   (for (k (sort! (hash-keys interactives) string<?))
        (displayln (format "~a: ~a" k (hash-get (hash-get interactives k) description:))))
   (exit 2))
-
-(def (nth n l)
-  (if (or (> n (length l)) (< n 0))
-    (error "Index out of bounds.")
-    (if (eq? n 0)
-      (car l)
-      (nth (- n 1) (cdr l)))))
 
 (def (view-md metric)
   (verify-account)
@@ -459,9 +414,6 @@ namespace: dda
 	 (uri (make-dd-uri ip (format "events?start=~a&end=~a&tags=~a" start end tags))))
     (do-get uri)))
 
-(def (float->int num)
-  (inexact->exact
-   (round num)))
 
 (def (get-events-last-secs secs tags)
   (let* ((start (float->int (- (time->seconds (builtin-current-time)) secs)))
@@ -1201,23 +1153,6 @@ namespace: dda
     item
     "N/A"))
 
-(def (epoch->date epoch)
-  (cond
-   ((string? epoch)
-    (time-utc->date (make-time time-utc 0 (string->number epoch))))
-   ((flonum? epoch)
-    (time-utc->date (make-time time-utc 0 (float->int epoch))))
-   ((fixnum? epoch)
-    (time-utc->date (make-time time-utc 0 epoch)))))
-
-(def (date->epoch mydate)
-  (string->number (date->string (string->date mydate "~Y-~m-~d ~H:~M:~S") "~s")))
-
-(def (flatten x)
-  (cond ((null? x) [])
-	((pair? x) (append (flatten (car x)) (flatten (cdr x))))
-	(else [x])))
-
 (def (data->get uri data)
   (if (table? data)
     (string-append
@@ -1251,31 +1186,6 @@ namespace: dda
   (displayln "-----------------------------------------")
   (displayln "secrets: " secrets)
   (displayln "-----------------------------------------"))
-
-(def (encrypt-string str)
-  (let* ((cipher (make-aes-256-ctr-cipher))
-	 (iv (random-bytes (cipher-iv-length cipher)))
-	 (key (random-bytes (cipher-key-length cipher)))
-	 (encrypted-password (encrypt cipher key iv str))
-	 (enc-pass-store (u8vector->base64-string encrypted-password))
-	 (iv-store (u8vector->base64-string iv))
-	 (key-store (u8vector->base64-string key)))
-    (hash
-     (key key-store)
-     (iv iv-store)
-     (password enc-pass-store))))
-
-(def (decrypt-password key iv password)
-  (bytes->string
-   (decrypt
-    (make-aes-256-ctr-cipher)
-    (base64-string->u8vector key)
-    (base64-string->u8vector iv)
-    (base64-string->u8vector password))))
-
-(def (decrypt-bundle bundle)
-  (let-hash bundle
-    (decrypt-password .key .iv .password)))
 
 (def datadog-auth-url "https://app.datadoghq.com/account/login?redirect=f")
 
@@ -1322,14 +1232,6 @@ namespace: dda
 	   (dogwebu (find-cookie cookies "^dogwebu=")))
       (strip-^m dogwebu))))
 
-(def (find-cookie cookies pattern)
-  (let ((cookie-of-interest ""))
-    (when (list? cookies)
-      (for (c cookies)
-      	   (when (pregexp-match pattern c)
-      	     (set! cookie-of-interest (car (pregexp-split ";" (cadr (pregexp-split "=" c))))))))
-    cookie-of-interest))
-
 (def (datadog-get-dogweb dogwebu)
   (let-hash (load-config)
     (let* ((uri datadog-auth-url)
@@ -1341,11 +1243,6 @@ namespace: dda
 	   (cookies (request-cookies reply))
 	   (dogweb (find-cookie cookies "^dogweb=")))
       (strip-^m dogweb))))
-
-(def (strip-^m str)
-  (if (string? str)
-    (string-trim-both str)
-    str))
 
 (def (live-metrics host)
   (let-hash (load-config)
@@ -1403,31 +1300,6 @@ namespace: dda
 	   (set! threads (cons thread threads))))
     threads))
 
-(def (collect-from-pool threads)
-  (when (list? threads)
-    (let ((data []))
-      (while (> (length threads) 0)
-	(let ((running_t 0)
-	      (waiting_t 0)
-	      (abterminated_t 0)
-	      (terminated_t 0))
-	  (for (thread threads)
-	       (let* ((thread (car threads))
-		      (state (thread-state thread)))
-		 (cond
-		  ((thread-state-running? state) (set! running_t (+ running_t 1)))
-		  ((thread-state-waiting? state) (set! waiting_t (+ waiting_t 1)))
-		  ((thread-state-abnormally-terminated? state) (set! abterminated_t (+ abterminated_t 1)))
-		  ((thread-state-normally-terminated? state) (set! terminated_t (+ terminated_t 1))
-		   (let* ((results (thread-state-normally-terminated-result state)))
-		     (set! data (cons results data))
-		     (set! threads (cdr threads))))
-		  (else
-		   (displayln "unknown state: " (thread-state thread))
-		   (set! threads (cdr threads))))))
-	  (dp (format "loop: total: ~a running: ~a waiting: ~a terminated: ~a abnormal_terminated: ~a" (length threads) running_t waiting_t terminated_t abterminated_t))
-	  (thread-sleep! 1)))
-      data)))
 
 (def (get-procs-by-host host secs dwl)
   (let-hash dwl
@@ -1552,11 +1424,6 @@ namespace: dda
       (displayln (let-hash .page .name " Url: " .url " Updated: " .updated_at))
       (displayln "Status: " (let-hash .status " Indicator: " .indicator " Description: " .description)))))
 
-(def (default-headers basic)
-  [
-   ["Accept" :: "*/*"]
-   ["Content-type" :: "application/json"]])
-
 (def (get-meta-by-host host)
   "Given a pattern, return all the hosts along with meta data about the hosts"
   (let ((results []))
@@ -1645,23 +1512,6 @@ namespace: dda
 	       "|" (hash->str .metrics)
 	       "|" )))
 
-(def (jif lst sep)
-  "If we get a list, join it on sep"
-  (if (list? lst)
-    (string-join lst sep)
-    lst))
-
-(def (hash->str h)
-  (let ((results []))
-    (if (table? h)
-      (begin
-	(hash-for-each
-	 (lambda (k v)
-	   (set! results (append results (list (format " ~a->" k) (format "~a   " v)))))
-	 h)
-	(append-strings results))
-      "N/A")))
-
 (def (contexts)
   (let-hash (datadog-web-login)
     (let* ((url "https://app.datadoghq.com/check/contexts?names_only=true")
@@ -1709,15 +1559,6 @@ namespace: dda
 		   (if found
 		     (format-host (hash-get alias-hash .host))
 		     (format-no-host (format "~a ~a" .host .ip)))))))))))
-
-(def (hash-key-like hsh pat)
-  "Search a hash for keys that match a given regexp and return value"
-  (when (table? hsh)
-    (let ((found #f))
-      (hash-map (lambda (k v)
-		  (when (pregexp-match pat k)
-		    (set! found v))) hsh)
-      found)))
 
 (def (convert-metas-hash-name metas)
   (let ((meta-hash (hash)))
