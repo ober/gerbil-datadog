@@ -1092,21 +1092,6 @@ namespace: dda
 	 (mon (from-json (do-get uri))))
     (print-monitor-long mon)))
 
-(def (print-monitor monitor)
-  (let-hash monitor
-    (displayln
-     "|" .id
-     "|" (if (table? .creator) (let-hash .creator .name " " .email " " .handle) "N/A")
-     "|" .query
-     "|" .message
-     "|" .tags
-     "|" (stringify-hash .options)
-     "|" .org_id
-     "|" .type
-     "|" .multi
-     "|" .created
-     "|" .modified "|")))
-
 (def (print-monitor-long monitor)
   (let-hash monitor
     (displayln "** Query: " .query)
@@ -1594,12 +1579,23 @@ namespace: dda
 
 (def (host hst)
   "We do not support regexp as hst here as this is used on the api directly to return matching hosts on pattern"
-  (let ((results (get-meta-by-host hst)))
-    (dp results)
-    (displayln "|Name|host name|Id|Apps|Muted?|Sources|Tags By Source| aliases| up?|metrics|")
-    (displayln "|-|-|")
+  (let ((results (get-meta-by-host hst))
+        (outs [[ "Name" "Hostname" "Id" "Integrations" "Muted?" "Sources" "Tags by Source" "Aliases" "is Up?" "Metrics" ]]))
     (for (host results)
-	 (format-host host))))
+         (when (table? host)
+           (let-hash host
+             (set! outs (cons [[ .?name
+                                 .?host_name
+                                 .?id
+                                 (jif (sort! .apps string<?) ",")
+                                 (if .is_muted "True" "False")
+                                 (jif .sources ",")
+                                 (hash->str .tags_by_source)
+                                 (jif .aliases ",")
+                                 (if .up "True" "False")
+                                 (hash->str .metrics)
+                                 ]] outs)))))
+    (style-output outs)))
 
 (def (format-no-host host)
   (let* ((split (pregexp-split " " host))
