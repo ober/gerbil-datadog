@@ -130,11 +130,17 @@ namespace: dda
       (apply (eval (string->symbol (string-append "dda#" verb))) args2))))
 
 (def (load-config)
-  (let ((config (hash)))
+  (let ((config (hash))
+        (config-data (yaml-load config-file)))
+    (unless (and (list? config-data)
+                 (length>n? config-data 0)
+                 (table? (car config-data)))
+      (displayln (format "Could not parse your config ~a" config-file))
+      (exit 2))
     (hash-for-each
      (lambda (k v)
        (hash-put! config (string->symbol k) v))
-     (car (yaml-load config-file)))
+     (car config-data))
     (let-hash config
       (when .?secrets
 	(let-hash (u8vector->object (base64-decode .secrets))
