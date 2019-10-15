@@ -120,3 +120,7 @@
     (dp (format "host-info: ~a type:~a" host-info (type-of host-info)))
     (ip4-address->string
      (car host-info))))
+
+(def (dp msg)
+  (when DEBUG
+    (displayln msg)))

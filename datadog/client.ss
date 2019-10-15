@@ -37,10 +37,6 @@
 
 (export #t)
 
-(def (dp msg)
-  (when DEBUG
-    (displayln msg)))
-
 (def (load-config)
   (let ((config (hash))
         (config-data (yaml-load config-file)))
