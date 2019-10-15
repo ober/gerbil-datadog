@@ -15,8 +15,6 @@
 (def version "0.03")
 (def config-file "~/.datadog.yaml")
 
-(def DEBUG (getenv "DEBUG" #f))
-
 (def program-name "datadog")
 (def datadog-api-key #f)
 (def datadog-app-key #f)
