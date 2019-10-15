@@ -1,8 +1,9 @@
 #!/usr/bin/env gxi
 ;; -*- Gerbil -*-
 
-(import :std/build-script
-	:std/make)
+(import :std/build-script)
 
 (defbuild-script
-  `("datadog/dda"))
+  '("datadog/client"
+    "datadog/oberlib"
+    (exe: "datadog/dda")))
