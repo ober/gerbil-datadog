@@ -92,13 +92,12 @@
       )))
 
 (def (print-header style header)
-  (let-hash (load-config)
-    (cond
+  (cond
      ((string=? style "org-mode")
       (displayln "| " (string-join header " | ") " |")
       (displayln "|-|"))
      (else
-      (displayln "Unknown format: " style)))))
+      (displayln "Unknown format: " style))))
 
 (def (print-row style data)
   (if (list? data)
