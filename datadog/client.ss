@@ -37,6 +37,9 @@
 
 (export #t)
 
+(import (rename-in :gerbil/gambit/os (current-time builtin-current-time)))
+(import (rename-in :gerbil/gambit/os (time mytime)))
+
 (def (load-config)
   (let ((config (hash))
         (config-data (yaml-load config-file)))
@@ -295,12 +298,6 @@
        (displayln (format "~a: ~a" k (hash-get (hash-get interactives k) description:))))
   (exit 2))
 
-(def (nth n l)
-  (if (or (> n (length l)) (< n 0))
-    (error "Index out of bounds.")
-    (if (eq? n 0)
-      (car l)
-      (nth (- n 1) (cdr l)))))
 
 (def (view-md metric)
   (verify-account)
