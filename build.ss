@@ -5,5 +5,4 @@
 
 (defbuild-script
   '("datadog/client"
-    "datadog/oberlib"
     (exe: "datadog/dda")))

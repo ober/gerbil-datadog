@@ -32,13 +32,17 @@
   :std/text/utf8
   :std/text/yaml
   :std/text/zlib
-  :ober/datadog/oberlib
+  :ober/oberlib
   :std/xml/ssax)
 
 (export #t)
-
+(def version "0.03")
+(def datadog-host "app.datadoghq.com")
 (import (rename-in :gerbil/gambit/os (current-time builtin-current-time)))
 (import (rename-in :gerbil/gambit/os (time mytime)))
+(def datadog-api-key #f)
+(def datadog-app-key #f)
+(def config-file "~/.datadog.yaml")
 
 (def (load-config)
   (let ((config (hash))
@@ -283,20 +287,6 @@
 	 (if pattern
 	   (if (string-contains m pattern)
 	     (displayln m))))))
-
-(def (usage-verb verb)
-  (let ((howto (hash-get interactives verb)))
-    (displayln "Wrong number of arguments. Usage is:")
-    (displayln program-name " " (hash-get howto usage:))
-    (exit 2)))
-
-(def (usage)
-  (displayln "Datadog version: " version)
-  (displayln "Usage: datadog <verb>")
-  (displayln "Verbs:")
-  (for (k (sort! (hash-keys interactives) string<?))
-       (displayln (format "~a: ~a" k (hash-get (hash-get interactives k) description:))))
-  (exit 2))
 
 
 (def (view-md metric)
@@ -1092,11 +1082,6 @@
 (def (date->epoch mydate)
   (string->number (date->string (string->date mydate "~Y-~m-~d ~H:~M:~S") "~s")))
 
-(def (flatten x)
-  (cond ((null? x) [])
-	((pair? x) (append (flatten (car x)) (flatten (cdr x))))
-	(else [x])))
-
 (def (data->get uri data)
   (if (table? data)
     (string-append
@@ -1663,5 +1648,3 @@
 			  (set! missing (flatten (cons app missing)))))
 		   (when (length>n? missing 0)
 		     (displayln .?name " missing apps: " (jif (sort! missing string<?) ",")))))))))))
-
-;;; Utils below need to be removed and sourced in via gxpkg
