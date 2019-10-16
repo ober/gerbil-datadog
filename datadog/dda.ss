@@ -12,13 +12,9 @@
 
 (declare (not optimize-dead-definitions))
 
-(def version "0.03")
-(def config-file "~/.datadog.yaml")
-
 (def program-name "datadog")
 (def datadog-api-key #f)
 (def datadog-app-key #f)
-(def datadog-host "app.datadoghq.com")
 
 (def interactives
   (hash
@@ -90,3 +86,17 @@
       (unless (= (length args2) count)
 	(usage-verb verb))
       (apply (eval (string->symbol (string-append "dda#" verb))) args2))))
+
+(def (usage-verb verb)
+  (let ((howto (hash-get interactives verb)))
+    (displayln "Wrong number of arguments. Usage is:")
+    (displayln program-name " " (hash-get howto usage:))
+    (exit 2)))
+
+(def (usage)
+  (displayln "Datadog version: " version)
+  (displayln "Usage: datadog <verb>")
+  (displayln "Verbs:")
+  (for (k (sort! (hash-keys interactives) string<?))
+       (displayln (format "~a: ~a" k (hash-get (hash-get interactives k) description:))))
+  (exit 2))
