@@ -1,4 +1,4 @@
-(import :ober/datadog/dda)
+(import :ober/datadog/client)
 
 (export
-  (import: :ober/datadog/dda))
+  (import: :ober/datadog/client))

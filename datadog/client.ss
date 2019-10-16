@@ -839,7 +839,7 @@
   (let* ((headers '(("Content-type" . "application/json")))
 	 (ip datadog-host)
 	 (uri (make-dd-uri ip (format "monitor/~a" id))))
-    (do-delete uri headers #f)))
+    (do-delete uri headers)))
 
 (def (new-monitor type query name message tags)
   (let* ((headers '(("Content-type" . "application/json")))

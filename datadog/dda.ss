@@ -39,7 +39,6 @@
 
 (export main)
 
-
 (declare (not optimize-dead-definitions))
 
 (def program-name "datadog")

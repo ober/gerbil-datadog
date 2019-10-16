@@ -4,5 +4,5 @@
 (import :std/build-script)
 
 (defbuild-script
-  '("datadog/client"
+  '("datadog/client"))
     (exe: "datadog/dda")))
