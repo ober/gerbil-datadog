@@ -951,11 +951,6 @@
      (tags .tags)
      (message .message))))
 
-(def (sis item)
-  (if item
-    item
-    "N/A"))
-
 (def (data->get uri data)
   (if (table? data)
     (string-append
@@ -1400,16 +1395,6 @@
     (string-join lst sep)
     lst))
 
-(def (hash->str h)
-  (let ((results []))
-    (if (table? h)
-      (begin
-	(hash-for-each
-	 (lambda (k v)
-	   (set! results (append results (list (format " ~a->" k) (format "~a   " v)))))
-	 h)
-	(append-strings results))
-      "N/A")))
 
 (def (contexts)
   (let-hash (datadog-web-login)
