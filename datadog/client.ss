@@ -1,5 +1,4 @@
 ;; -*- Gerbil -*-
-;;; © ober
 
 (import
   :gerbil/gambit
@@ -94,8 +93,6 @@
       (string-concatenate [ datadog-base-url adds (format "&api_key=~a&application_key=~a" datadog-api-key datadog-app-key)])
       (string-concatenate [ datadog-base-url adds (format "?api_key=~a&application_key=~a" datadog-api-key datadog-app-key)]))))
 
-(def (success? status)
-  (and (>= status 200) (<= status 299)))
 
 (def (verify-account)
   (let* ((ip datadog-host)
@@ -105,48 +102,11 @@
     (unless valid
       (displayln "Credentials are not valid. got status:" status " with error:"  (request-text req)))))
 
-(def (do-post uri headers data)
-  (dp (print-curl "post" uri headers data))
-  (try
-   (let* ((reply (http-post uri
-			    headers: headers
-			    data: data))
-	  (status (request-status reply))
-	  (text (request-text reply)))
-
-     (if (success? status)
-       (displayln status text)
-       (displayln (format "Failure on post. Status:~a Text:~a~%" status text))))
-   (catch (e)
-     (begin
-       (let ((uri2 (get-new-ip uri datadog-host)))
-	 (display-exception e)
-	 (do-post uri2 headers data))))))
-
 (def (get-new-ip uri host)
   (pregexp-replace "[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}" uri (resolve-ipv4 host)))
 
 (def (print-object obj)
   #f)
-
-(def (do-put uri headers data)
-  (dp (print-curl "put" uri headers data))
-  (let* ((reply (http-put uri
-			  headers: headers
-			  data: data)))
-    reply))
-
-(def (do-delete uri headers params)
-  (dp (print-curl "delete" uri headers params))
-  (let* ((reply (http-delete uri
-			     headers: headers
-			     params: params))
-	 (status (request-status reply))
-	 (text (request-text reply)))
-
-    (if (success? status)
-      (displayln text)
-      (displayln (format "Failure on delete. Status:~a Text:~a~%" status text)))))
 
 (def (print-opts t)
   (let-hash t
@@ -172,18 +132,6 @@
 	 (unless (fixnum? datum)
 	   (set! datum (float->int datum)))
 	 (displayln (date->string (epoch->date date) "~s") " " datum))))
-
-(def (stringify-hash h)
-  (let ((results []))
-    (if (table? h)
-      (begin
-	(hash-for-each
-	 (lambda (k v)
-	   (set! results (append results [ (format " ~a->" k) (format "~a   " v)])))
-	 h)
-	(append-strings results))
-      "N/A")))
-
 
 (def (make-metric-string str)
   (pregexp-replace* "," (pregexp-replace* " " str "-") ""))
@@ -217,55 +165,6 @@
 
 (def (query-day query)
   (query-last-secs 86400 query))
-
-(def (print-curl type uri headers data)
-  ;;(displayln headers)
-  (let ((heads "Content-type: application/json")
-	(do-curl (getenv "DEBUG" #f)))
-    (when do-curl
-      (cond
-       ((string=? type "get")
-	(if (string=? "" data)
-	  (displayln (format "curl -X GET -H \'~a\' ~a" heads uri))
-	  (displayln (format "curl -X GET -H \'~a\' -d \'~a\' \'~a\'" heads data uri))))
-       ((string=? type "put")
-	(displayln (format "curl -X PUT -H \'~a\' -d \'~a\' \'~a\'" heads data uri)))
-       ((string=? type "post")
-	(displayln (format "curl -X POST -H \'~a\' -d \'~a\' \'~a\'" heads data uri)))
-       ((string=? type "delete")
-	(displayln (format "curl -X DELETE -H \'~a\' -d \'~a\' \'~a\'" heads data uri)))
-       (else
-	(displayln "unknown format " type))))))
-
-(def (do-get uri)
-  (print-curl "get" uri "" "")
-  (let* ((reply (http-get uri))
-	 (status (request-status reply))
-	 (text (request-text reply)))
-    (if (success? status)
-      text
-      (displayln (format "Error: got ~a on request. text: ~a~%" status text)))))
-
-(def (do-post-generic uri headers data)
-  (let* ((reply (http-post uri
-			   headers: headers
-			   data: data))
-	 (status (request-status reply))
-	 (text (request-text reply)))
-    (dp (print-curl "post" uri headers data))
-    (if (success? status)
-      text
-      (displayln (format "Error: Failure on a post. got ~a text: ~a~%" status text)))))
-
-(def (do-get-generic uri headers)
-  (let* ((reply (http-get uri
-			  headers: headers))
-	 (status (request-status reply))
-	 (text (request-text reply)))
-    (print-curl "get" uri "" "")
-    (if (success? status)
-      text
-      (displayln (format "Error: got ~a on request. text: ~a~%" status text)))))
 
 (def (metrics pattern)
   (verify-account)
@@ -352,10 +251,6 @@
 	 (uri (make-dd-uri ip (format "events?start=~a&end=~a&tags=~a" start end tags))))
     (do-get uri)))
 
-(def (float->int num)
-  (inexact->exact
-   (round num)))
-
 (def (get-events-last-secs secs tags)
   (let* ((start (float->int (- (time->seconds (builtin-current-time)) secs)))
 	 (end (float->int (time->seconds (builtin-current-time))))
@@ -410,9 +305,6 @@
 	  " comments: " .comments
 	  (if (hash-key? event 'children)
 	    (print-children .children))))))
-
-(def (print-date date)
-  (date->string date "~c"))
 
 (def (print-children children)
   (for (child children)
@@ -966,12 +858,6 @@
 		   ("no_data_timeframe" 20)))))))
     (do-post uri headers data)))
 
-(def (from-json json)
-  (try
-   (with-input-from-string json read-json)
-   (catch (e)
-     (displayln "error parsing json " e))))
-
 (def (monitor id)
   (displayln (format "* Datadog Monitor: ~a" id))
   (let* ((ip datadog-host)
@@ -1069,18 +955,6 @@
   (if item
     item
     "N/A"))
-
-(def (epoch->date epoch)
-  (cond
-   ((string? epoch)
-    (time-utc->date (make-time time-utc 0 (string->number epoch))))
-   ((flonum? epoch)
-    (time-utc->date (make-time time-utc 0 (float->int epoch))))
-   ((fixnum? epoch)
-    (time-utc->date (make-time time-utc 0 epoch)))))
-
-(def (date->epoch mydate)
-  (string->number (date->string (string->date mydate "~Y-~m-~d ~H:~M:~S") "~s")))
 
 (def (data->get uri data)
   (if (table? data)
