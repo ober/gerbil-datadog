@@ -5,4 +5,4 @@
 
 (defbuild-script
   '("datadog/client"
-    (static-exe: "datadog/dda")))
+    (exe: "datadog/dda")))
