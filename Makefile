@@ -18,9 +18,6 @@ LIBYAML-BASE := "/usr/include"
 SED := sed
 endif
 
-#$(info $(CPPFLAGS) is cppflags)
-#$(info $(LDFLAGS) is ldflags)
-
 datadog: $(eval CPPFLAGS := "-I$(SSL-BASE)include -I$(LIBYAML-BASE)include -I/usr/local/include")
 datadog: $(eval LDFLAGS := "-L$(SSL-BASE)lib -L$(LIBYAML-BASE)lib -lz -lssl -lyaml -L/usr/local/lib")
 datadog:
