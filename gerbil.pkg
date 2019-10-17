@@ -1,1 +1,2 @@
 (package: ober)
+(depend: github.com/ober/oberlib)
