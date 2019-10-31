@@ -35,6 +35,7 @@
 
 (export #t)
 (def version "0.03")
+(declare (not optimize-dead-definitions))
 (def datadog-host "app.datadoghq.com")
 (import (rename-in :gerbil/gambit/os (current-time builtin-current-time)))
 (import (rename-in :gerbil/gambit/os (time mytime)))
