@@ -965,11 +965,11 @@
 
 (def (config)
   (displayln "Please enter your DataDog API Key:")
-  (def api-key (read-line (current-input-port)))
+  (def api-key (read-passowrd ##console-port))
   (displayln "Please enter your DataDog Application Key:")
-  (def app-key (read-line (current-input-port)))
+  (def app-key (read-password ##console-port))
   (displayln "Please enter your DataDog Username:")
-  (def username (read-line (current-input-port)))
+  (def username  (read-password ##console-port))
   (displayln "Please enter your DataDog Password:")
   (def password (read-line (current-input-port)))
   (def secrets (base64-encode
@@ -981,9 +981,7 @@
 		  (password (encrypt-string password))))))
 
   (displayln "Add the following lines to your " config-file)
-  (displayln "-----------------------------------------")
-  (displayln "secrets: " secrets)
-  (displayln "-----------------------------------------"))
+  (displayln "secrets: " secrets))
 
 (def (encrypt-string str)
   (let* ((cipher (make-aes-256-ctr-cipher))
