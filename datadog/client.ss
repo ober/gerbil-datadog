@@ -1333,7 +1333,7 @@
     (for (host results)
          (when (table? host)
            (let-hash host
-             (set! outs (cons [[ .?name
+             (set! outs (cons [ .?name
                                  .?host_name
                                  .?id
                                  (jif (sort! .apps string<?) ",")
@@ -1343,7 +1343,7 @@
                                  (jif .aliases ",")
                                  (if .up "True" "False")
                                  (hash->str .metrics)
-                                 ]] outs)))))
+                                 ] outs)))))
     (style-output outs)))
 
 (def (format-no-host host)
