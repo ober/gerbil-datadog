@@ -218,19 +218,17 @@
 			 unit)))))
 
 (def (edit-metric-metadata metric description short_name)
-  (let* ((headers '(("Content-type" . "application/json")))
-	 (ip datadog-host)
+  (let* ((ip datadog-host)
 	 (uri (make-dd-uri ip (format "metrics/~a" metric)))
 	 (data (json-object->string
 		(hash
 		 ("description" description)
 		 ("short_name" short_name)))))
     (displayln "json is: " data)
-    (do-put uri headers data)))
+    (do-put uri default-headers data)))
 
 (def (submit-event title text priority tags alert_type)
-  (let* ((headers '(("Content-type" . "application/json")))
-	 (ip datadog-host)
+  (let* ((ip datadog-host)
 	 (uri (make-dd-uri ip "events"))
 	 (data (json-object->string
 		(hash
@@ -239,7 +237,7 @@
 		 ("priority" priority)
 		 ("tags" tags)
 		 ("alert_type" alert_type)))))
-    (do-post uri headers data)))
+    (do-post uri default-headers data)))
 
 (def (get-events-time start end)
   (let* ((ip datadog-host)
@@ -440,8 +438,7 @@
    ("viz" viz)))
 
 (def (tboard-create title description)
-  (let* ((headers '(("Content-type" . "application/json")))
-	 (ip datadog-host)
+  (let* ((ip datadog-host)
 	 (uri (make-dd-uri datadog-host "dash"))
 	 (data (json-object->string
 		(hash
@@ -454,7 +451,7 @@
 		     ("prefix" "host")
 		     ("default" "host:my-host")) ])
 		 )))
-	 (results (do-post uri headers data)))
+	 (results (do-post uri default-headers data)))
     (displayln results)))
 
 (def (tboard-mass-add id metric-pattern host-clause groupby replace)
@@ -464,8 +461,7 @@
 	 (dash (hash-get tbinfo 'dash))
 	 (graphs (hash-get dash 'graphs))
 	 (title (hash-get dash 'title))
-	 (new-graphs [])
-	 (headers [["Content-type" :: "application/json"]]))
+	 (new-graphs []))
     (unless (string=? replace "t")
       (set! new-graphs graphs))
     (for (m (sort! (search-metrics metric-pattern) string<?))
@@ -475,7 +471,7 @@
 		 (format "avg:~a{~a}by{~a}" m host-clause groupby) "timeseries")))
 	   (set! new-graphs (append new-graphs [new-graph]))))
 
-    (do-put uri headers
+    (do-put uri default-headers
 	    (json-object->string
 	     (hash
 	      ("graphs" new-graphs)
@@ -489,8 +485,7 @@
 	 (dash (hash-get tbinfo 'dash))
 	 (graphs (hash-get dash 'graphs))
 	 (title (hash-get dash 'title))
-	 (new-graphs [])
-	 (headers [["Content-type" :: "application/json"]]))
+	 (new-graphs []))
     (unless (string=? replace "t")
       (set! new-graphs graphs))
     (for (m (sort! (search-metrics metric-pattern) string<?))
@@ -500,7 +495,7 @@
 		 (format "avg:~a{~a}by{~a}" m host-clause groupby) "timeseries")))
 	   (set! new-graphs (append new-graphs [new-graph]))))
 
-    (do-put uri headers
+    (do-put uri default-headers
 	    (json-object->string
 	     (hash
 	      ("graphs" new-graphs)
@@ -521,8 +516,7 @@
 	 (dash (hash-get tbinfo 'dash))
 	 (graphs (hash-get dash 'graphs))
 	 (title (hash-get dash 'title))
-	 (new-graphs [])
-	 (headers '(("Content-type" . "application/json"))))
+	 (new-graphs []))
     (unless (string=? replace "t")
       (set! new-graphs graphs))
     (for (m (sort! (search-metrics metric-pattern) string<?))
@@ -533,7 +527,7 @@
 		 "timeseries")))
 	   (set! new-graphs (append new-graphs [new-graph]))))
 
-    (do-put uri headers
+    (do-put uri default-headers
 	    (json-object->string
 	     (hash
 	      ("graphs" new-graphs)
@@ -549,8 +543,7 @@
 			 (car (pregexp-split ":" tag))
 			 tag))
 	      (uri (make-dd-uri datadog-host (format "dash/~a" id)))
-	      (new-graphs [])
-	      (headers '(("Content-type" . "application/json"))))
+	      (new-graphs []))
 	  (when .?dash
 	    (when (table? .dash)
 	      (dp (hash->list .dash))
@@ -571,7 +564,7 @@
 				 ("graphs" new-graphs)
 				 ("title" .title)
 				 ("description" .description))))
-			 (results (do-put uri headers data))
+			 (results (do-put uri default-headers data))
 			 (text (request-text results))
 			 (status (request-status results)))
 		    (if (success? status)
@@ -593,8 +586,7 @@
 	 (dash (hash-get tbinfo 'dash))
 	 (graphs (hash-get dash 'graphs))
 	 (new-graph (make-graph (metric-name-to-title title) request viz))
-	 (headers '(("Content-type" . "application/json"))))
-    (do-put uri headers
+    (do-put uri default-headers
 	    (json-object->string
 	     (hash
 	      ("graphs" (append graphs [ new-graph ]))
@@ -679,8 +671,7 @@
 	 (print-screens screen))))
 
 (def (screen-create board_title widgets width height)
-  (let* ((headers '(("Content-type" . "application/json")))
-	 (ip datadog-host)
+  (let* ((ip datadog-host)
 	 (uri (make-dd-uri ip "screen"))
 	 (data (json-object->string
 		(hash
@@ -697,11 +688,10 @@
 		    ("x" "32")
 		    ("url" "https://upload.wikimedia.org/wikipedia/commons/b/b4/Kafka.jpg"))])))))
     (displayln (hash-keys (from-json data)))
-    (do-post uri headers data)))
+    (do-post uri default-headers data)))
 
 (def (screen-update id width height board_title)
-  (let* ((headers '(("Content-type" . "application/json")))
-	 (ip datadog-host)
+  (let* ((ip datadog-host)
 	 (uri (make-dd-uri ip (format "screen/~a" id)))
 	 (data (json-object->string
 		(hash
@@ -718,7 +708,7 @@
 		    ("x" "32")
 		    ("url" "https://upload.wikimedia.org/wikipedia/commons/b/b4/Kafka.jpg"))])))))
     (displayln (hash-keys (from-json data)))
-    (do-put uri headers data)))
+    (do-put uri default-headers data)))
 
 (def (search query)
   (let* ((ip datadog-host)
@@ -772,8 +762,7 @@
 
 (def (tag host-pattern tag)
   "Tag a given host pattern with a given tag"
-  (let* ((headers '(("Content-type" . "application/json")))
-	 (hosts (search-hosts host-pattern))
+  (let* ((hosts (search-hosts host-pattern))
 	 (ip datadog-host)
 	 (data (json-object->string
 		(hash
@@ -781,7 +770,7 @@
     (for (h hosts)
 	 (let ((uri (make-dd-uri ip (format "tags/hosts/~a" h))))
 	   (displayln "doing " h)
-	   (displayln (do-post uri headers data))
+	   (displayln (do-post uri default-headers data))
 	   (dp (format "tag data is ~a uri: ~a" data uri))))))
 
 (def (tags)
@@ -824,8 +813,7 @@
   (query-last-secs 3600 query))
 
 (def (edit-monitor id query name message)
-  (let* ((headers '(("Content-type" . "application/json")))
-	 (ip datadog-host)
+  (let* ((ip datadog-host)
 	 (uri (make-dd-uri ip (format "montior/~a" id)))
 	 (data (json-object->string
 		(hash
@@ -833,17 +821,15 @@
 		 ("name" name)
 		 ("message" message)))))
     (displayln "json is:"  data)
-    (do-put uri headers data)))
+    (do-put uri default-headers data)))
 
 (def (del-monitor id)
-  (let* ((headers '(("Content-type" . "application/json")))
-	 (ip datadog-host)
+  (let* ((ip datadog-host)
 	 (uri (make-dd-uri ip (format "monitor/~a" id))))
-    (do-delete uri headers)))
+    (do-delete uri default-headers)))
 
 (def (new-monitor type query name message tags)
-  (let* ((headers '(("Content-type" . "application/json")))
-	 (ip datadog-host)
+  (let* ((ip datadog-host)
 	 (uri (make-dd-uri ip "monitor"))
 	 (data (json-object->string
 		(hash
@@ -856,7 +842,7 @@
 		  (hash
 		   ("notify_no_data" #t)
 		   ("no_data_timeframe" 20)))))))
-    (do-post uri headers data)))
+    (do-post uri default-headers data)))
 
 (def (monitor id)
   (displayln (format "* Datadog Monitor: ~a" id))
@@ -1482,6 +1468,12 @@
 	 (for (tag (get-metric-tags metric dwl))
 	      (displayln "|" metric
 			 "|" tag "|")))))
+
+(def (datadog-usage)
+  "Get Usage metering from datadog"
+  (let-hash (load-config)
+
+
 
 (def (verify-apps)
   "Validate all hosts app list against their apps tag, show those out of sync"
