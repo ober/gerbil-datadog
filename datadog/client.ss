@@ -72,13 +72,13 @@
       (set! datadog-app-key .datadog-app-key)
       (set! datadog-api-key .datadog-api-key))))
 
-
 (def (make-dd-uri ip adds)
   (ensure-api-keys)
   (let* ((datadog-base-url (format "https://~a/api/v1/" ip)))
-    (if (string-contains adds "?")
-      (string-concatenate [ datadog-base-url adds (format "&api_key=~a&application_key=~a" datadog-api-key datadog-app-key)])
-      (string-concatenate [ datadog-base-url adds (format "?api_key=~a&application_key=~a" datadog-api-key datadog-app-key)]))))
+    (let ((delim "?"))
+      (when (string-contains adds "?")
+        (set! delim "&"))
+      (string-concatenate [ datadog-base-url adds (format "~aapi_key=~a&application_key=~a" delim datadog-api-key datadog-app-key)]))))
 
 (def (make-dd-uri-metric ip adds)
   (ensure-api-keys)
@@ -1456,6 +1456,15 @@
 (def (get-all-metas)
   "Get the full inventory"
   (get-meta-by-host ""))
+
+(def (billing start end)
+  "Get Usage metering from datadog"
+  (let-hash (load-config)
+    (let* ((uri (make-dd-uri datadog-host
+                             (format "usage/hosts?start_hr=~a&end_hr=~a" start end)))
+           (results (do-get uri))
+           (myjson (from-json results)))
+      (displayln results))))
 
 (def (metric-tags-from-file file)
   "Read a list of metrics from file and return all metrics associated with each metric"

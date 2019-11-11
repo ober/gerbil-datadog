@@ -45,6 +45,7 @@
 (def interactives
   (hash
    ("agents" (hash (description: "List all servers with Datadog Agent running.") (usage: "agents") (count: 0)))
+   ("billing" (hash (description: "List Metering/Billing information for timeframe.") (usage: "billing <2010-01-02T12> <2010-02-03T12>") (count: 2)))
    ("config" (hash (description: "Configure credentials for datadog.") (usage: "config") (count: 0)))
    ("contexts" (hash (description: "List all contexts") (usage: "contexts") (count: 0)))
    ("del-monitor" (hash (description: "Delete monitor.") (usage: "del-monitor <monitor id>") (count: 1)))
