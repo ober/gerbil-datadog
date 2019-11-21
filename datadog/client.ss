@@ -1460,7 +1460,7 @@
 (def (billing start end)
   "Get Usage metering from datadog"
   (let-hash (load-config)
-    (let* ((outs [[ "Host Count" "Container Count" "Hour" "Apm Host Count" "Gcp Host Count" "Aws Host Count" ]])
+    (let* ((outs [[ "Host Count" "Container Count" "Hour" "Apm Host Count" "Agent Host Count" "Gcp Host Count" "Aws Host Count" ]])
            (uri (make-dd-uri datadog-host
                              (format "usage/hosts?start_hr=~a&end_hr=~a" start end)))
            (results (do-get uri))
@@ -1473,6 +1473,7 @@
                                   .?hour
                                   .?apm_host_count
                                   .?agent_host_count
+                                  .?gcp_host_count
                                   .?aws_host_count
                                   ] outs)))))
       (style-output outs))))
