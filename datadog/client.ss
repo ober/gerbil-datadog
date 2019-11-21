@@ -1281,7 +1281,7 @@
         (let* ((url (format "https://app.datadoghq.com/api/v1/hosts?filter=~a&group=&start=~a&count=100&discovery=true" host start))
                (reply (http-get url headers: .headers))
                (myjson (from-json (request-text reply)))
-               (hosts (let-hash myjson .host_list)))
+               (hosts (let-hash myjson .?host_list)))
           (let-hash myjson
             (set! results (flatten (cons hosts results)))
             (when (> .total_matching (+ start .total_returned))
