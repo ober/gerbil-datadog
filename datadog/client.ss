@@ -1460,11 +1460,22 @@
 (def (billing start end)
   "Get Usage metering from datadog"
   (let-hash (load-config)
-    (let* ((uri (make-dd-uri datadog-host
+    (let* ((outs [[ "Host Count" "Container Count" "Hour" "Apm Host Count" "Gcp Host Count" "Aws Host Count" ]])
+           (uri (make-dd-uri datadog-host
                              (format "usage/hosts?start_hr=~a&end_hr=~a" start end)))
            (results (do-get uri))
            (myjson (from-json results)))
-      (displayln results))))
+      (let-hash myjson
+        (for (entry .usage)
+             (let-hash entry
+               (set! outs (cons [ .?host_count
+                                  .?container_count
+                                  .?hour
+                                  .?apm_host_count
+                                  .?agent_host_count
+                                  .?aws_host_count
+                                  ] outs)))))
+      (style-output outs))))
 
 (def (metric-tags-from-file file)
   "Read a list of metrics from file and return all metrics associated with each metric"
