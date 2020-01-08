@@ -1133,7 +1133,10 @@
                  (cond
                   ((thread-state-running? state) (set! running_t (+ running_t 1)))
                   ((thread-state-waiting? state) (set! waiting_t (+ waiting_t 1)))
-                  ((thread-state-abnormally-terminated? state) (set! abterminated_t (+ abterminated_t 1)))
+                  ((thread-state-abnormally-terminated? state) (set! abterminated_t (+ abterminated_t 1))
+                   (let* ((results (thread-state-abnormally-terminated-reason state)))
+                     (set! data (cons results data))
+                     (set! threads (cdr threads))))
                   ((thread-state-normally-terminated? state) (set! terminated_t (+ terminated_t 1))
                    (let* ((results (thread-state-normally-terminated-result state)))
                      (set! data (cons results data))
@@ -1170,11 +1173,10 @@
          (when (table? result)
            (proc-format result procpat)))))
 
-
 (def (metrics-tag-search metric-pattern tag dwl)
   (let* ((found [])
          (metrics (search-metrics metric-pattern))
-         (threads (spawn-metric-tags metrics tag 300 dwl))
+         (threads (spawn-metric-tags metrics tag 40 dwl))
          (results (collect-from-pool threads)))
     (for (result results)
          (when result
@@ -1518,3 +1520,18 @@
                           (set! missing (flatten (cons app missing)))))
                    (when (length>n? missing 0)
                      (displayln .?name " missing apps: " (jif (sort! missing string<?) ",")))))))))))
+
+(def (create-user handle name role)
+  "Create a Datadog user with:
+   Handle must be a valid email address
+   name as the user name
+   Role as st: standard user, adm: for admin, ro: for readonly"
+  (let-hash (load-config)
+    (let* ((url (make-dd-uri datadog-host "user"))
+           (data (json-object->string
+                  (hash
+                   ("handle" handle)
+                   ("name" name)
+                   ("access_role" role))))
+           (results (do-post-generic url default-headers data)))
+      (displayln results))))
