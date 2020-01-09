@@ -567,10 +567,12 @@
 			 (text (request-text results))
 			 (status (request-status results)))
 		    (if (success? status)
-		      (let-hash text
-			(dp (format "description: ~a title: ~a graphs: ~a" .description .title new-graphs))
-			(displayln (format "https://app.datadoghq.com/dashboard/~a" .new_id)))
-		      (displayln (format "No metrics found matching tag ~a for metric ~a" tag metric-pattern)))))))))))))
+                      (let-hash (from-json text)
+                        (when (table? .?dash)
+                          (let-hash .dash
+                            (dp (format "description: ~a title: ~a graphs: ~a" .?description .?title new-graphs))
+                            (displayln (format "https://app.datadoghq.com/dashboard/~a" .?new_id)))))
+                      (displayln (format "No metrics found matching tag ~a for metric ~a" tag metric-pattern)))))))))))))
 
 (def (metric-name-to-title metric)
   (let* ((no-netdata (pregexp-replace "^netdata." metric ""))
