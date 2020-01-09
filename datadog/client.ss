@@ -126,11 +126,11 @@
 
 (def (print-points points)
   (for (point points)
-       (let ((date (car point))
-	     (datum (car (cdr point))))
-	 (unless (fixnum? datum)
-	   (set! datum (float->int datum)))
-	 (displayln (date->string (epoch->date date) "~s") " " datum))))
+    (let ((date (car point))
+          (datum (car (cdr point))))
+      (unless (fixnum? datum)
+        (set! datum (float->int datum)))
+      (displayln (date->string (epoch->date date) "~s") " " datum))))
 
 (def (make-metric-string str)
   (pregexp-replace* "," (pregexp-replace* " " str "-") ""))
@@ -146,8 +146,8 @@
     (if (string= "ok" status)
       (begin
 	(for (p (hash-get myjson 'series))
-	     (displayln p)
-	     (print-opts p)))
+          (displayln p)
+          (print-opts p)))
       (begin ;; failure to find stuff
 	(displayln "Failed with status:" status)))))
 
@@ -182,9 +182,9 @@
 	   (from-json results)
 	   'metrics)))
     (for (m metrics)
-	 (if pattern
-	   (if (string-contains m pattern)
-	     (displayln m))))))
+      (if pattern
+        (if (string-contains m pattern)
+          (displayln m))))))
 
 
 (def (view-md metric)
@@ -284,32 +284,32 @@
 
 (def (print-events events)
   (for (event events)
-       (let-hash event
-	 (displayln
-	  " source: " .source
-	  " priority: " .priority
-	  " -" .date_happened
-	  " title: " .title
-	  " id: " .id
-	  " url: " .url
-	  " host: " .host
-	  " is_aggregate: " .is_aggregate
-	  " device_name: " .device_name
-	  " tags: " .tags
-	  " resource: " .resource
-	  " alert_type: " .alert_type
-	  " text: " .text
-	  " comments: " .comments
-	  (if (hash-key? event 'children)
-	    (print-children .children))))))
+    (let-hash event
+      (displayln
+       " source: " .source
+       " priority: " .priority
+       " -" .date_happened
+       " title: " .title
+       " id: " .id
+       " url: " .url
+       " host: " .host
+       " is_aggregate: " .is_aggregate
+       " device_name: " .device_name
+       " tags: " .tags
+       " resource: " .resource
+       " alert_type: " .alert_type
+       " text: " .text
+       " comments: " .comments
+       (if (hash-key? event 'children)
+         (print-children .children))))))
 
 (def (print-children children)
   (for (child children)
-       (let-hash child
-	 (displayln
-	  " -: " (print-date (epoch->date .date_happened))
-	  " alert_type: " .alert_type
-	  " id: " .id))))
+    (let-hash child
+      (displayln
+       " -: " (print-date (epoch->date .date_happened))
+       " alert_type: " .alert_type
+       " id: " .id))))
 
 (def (downtimes)
   (let* ((ip datadog-host)
@@ -317,39 +317,39 @@
 	 (dts (from-json (do-get uri))))
 
     (for (dt dts)
-	 (let
-	     ((start (hash-get dt 'start))
-	      (parent_id (hash-get dt 'parent_id))
-	      (scope (hash-get dt 'scope))
-	      (downtime_type (hash-get dt 'downtime_type))
-	      (timezone (hash-get dt 'timezone))
-	      (id (hash-get dt 'id))
-	      (message (hash-get dt 'message))
-	      (updater_id (hash-get dt 'updater_id))
-	      (recurrence (hash-get dt 'recurrence))
-	      (canceled (hash-get dt 'canceled))
-	      (disabled (hash-get dt 'disabled))
-	      (creator_id (hash-get dt 'creator_id))
-	      (end (hash-get dt 'end))
-	      (active (hash-get dt 'active))
-	      (monitor_id (hash-get dt 'monitor_id)))
-	   (displayln
-	    " start:" start
-	    " parent_id:" parent_id
-	    " scope:" scope
-	    " downtime_type:" downtime_type
-	    " timezone:" timezone
-	    " id:" id
-	    " message:" message
-	    " updater_id:" updater_id
-	    " recurrence:" recurrence
-	    " canceled:" canceled
-	    " disabled:" disabled
-	    " creator_id:" creator_id
-	    " end:" end
-	    " active:" active
-	    " monitor_id:" monitor_id
-	    )))))
+      (let
+          ((start (hash-get dt 'start))
+           (parent_id (hash-get dt 'parent_id))
+           (scope (hash-get dt 'scope))
+           (downtime_type (hash-get dt 'downtime_type))
+           (timezone (hash-get dt 'timezone))
+           (id (hash-get dt 'id))
+           (message (hash-get dt 'message))
+           (updater_id (hash-get dt 'updater_id))
+           (recurrence (hash-get dt 'recurrence))
+           (canceled (hash-get dt 'canceled))
+           (disabled (hash-get dt 'disabled))
+           (creator_id (hash-get dt 'creator_id))
+           (end (hash-get dt 'end))
+           (active (hash-get dt 'active))
+           (monitor_id (hash-get dt 'monitor_id)))
+        (displayln
+         " start:" start
+         " parent_id:" parent_id
+         " scope:" scope
+         " downtime_type:" downtime_type
+         " timezone:" timezone
+         " id:" id
+         " message:" message
+         " updater_id:" updater_id
+         " recurrence:" recurrence
+         " canceled:" canceled
+         " disabled:" disabled
+         " creator_id:" creator_id
+         " end:" end
+         " active:" active
+         " monitor_id:" monitor_id
+         )))))
 
 (def (screen id)
   (let* ((ip datadog-host)
@@ -373,22 +373,22 @@
 
 (def (print-widgets widgets)
   (for (widget widgets)
-       (let-hash
-	   widget
-	 (if (string=? .type "query_value")
-	   (let-hash
-	       .tile_def
-	     (print-widget-requests .requests))))))
+    (let-hash
+        widget
+      (if (string=? .type "query_value")
+        (let-hash
+            .tile_def
+          (print-widget-requests .requests))))))
 
 (def (print-widget-requests requests)
   (for (request requests)
-       (let-hash
-	   request
-	 (displayln
-	  (when (hash-key? request 'style)" style: " (print-widget-style .style))
-	  " aggregator: " .aggregator
-	  " q: " .q)
-	 (print-widget-conditional-formats .conditional_formats))))
+    (let-hash
+        request
+      (displayln
+       (when (hash-key? request 'style)" style: " (print-widget-style .style))
+       " aggregator: " .aggregator
+       " q: " .q)
+      (print-widget-conditional-formats .conditional_formats))))
 
 (def (print-widget-style style)
   (let-hash
@@ -397,9 +397,9 @@
 
 (def (print-widget-conditional-formats formats)
   (for (cformat formats)
-       (let-hash
-	   cformat
-	 (displayln (format "	 value: ~a comparator: ~a palette: ~a" .value .comparator .palette)))))
+    (let-hash
+        cformat
+      (displayln (format "	 value: ~a comparator: ~a palette: ~a" .value .comparator .palette)))))
 
 (def (print-screen screen)
   (let-hash
@@ -464,11 +464,11 @@
     (unless (string=? replace "t")
       (set! new-graphs graphs))
     (for (m (sort! (search-metrics metric-pattern) string<?))
-	 (let ((new-graph
-		(make-graph
-		 (metric-name-to-title m)
-		 (format "avg:~a{~a}by{~a}" m host-clause groupby) "timeseries")))
-	   (set! new-graphs (append new-graphs [new-graph]))))
+      (let ((new-graph
+             (make-graph
+              (metric-name-to-title m)
+              (format "avg:~a{~a}by{~a}" m host-clause groupby) "timeseries")))
+        (set! new-graphs (append new-graphs [new-graph]))))
 
     (do-put uri default-headers
 	    (json-object->string
@@ -488,11 +488,11 @@
     (unless (string=? replace "t")
       (set! new-graphs graphs))
     (for (m (sort! (search-metrics metric-pattern) string<?))
-	 (let ((new-graph
-		(make-graph
-		 (metric-name-to-title m)
-		 (format "avg:~a{~a}by{~a}" m host-clause groupby) "timeseries")))
-	   (set! new-graphs (append new-graphs [new-graph]))))
+      (let ((new-graph
+             (make-graph
+              (metric-name-to-title m)
+              (format "avg:~a{~a}by{~a}" m host-clause groupby) "timeseries")))
+        (set! new-graphs (append new-graphs [new-graph]))))
 
     (do-put uri default-headers
 	    (json-object->string
@@ -504,7 +504,7 @@
 (def (make-query-for-hosts metric hosts)
   (let ((results []))
     (for (host hosts)
-	 (set! results (flatten (cons (format "avg:~a{host:~a}" metric host) results))))
+      (set! results (flatten (cons (format "avg:~a{host:~a}" metric host) results))))
     (string-join results ",")))
 
 (def (tboard-mass-add-many id metric-pattern host-pattern replace)
@@ -519,12 +519,12 @@
     (unless (string=? replace "t")
       (set! new-graphs graphs))
     (for (m (sort! (search-metrics metric-pattern) string<?))
-	 (let ((new-graph
-		(make-graph
-		 (metric-name-to-title m)
-		 (make-query-for-hosts m hosts)
-		 "timeseries")))
-	   (set! new-graphs (append new-graphs [new-graph]))))
+      (let ((new-graph
+             (make-graph
+              (metric-name-to-title m)
+              (make-query-for-hosts m hosts)
+              "timeseries")))
+        (set! new-graphs (append new-graphs [new-graph]))))
 
     (do-put uri default-headers
 	    (json-object->string
@@ -550,19 +550,19 @@
 		(unless (string=? replace "t")
 		  (set! new-graphs .graphs))
 		(for (metric (sort! (metrics-tag-search metric-pattern tag dwl) string<?))
-		     (dp (format "metric is ~a" metric))
-		     (let* ((new-graph
-			     (make-graph
-			      (metric-name-to-title metric)
-			      (format "avg:~a{~a}by{~a}" metric tag groupby) "timeseries")))
-		       (set! new-graphs (flatten (cons new-graph new-graphs)))))
+                  (dp (format "metric is ~a" metric))
+                  (let* ((new-graph
+                          (make-graph
+                           (metric-name-to-title metric)
+                           (format "avg:~a{~a}by{~a}" metric tag groupby) "timeseries")))
+                    (set! new-graphs (flatten (cons new-graph new-graphs)))))
 
 		(if (length>n? new-graphs 0)
 		  (let* ((data (json-object->string
 				(hash
 				 ("graphs" new-graphs)
-				 ("title" .title)
-				 ("description" .description))))
+				 ("title" (if replace .?title (format "~a for ~a" metric-pattern tag)))
+				 ("description" (if replace .?description (format "~a for ~a" metric-pattern tag))))))
 			 (results (do-put uri default-headers data))
 			 (text (request-text results))
 			 (status (request-status results)))
@@ -626,28 +626,28 @@
 (def (print-graphs graphs)
   (let ((results ""))
     (for (graph graphs)
-         (let-hash
-             graph
-           (let-hash
-               .definition
-             (cond
-              ((string=? .viz "toplist")
-               (displayln "<--- chart:" (format " status:~a requests:~a autoscale:~a viz:~a " .?status .?requests .?autoscale .?viz)))
-              ((string=? .viz "timeseries")
-               (displayln "<--- chart:" (format " requests:~a autoscale:~a viz:~a " (print-requests .requests) .?autoscale .?viz)))
-              (else
-               (format "Unknown chart type viz: ~a. keys: ~a" .viz))))))
+      (let-hash
+          graph
+        (let-hash
+            .definition
+          (cond
+           ((string=? .viz "toplist")
+            (displayln "<--- chart:" (format " status:~a requests:~a autoscale:~a viz:~a " .?status .?requests .?autoscale .?viz)))
+           ((string=? .viz "timeseries")
+            (displayln "<--- chart:" (format " requests:~a autoscale:~a viz:~a " (print-requests .requests) .?autoscale .?viz)))
+           (else
+            (format "Unknown chart type viz: ~a. keys: ~a" .viz))))))
     results))
 
 (def (print-requests requests)
   (let ((results ""))
     (for (request requests)
-         (hash-for-each
-          (lambda (k v)
-            (if (hash-table? v)
-              (set! results (string-append results (format " ~a:~a " k (stringify-hash v))))
-              (set! results (string-append results (format " ~a:~a " k v)))))
-          request))
+      (hash-for-each
+       (lambda (k v)
+         (if (hash-table? v)
+           (set! results (string-append results (format " ~a:~a " k (stringify-hash v))))
+           (set! results (string-append results (format " ~a:~a " k v)))))
+       request))
     results))
 
 (def (tboards)
@@ -657,8 +657,8 @@
          (timeboards (hash-get tboardz 'dashes))
          (outs [[ "Description" "Id" "Resource" "Title" "Created" "Modified" "RO?" ]]))
     (for (timeboard timeboards)
-         (let-hash timeboard
-           (set! outs (cons [ .description .id .resource .title.created.modified .read_only ] outs))))
+      (let-hash timeboard
+        (set! outs (cons [ .description .id .resource .title.created.modified .read_only ] outs))))
     (style-output outs)))
 
 (def (screens)
@@ -667,7 +667,7 @@
          (screenz (from-json (do-get uri)))
          (screenboards (hash-get screenz 'screenboards)))
     (for (screen screenboards)
-         (print-screens screen))))
+      (print-screens screen))))
 
 (def (screen-create board_title widgets width height)
   (let* ((ip datadog-host)
@@ -716,9 +716,9 @@
          (metrics (hash-get results 'metrics))
          (hosts (hash-get results 'hosts)))
     (for (m metrics)
-         (displayln "metric: " m))
+      (displayln "metric: " m))
     (for (h hosts)
-         (displayln "host: " h))))
+      (displayln "host: " h))))
 
 (def (search-metrics pattern)
   (let* ((ip datadog-host)
@@ -727,16 +727,16 @@
          (results (hash-get (from-json (do-get uri)) 'results))
          (metrics (hash-get results 'metrics)))
     (for (m metrics)
-         (dp (format "(pregexp-match \"~a\" ~a)" pattern m))
-         (when (pregexp-match pattern m)
-           (set! metrics-matched (cons m metrics-matched))))
+      (dp (format "(pregexp-match \"~a\" ~a)" pattern m))
+      (when (pregexp-match pattern m)
+        (set! metrics-matched (cons m metrics-matched))))
     metrics-matched))
 
 (def (hosts pattern)
   (let ((results (search-hosts pattern)))
     (when (list? results)
       (for (r results)
-           (displayln r)))))
+        (displayln r)))))
 
 (def (regexp->str regexp)
   (let ((str regexp)
@@ -744,7 +744,7 @@
                    #\$
                    ]))
     (for (remove regexps)
-         (set! str (string-delete remove str)))
+      (set! str (string-delete remove str)))
     str))
 
 (def (search-hosts pattern)
@@ -754,9 +754,9 @@
          (results (hash-get (from-json (do-get uri)) 'results))
          (hosts (hash-get results 'hosts)))
     (for (h hosts)
-         (let ((matches (pregexp-match pattern h)))
-           (when matches
-             (set! hosts-matched (cons h hosts-matched)))))
+      (let ((matches (pregexp-match pattern h)))
+        (when matches
+          (set! hosts-matched (cons h hosts-matched)))))
     hosts-matched))
 
 (def (tag host-pattern tag)
@@ -767,31 +767,31 @@
                 (hash
                  ("tags" [ tag ])))))
     (for (h hosts)
-         (let ((uri (make-dd-uri ip (format "tags/hosts/~a" h))))
-           (displayln "doing " h)
-           (displayln (do-post uri default-headers data))
-           (dp (format "tag data is ~a uri: ~a" data uri))))))
+      (let ((uri (make-dd-uri ip (format "tags/hosts/~a" h))))
+        (displayln "doing " h)
+        (displayln (do-post uri default-headers data))
+        (dp (format "tag data is ~a uri: ~a" data uri))))))
 
 (def (tags)
   (let* ((ip datadog-host)
          (uri (make-dd-uri ip "tags/hosts"))
          (tags (hash-get (from-json (do-get uri)) 'tags)))
     (for (k (hash-keys tags))
-         (displayln k))))
+      (displayln k))))
 
 (def (tags-for-metric metric)
   (let* ((ip datadog-host)
          (uri (make-dd-uri ip "tags/metrics"))
          (tags (hash-get (from-json (do-get uri)) 'tags)))
     (for (k (hash-keys tags))
-         (displayln k))))
+      (displayln k))))
 
 (def (tags-for-source source)
   (let* ((ip datadog-host)
          (uri (make-dd-uri ip (format "tags/hosts/~a" source)))
          (tags (hash-get (from-json (do-get uri)) 'tags)))
     (for (k (hash-keys tags))
-         (displayln k))))
+      (displayln k))))
 
 (def (graph query start end)
   (let* ((ip datadog-host)
@@ -890,15 +890,15 @@
          (results (from-json (do-get uri))))
     (displayln "* Datadog Monitors")
     (for (monitor results)
-         (print-monitor-long monitor))))
+      (print-monitor-long monitor))))
 
 (def (dump-monitors dir)
   (let* ((ip datadog-host)
          (uri (make-dd-uri ip "monitor"))
          (results (from-json (do-get uri))))
     (for (monitor results)
-         (let-hash monitor
-           (yaml-dump (format "~a/~a.yaml" dir .id) (format-monitor monitor))))))
+      (let-hash monitor
+        (yaml-dump (format "~a/~a.yaml" dir .id) (format-monitor monitor))))))
 
 (def (format-monitor monitor)
   "Try to order the keys in this hash to consistently represent them in yaml"
@@ -1000,7 +1000,7 @@
   (let* ((dwl (datadog-web-login))
          (tags (get-metric-tags metric dwl)))
     (for (tag tags)
-         (displayln tag))))
+      (displayln tag))))
 
 (def (get-metric-tags metric dwl)
   "Non-interactive version of metric-tags"
@@ -1042,8 +1042,8 @@
   (let ((cookie-of-interest ""))
     (when (list? cookies)
       (for (c cookies)
-           (when (pregexp-match pattern c)
-             (set! cookie-of-interest (car (pregexp-split ";" (cadr (pregexp-split "=" c))))))))
+        (when (pregexp-match pattern c)
+          (set! cookie-of-interest (car (pregexp-split ";" (cadr (pregexp-split "=" c))))))))
     cookie-of-interest))
 
 (def (datadog-get-dogweb dogwebu)
@@ -1072,11 +1072,11 @@
            (hosts (from-json results)))
       (let-hash hosts
         (for (host .host_list)
-             (displayln (hash->list host))
-             (let-hash host
-               (display .name)
-               (let-hash .live_metrics
-                 (displayln ": iowait: " .?iowait " load15: " .?load15 " cpu: " .?cpu))))))))
+          (displayln (hash->list host))
+          (let-hash host
+            (display .name)
+            (let-hash .live_metrics
+              (displayln ": iowait: " .?iowait " load15: " .?load15 " cpu: " .?cpu))))))))
 
 (def (totals)
   (let-hash (load-config)
@@ -1103,20 +1103,21 @@
 (def (spawn-proc-collectors hosts secs dwl)
   (let ((threads []))
     (for (host hosts)
-         (let ((thread (spawn
-                        (lambda ()
-                          (get-procs-by-host host secs dwl)))))
-           (set! threads (cons thread threads))))
+      (let ((thread (spawn
+                     (lambda ()
+                       (get-procs-by-host host secs dwl)))))
+        (set! threads (cons thread threads))))
     threads))
 
 (def (spawn-metric-tags metrics tag secs dwl)
   (let ((threads []))
     (for (metric metrics)
-         (let ((thread (spawn
-                        (lambda ()
-                          (tag-in-metric? tag metric dwl)))))
-           ;;			  (get-procs-by-host host secs dwl)))))
-           (set! threads (cons thread threads))))
+      (let ((thread
+             (spawn
+              (lambda ()
+                (tag-in-metric? tag metric dwl)))))
+        ;;			  (get-procs-by-host host secs dwl)))))
+        (set! threads (cons thread threads))))
     threads))
 
 (def (collect-from-pool threads)
@@ -1128,22 +1129,22 @@
               (abterminated_t 0)
               (terminated_t 0))
           (for (thread threads)
-               (let* ((thread (car threads))
-                      (state (thread-state thread)))
-                 (cond
-                  ((thread-state-running? state) (set! running_t (+ running_t 1)))
-                  ((thread-state-waiting? state) (set! waiting_t (+ waiting_t 1)))
-                  ((thread-state-abnormally-terminated? state) (set! abterminated_t (+ abterminated_t 1))
-                   (let* ((results (thread-state-abnormally-terminated-reason state)))
-                     (set! data (cons results data))
-                     (set! threads (cdr threads))))
-                  ((thread-state-normally-terminated? state) (set! terminated_t (+ terminated_t 1))
-                   (let* ((results (thread-state-normally-terminated-result state)))
-                     (set! data (cons results data))
-                     (set! threads (cdr threads))))
-                  (else
-                   (displayln "unknown state: " (thread-state thread))
-                   (set! threads (cdr threads))))))
+            (let* ((thread (car threads))
+                   (state (thread-state thread)))
+              (cond
+               ((thread-state-running? state) (set! running_t (+ running_t 1)))
+               ((thread-state-waiting? state) (set! waiting_t (+ waiting_t 1)))
+               ((thread-state-abnormally-terminated? state) (set! abterminated_t (+ abterminated_t 1))
+                (let ((state (thread-state-abnormally-terminated-reason state)))
+                  (displayln "Error: msg: " (display-exception state))
+                  (set! threads (cdr threads))))
+               ((thread-state-normally-terminated? state) (set! terminated_t (+ terminated_t 1))
+                (let* ((results (thread-state-normally-terminated-result state)))
+                  (set! data (cons results data))
+                  (set! threads (cdr threads))))
+               (else
+                (displayln "unknown state: " (thread-state thread))
+                (set! threads (cdr threads))))))
           (dp (format "loop: total: ~a running: ~a waiting: ~a terminated: ~a abnormal_terminated: ~a" (length threads) running_t waiting_t terminated_t abterminated_t))
           (thread-sleep! 1)))
       data)))
@@ -1170,8 +1171,8 @@
          (threads (spawn-proc-collectors hosts 300 dwl))
          (results (collect-from-pool threads)))
     (for (result results)
-         (when (table? result)
-           (proc-format result procpat)))))
+      (when (table? result)
+        (proc-format result procpat)))))
 
 (def (metrics-tag-search metric-pattern tag dwl)
   (let* ((found [])
@@ -1179,8 +1180,8 @@
          (threads (spawn-metric-tags metrics tag 40 dwl))
          (results (collect-from-pool threads)))
     (for (result results)
-         (when result
-           (set! found (flatten (cons result found)))))
+      (when result
+        (set! found (flatten (cons result found)))))
     found))
 
 (def (procs host secs)
@@ -1188,7 +1189,7 @@
   (let ((dwl (datadog-web-login)))
     (let-hash (get-procs-by-host host secs dwl)
       (for (snapshot .snapshots)
-           (format-snapshot snapshot)))))
+        (format-snapshot snapshot)))))
 
 (def (proc host pattern dwl)
   "Find any processes who's name matches pattern on the given host and seconds window"
@@ -1197,7 +1198,7 @@
       (let ((results #f)
             (matches []))
         (for (snapshot .snapshots)
-             (set! matches (cons (match-snapshot snapshot pattern) matches)))
+          (set! matches (cons (match-snapshot snapshot pattern) matches)))
         matches))))
 
 (def (proc-format procs procpat)
@@ -1206,7 +1207,7 @@
     (let ((results #f)
           (matches []))
       (for (snapshot .snapshots)
-           (set! matches (flatten (cons (match-snapshot snapshot procpat) matches))))
+        (set! matches (flatten (cons (match-snapshot snapshot procpat) matches))))
       (when (length>n? (flatten matches) 0)
         (let ((host (car (pregexp-split "\\}" (cadr (pregexp-split "\\{" .query))))))
           (displayln host ": " (string-join (delete-duplicates (flatten matches)) ",")))))))
@@ -1217,29 +1218,29 @@
   (when (table? snapshot)
     (let-hash snapshot
       (for (proc .pslist)
-           (with ([
-                   ppid
-                   user
-                   pct1
-                   pctmem
-                   vsz
-                   rss
-                   zero1
-                   zero2
-                   name
-                   nprocs
-                   ] proc)
-             (displayln (format "ppid?:~a user:~a pct1?:~a pctmem:~a vsz:~a rss:~a zero1?:~a zero2?:~a name:~a nprocs:~a"
-                                ppid
-                                user
-                                pct1
-                                pctmem
-                                vsz
-                                rss
-                                zero1
-                                zero2
-                                name
-                                nprocs)))))))
+        (with ([
+                ppid
+                user
+                pct1
+                pctmem
+                vsz
+                rss
+                zero1
+                zero2
+                name
+                nprocs
+                ] proc)
+          (displayln (format "ppid?:~a user:~a pct1?:~a pctmem:~a vsz:~a rss:~a zero1?:~a zero2?:~a name:~a nprocs:~a"
+                             ppid
+                             user
+                             pct1
+                             pctmem
+                             vsz
+                             rss
+                             zero1
+                             zero2
+                             name
+                             nprocs)))))))
 
 (def (match-snapshot snapshot pattern)
   "Snapshots are lists of pslists."
@@ -1248,9 +1249,9 @@
     (let ((results []))
       (let-hash snapshot
         (for (proc .pslist)
-             (with ([ ppid user pct1 pctmem vsz rss zero1 zero2 name nprocs ] proc)
-               (when (pregexp-match pattern name)
-                 (set! results (cons name results)))))
+          (with ([ ppid user pct1 pctmem vsz rss zero1 zero2 name nprocs ] proc)
+            (when (pregexp-match pattern name)
+              (set! results (cons name results)))))
         results))))
 
 (def (indexes)
@@ -1260,7 +1261,7 @@
            (myjson (from-json (request-text reply))))
       (let-hash myjson
         (for (index .indexes)
-             (displayln (hash->list index)))))))
+          (displayln (hash->list index)))))))
 
 (def (status)
   (let* ((url "https://1k6wzpspjf99.statuspage.io/api/v2/status.json")
@@ -1293,7 +1294,7 @@
 (def (agents)
   (let ((hosts (mytime (hosts-with-agent))))
     (for (host hosts)
-         (displayln host))))
+      (displayln host))))
 
 (def (hosts-with-agent)
   (hosts-with-app "agent"))
@@ -1301,16 +1302,16 @@
 (def (find-app app)
   "Return a list of hosts with app listed in it's apps"
   (for (host (sort! (hosts-with-app app) string<?))
-       (displayln host)))
+    (displayln host)))
 
 (def (hosts-with-app app)
   "Return a list of hostnames for all servers with agent listed in their apps. Used with proc search to avoid hitting hosts without proc info"
   (let ((secret-agents [])
         (hosts (get-meta-by-host "")))
     (for (host hosts)
-         (let-hash host
-           (when (member app .apps)
-             (set! secret-agents (flatten (cons .host_name secret-agents))))))
+      (let-hash host
+        (when (member app .apps)
+          (set! secret-agents (flatten (cons .host_name secret-agents))))))
     secret-agents))
 
 (def (host hst)
@@ -1318,19 +1319,19 @@
   (let ((results (get-meta-by-host hst))
         (outs [[ "Name" "Hostname" "Id" "Integrations" "Muted?" "Sources" "Tags by Source" "Aliases" "is Up?" "Metrics" ]]))
     (for (host results)
-         (when (table? host)
-           (let-hash host
-             (set! outs (cons [ .?name
-                                .?host_name
-                                .?id
-                                (jif (sort! .apps string<?) ",")
-                                (if .is_muted "True" "False")
-                                (jif .sources ",")
-                                (hash->str .tags_by_source)
-                                (jif .aliases ",")
-                                (if .up "True" "False")
-                                (hash->str .metrics)
-                                ] outs)))))
+      (when (table? host)
+        (let-hash host
+          (set! outs (cons [ .?name
+                             .?host_name
+                             .?id
+                             (jif (sort! .apps string<?) ",")
+                             (if .is_muted "True" "False")
+                             (jif .sources ",")
+                             (hash->str .tags_by_source)
+                             (jif .aliases ",")
+                             (if .up "True" "False")
+                             (hash->str .metrics)
+                             ] outs)))))
     (style-output outs)))
 
 (def (format-no-host host)
@@ -1389,7 +1390,7 @@
            (text (request-text reply))
            (contexts (from-json text)))
       (for (context contexts)
-           (display-context context)))))
+        (display-context context)))))
 
 (def (display-context context)
   (when (table? context)
@@ -1397,8 +1398,8 @@
       (displayln "*** " .name)
       (displayln "**** Groups")
       (for (group .groups)
-           (let-hash group
-             (displayln "****** " .status " message: " (or .message "None") " " .tags " " .modified))))))
+        (let-hash group
+          (displayln "****** " .status " message: " (or .message "None") " " .tags " " .modified))))))
 
 
 ;; ********************* Reporting stuff here. todo move to other project
@@ -1413,21 +1414,21 @@
     (displayln "|Name|host name|Id|Apps|Muted?|Sources|Meta|Tags By Source| aliases| up?|metrics|")
     (displayln "|-|-|")
     (for (host inventory)
-         (let-hash host
-           (if .?instance_id
-             (let (found (hash-get alias-hash .instance_id))
-               (if found
-                 (format-host found)
-                 (begin ;; not found
-                   (if (hash-get alias-hash .host)
-                     (format-host (hash-get alias-hash .host))
-                     (format-no-host (format "~a ~a ~a" .instance_id .ip .host))))))
-             (begin
-               (when (and (string? .in_service) (string=? .in_service "t"))
-                 (let ((found (or (hash-get alias-hash .host) (hash-key-like alias-hash .host))))
-                   (if found
-                     (format-host (hash-get alias-hash .host))
-                     (format-no-host (format "~a ~a" .host .ip)))))))))))
+      (let-hash host
+        (if .?instance_id
+          (let (found (hash-get alias-hash .instance_id))
+            (if found
+              (format-host found)
+              (begin ;; not found
+                (if (hash-get alias-hash .host)
+                  (format-host (hash-get alias-hash .host))
+                  (format-no-host (format "~a ~a ~a" .instance_id .ip .host))))))
+          (begin
+            (when (and (string? .in_service) (string=? .in_service "t"))
+              (let ((found (or (hash-get alias-hash .host) (hash-key-like alias-hash .host))))
+                (if found
+                  (format-host (hash-get alias-hash .host))
+                  (format-no-host (format "~a ~a" .host .ip)))))))))))
 
 (def (hash-key-like hsh pat)
   "Search a hash for keys that match a given regexp and return value"
@@ -1441,18 +1442,18 @@
 (def (convert-metas-hash-name metas)
   (let ((meta-hash (hash)))
     (for (meta metas)
-         (let-hash meta
-           (hash-put! meta-hash .name meta)))
+      (let-hash meta
+        (hash-put! meta-hash .name meta)))
     meta-hash))
 
 (def (convert-metas-hash-aliases metas)
   (let ((meta-hash (hash)))
     (for (meta metas)
-         (let-hash meta
-           (when (and (list? .?aliases)
-                      (length>n? .aliases 0))
-             (for (alias .aliases)
-                  (hash-put! meta-hash alias meta)))))
+      (let-hash meta
+        (when (and (list? .?aliases)
+                   (length>n? .aliases 0))
+          (for (alias .aliases)
+            (hash-put! meta-hash alias meta)))))
     meta-hash))
 
 (def (get-all-metas)
@@ -1469,15 +1470,15 @@
            (myjson (from-json results)))
       (let-hash myjson
         (for (entry .usage)
-             (let-hash entry
-               (set! outs (cons [ .?host_count
-                                  .?container_count
-                                  .?hour
-                                  .?apm_host_count
-                                  .?agent_host_count
-                                  .?gcp_host_count
-                                  .?aws_host_count
-                                  ] outs)))))
+          (let-hash entry
+            (set! outs (cons [ .?host_count
+                               .?container_count
+                               .?hour
+                               .?apm_host_count
+                               .?agent_host_count
+                               .?gcp_host_count
+                               .?aws_host_count
+                               ] outs)))))
       (style-output outs))))
 
 (def (metric-tags-from-file file)
@@ -1487,9 +1488,9 @@
   (let* ((metrics (read-file-lines file))
          (dwl (datadog-web-login)))
     (for (metric metrics)
-         (for (tag (get-metric-tags metric dwl))
-              (displayln "|" metric
-                         "|" tag "|")))))
+      (for (tag (get-metric-tags metric dwl))
+        (displayln "|" metric
+                   "|" tag "|")))))
 
 (def (datadog-usage)
   "Get Usage metering from datadog"
@@ -1502,8 +1503,8 @@
   "Validate all hosts app list against their apps tag, show those out of sync"
   (let ((hosts (get-all-metas)))
     (for (host hosts)
-         (let-hash host
-           (verify-app-tag host)))))
+      (let-hash host
+        (verify-app-tag host)))))
 
 (def (verify-app-tag host)
   "Verify all Users App tag is consistent with apps."
@@ -1512,14 +1513,14 @@
       (let* ((user-tags (hash-get .tags_by_source 'Users)))
         (when user-tags
           (for (tag user-tags)
-               (when (pregexp-match "^apps:" tag)
-                 (let* ((want (pregexp-split "_" (cadr (pregexp-split ":" tag))))
-                        (missing []))
-                   (for (app want)
-                        (unless (member app .apps)
-                          (set! missing (flatten (cons app missing)))))
-                   (when (length>n? missing 0)
-                     (displayln .?name " missing apps: " (jif (sort! missing string<?) ",")))))))))))
+            (when (pregexp-match "^apps:" tag)
+              (let* ((want (pregexp-split "_" (cadr (pregexp-split ":" tag))))
+                     (missing []))
+                (for (app want)
+                  (unless (member app .apps)
+                    (set! missing (flatten (cons app missing)))))
+                (when (length>n? missing 0)
+                  (displayln .?name " missing apps: " (jif (sort! missing string<?) ",")))))))))))
 
 (def (create-user handle name role)
   "Create a Datadog user with:
