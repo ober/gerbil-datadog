@@ -1,4 +1,4 @@
-;;; -*- Gerbil -*-
+;; -*- Gerbil -*-
 ;;; © ober
 ;;; Datadog client binary
 
@@ -48,6 +48,7 @@
    ("billing" (hash (description: "List Metering/Billing information for timeframe.") (usage: "billing <2010-01-02T12> <2010-02-03T12>") (count: 2)))
    ("config" (hash (description: "Configure credentials for datadog.") (usage: "config") (count: 0)))
    ("contexts" (hash (description: "List all contexts") (usage: "contexts") (count: 0)))
+   ("create-user" (hash (description: "Create a Datadog user. ") (usage: "create-user <email> <full user name> <role: Standard User: st, Admin: adm, Readonly: ro>") (count: 3)))
    ("del-monitor" (hash (description: "Delete monitor.") (usage: "del-monitor <monitor id>") (count: 1)))
    ("dump" (hash (description: "Dump: dump json defintion of tboard ") (usage: "dump <tboard id>") (count: 1)))
    ("dump-monitors" (hash (description: "Dump all monitors to yaml definitions in directory passed.") (usage: "dump-monitors <directory>") (count: 1)))

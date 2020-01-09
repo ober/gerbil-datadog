@@ -1,4 +1,4 @@
-.PHONY: datadog
+a.PHONY: datadog
 
 default: datadog
 
@@ -22,6 +22,16 @@ datadog: $(eval CPPFLAGS := "-I$(SSL-BASE)include -I$(LIBYAML-BASE)include -I/us
 datadog: $(eval LDFLAGS := "-L$(SSL-BASE)lib -L$(LIBYAML-BASE)lib -lz -lssl -lyaml -L/usr/local/lib")
 datadog:
 	gxc -O -o dda -static -exe -g -genv -cc-options $(CPPFLAGS) -ld-options $(LDFLAGS) -gsrc -gsc-flag -keep-c datadog/dda.ss
+
+datadog-fat: $(eval CPPFLAGS := "-I$(SSL-BASE)include -I$(LIBYAML-BASE)include -I/usr/local/include")
+datadog-fat: $(eval LDFLAGS := "-L$(SSL-BASE)lib -L$(LIBYAML-BASE)lib -lz -lssl -lyaml -L/usr/local/lib")
+datadog-fat:
+	gxc -O -o dda-fat -static -exe -cc-options $(CPPFLAGS) -ld-options $(LDFLAGS) -gsrc datadog/dda.ss
+
+datadog-skinny: $(eval CPPFLAGS := "-I$(SSL-BASE)include -I$(LIBYAML-BASE)include -I/usr/local/include")
+datadog-skinny: $(eval LDFLAGS := "-L$(SSL-BASE)lib -L$(LIBYAML-BASE)lib -lz -lssl -lyaml -L/usr/local/lib")
+datadog-skinny:
+	gxc -O -o dda-skinny -static -exe -cc-options $(CPPFLAGS) -ld-options $(LDFLAGS) datadog/dda.ss
 
 linux-static:
 	docker run -e GERBIL_PATH=/dd/.gerbil -e PATH='/root/gerbil/bin:/usr/local/gambit/current/bin:/bin:/usr/bin:/sbin:/usr/sbin' -v $(PWD):/dd -it jaimef/centos bash -c 'cd /dd && make linux-static-intern'
