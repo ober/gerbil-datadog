@@ -1,0 +1,2 @@
+** 0.07
+   - Fix tboard-fancy to work properly and handle errors.
