@@ -34,7 +34,7 @@
   :std/xml/ssax)
 
 (export #t)
-(def version "0.06")
+(def version "0.07")
 (declare (not optimize-dead-definitions))
 (def datadog-host "app.datadoghq.com")
 (import (rename-in :gerbil/gambit/os (current-time builtin-current-time)))
