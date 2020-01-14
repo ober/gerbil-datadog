@@ -1,4 +1,4 @@
-a.PHONY: datadog
+.PHONY: datadog
 
 default: datadog
 
@@ -34,10 +34,12 @@ datadog-skinny:
 	gxc -O -o dda-skinny -static -exe -cc-options $(CPPFLAGS) -ld-options $(LDFLAGS) datadog/dda.ss
 
 linux-static:
-	docker run -e GERBIL_PATH=/dd/.gerbil -e PATH='/root/gerbil/bin:/usr/local/gambit/current/bin:/bin:/usr/bin:/sbin:/usr/sbin' -v $(PWD):/dd -it jaimef/centos bash -c 'cd /dd && make linux-static-intern'
+	docker run -e GERBIL_PATH=/dd/.gerbil -e GERBIL_HOME=/root/gerbil -e PATH='/root/gerbil/bin:/usr/local/gambit/current/bin:/bin:/usr/bin:/sbin:/usr/sbin' -v $(PWD):/dd -it jaimef/centos bash -c 'cd /dd && unset http_proxy; unset https_proxy; make linux-static-intern'
 
 linux-static-intern:
-	gxc -o dda-linux-static -cc-options "-Bstatic -DOPENSSL_NO_KRB5 -I/usr/local/include -I/usr/local/ssl/include" -static -ld-options "-static -L/usr/lib64 -L/usr/local/ssl/lib -lssl -L/usr/local/lib -ldl -lyaml -lz" -gsc-option -prelude '(declare (not safe))' -exe datadog/dda.ss
+	export GERBIL_HOME=/root/gerbil
+	gxpkg install github.com/ober/oberlib
+	gxc -o dda-linux-static -cc-options "-Bstatic -DOPENSSL_NO_KRB5 -I/usr/local/include -I/usr/local/ssl/include" -static -ld-options "-static -L/usr/lib64 -L/usr/local/ssl/lib -lssl -L/usr/local/lib -ldl -lyaml -lz" -gsc-option -prelude '(declare (not safe))' -exe datadog/dda.ss datadog/client.ss
 
 linux:
 	gxc -o dd-linux -cc-options "-Bstatic -DOPENSSL_NO_KRB5 -I/usr/local/include -I/usr/local/ssl/include" -static -ld-options "-static -L/usr/lib64 -L/usr/local/ssl/lib -lssl -L/usr/local/lib -ldl -lyaml -lz" -exe datadog/dda.ss
