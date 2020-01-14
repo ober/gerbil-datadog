@@ -912,7 +912,7 @@
      (multi .multi)
      (created .created)
      (created_at .created_at)
-     (overall_state .overall_state)
+;;     (overall_state .overall_state)
      (creator (let-hash .creator
                 (hash
                  (name .name)
@@ -934,7 +934,7 @@
      (deleted .deleted)
      (matching_downtimes .matching_downtimes)
      (modified .modified)
-     (overall_state_modified .overall_state_modified)
+;;     (overall_state_modified .overall_state_modified)
      (tags .tags)
      (message .message))))
 
