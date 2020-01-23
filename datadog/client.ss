@@ -1103,7 +1103,7 @@
 
 (def (stories)
   (let-hash (datadog-web-login)
-    (let* ((url (make-dd-uri "https://app.datadoghq.com/watchdog/stories?page_size=100&stories_api_v2=true"))
+    (let* ((url "https://app.datadoghq.com/watchdog/stories?page_size=100&stories_api_v2=true")
            (reply (http-get url headers: .headers)))
       (displayln (request-text reply)))))
 
