@@ -923,7 +923,7 @@
      (multi .multi)
      (created .created)
      (created_at .created_at)
-;;     (overall_state .overall_state)
+     ;;     (overall_state .overall_state)
      (creator (let-hash .creator
                 (hash
                  (name .name)
@@ -945,7 +945,7 @@
      (deleted .deleted)
      (matching_downtimes .matching_downtimes)
      (modified .modified)
-;;     (overall_state_modified .overall_state_modified)
+     ;;     (overall_state_modified .overall_state_modified)
      (tags .tags)
      (message .message))))
 
@@ -1103,7 +1103,7 @@
 
 (def (stories)
   (let-hash (datadog-web-login)
-    (let* ((url (make-dd-uri "https://app.datadoghq.com/watchdog/stories?page_size=100&stories_api_v2=true")
+    (let* ((url (make-dd-uri "https://app.datadoghq.com/watchdog/stories?page_size=100&stories_api_v2=true"))
            (reply (http-get url headers: .headers)))
       (displayln (request-text reply)))))
 
