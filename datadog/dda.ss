@@ -72,6 +72,7 @@
    ("metrics" (hash (description: "List Datadog Metrics and search on argument 1.") (usage: "metrics <pattern of metric to search for>") (count: 1)))
    ("monitor" (hash (description: "Describe Monitor.") (usage: "monitor <monitor id>") (count: 1)))
    ("monitors" (hash (description: "List all monitors.") (usage: "monitors") (count: 0)))
+   ("monitors-table" (hash (description: "List all monitors - Table format.") (usage: "monitors") (count: 0)))
    ("new-monitor" (hash (description: "Create new monitor.") (usage: "new-monitor <type> <query> <name> <message> <tags>") (count: 5)))
    ("query-day" (hash (description: "<query>: Query metrics for last day.") (usage: "query-day") (count: 1)))
    ("query-hour" (hash (description: "<query>: Query metrics for last hour.") (usage: "query-hour") (count: 1)))
