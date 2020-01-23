@@ -1,4 +1,5 @@
 ;; -*- Gerbil -*-
+;; © ober 2020
 
 (import
   :gerbil/gambit
@@ -34,7 +35,7 @@
   :std/xml/ssax)
 
 (export #t)
-(def version "0.07")
+(def version "0.08")
 (declare (not optimize-dead-definitions))
 (def datadog-host "app.datadoghq.com")
 (import (rename-in :gerbil/gambit/os (current-time builtin-current-time)))
@@ -902,6 +903,16 @@
       (let-hash monitor
         (yaml-dump (format "~a/~a.yaml" dir .id) (format-monitor monitor))))))
 
+(def (monitors-table)
+  (let* ((outs [[ "Id" "Type" "Name" "Query" ]])
+         (ip datadog-host)
+         (uri (make-dd-uri ip "monitor"))
+         (results (from-json (do-get uri))))
+    (for (monitor results)
+      (let-hash monitor
+        (set! outs (cons [ .id  .type .name .query ] outs))))
+    (style-output outs)))
+
 (def (format-monitor monitor)
   "Try to order the keys in this hash to consistently represent them in yaml"
   (let-hash monitor
@@ -1092,7 +1103,7 @@
 
 (def (stories)
   (let-hash (datadog-web-login)
-    (let* ((url "https://app.datadoghq.com/watchdog/stories?page_size=100&stories_api_v2=true")
+    (let* ((url (make-dd-uri "https://app.datadoghq.com/watchdog/stories?page_size=100&stories_api_v2=true")
            (reply (http-get url headers: .headers)))
       (displayln (request-text reply)))))
 
@@ -1383,7 +1394,6 @@
     (string-join lst sep)
     lst))
 
-
 (def (contexts)
   (let-hash (datadog-web-login)
     (let* ((url "https://app.datadoghq.com/check/contexts?names_only=true")
@@ -1498,8 +1508,6 @@
   "Get Usage metering from datadog"
   (let-hash (load-config)
     (displayln "missing")))
-
-
 
 (def (verify-apps)
   "Validate all hosts app list against their apps tag, show those out of sync"
