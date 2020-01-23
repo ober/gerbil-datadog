@@ -904,13 +904,13 @@
         (yaml-dump (format "~a/~a.yaml" dir .id) (format-monitor monitor))))))
 
 (def (monitors-table)
-  (let* ((outs [[ "Id" "Type" "Name" "Query" ]])
+  (let* ((outs [[ "Id" "Name" "Query" ]])
          (ip datadog-host)
          (uri (make-dd-uri ip "monitor"))
          (results (from-json (do-get uri))))
     (for (monitor results)
       (let-hash monitor
-        (set! outs (cons [ .id  .type .name .query ] outs))))
+        (set! outs (cons [ .id .name .query ] outs))))
     (style-output outs)))
 
 (def (format-monitor monitor)
