@@ -112,9 +112,9 @@
   (let-hash t
     (displayln
      " end: " .end
-     " unit: "  (stringify-hash .unit)
+     " unit: "  (hash->string .unit)
      " length: " .length
-     " attributes: " (stringify-hash .attributes)
+     " attributes: " (hash->string .attributes)
      " metric: " .metric
      " display_name: " .display_name
      " aggr: " .aggr
@@ -648,7 +648,7 @@
       (hash-for-each
        (lambda (k v)
          (if (hash-table? v)
-           (set! results (string-append results (format " ~a:~a " k (stringify-hash v))))
+           (set! results (string-append results (format " ~a:~a " k (hash->string v))))
            (set! results (string-append results (format " ~a:~a " k v)))))
        request))
     results))
