@@ -140,8 +140,8 @@
   (verify-account)
   (let* ((adds (format "query?from=~a&to=~a&query=~a" from-s to-s query))
 	 (ip datadog-host)
-	 (uri (make-dd-uri ip adds))
-	 (results (do-get uri))
+	 (url (make-dd-uri ip adds))
+	 (results (rest-call 'get uri (default-headers)))
 	 (myjson (from-json results))
 	 (status (hash-ref myjson 'status)))
     (if (string= "ok" status)
@@ -177,7 +177,7 @@
 				 (-
 				  (time->seconds
 				   (builtin-current-time)) 9000))))))
-	 (results (do-get uri))
+	 (results (rest-call 'get uri (default-headers)))
 	 (metrics
 	  (hash-get
 	   (from-json results)
@@ -192,8 +192,8 @@
   (verify-account)
   (let* ((adds (format "metrics/~a" metric))
 	 (ip datadog-host)
-	 (uri (make-dd-uri ip adds))
-	 (results (do-get uri))
+	 (url (make-dd-uri ip adds))
+	 (results (rest-call 'get uri
 	 (myjson (from-json results))
 	 (description (hash-get myjson 'description))
 	 (integration (hash-get myjson 'integration))
@@ -219,17 +219,19 @@
 
 (def (edit-metric-metadata metric description short_name)
   (let* ((ip datadog-host)
-	 (uri (make-dd-uri ip (format "metrics/~a" metric)))
+	 (url (make-dd-uri ip (format "metrics/~a" metric)))
 	 (data (json-object->string
 		(hash
 		 ("description" description)
 		 ("short_name" short_name)))))
-    (displayln "json is: " data)
-    (do-put uri default-headers data)))
+    (with ([ status body ] (rest-call 'put uri (default-headers) data))
+      (unless status
+        (error body))
+      (present-item body))))
 
 (def (submit-event title text priority tags alert_type)
   (let* ((ip datadog-host)
-	 (uri (make-dd-uri ip "events"))
+	 (url (make-dd-uri ip "events"))
 	 (data (json-object->string
 		(hash
 		 ("title" title)
@@ -237,17 +239,25 @@
 		 ("priority" priority)
 		 ("tags" tags)
 		 ("alert_type" alert_type)))))
-    (do-post uri default-headers data)))
+
+  (with ([status . body] (rest-call 'post uri (default-headers) data))
+    (present-item body))))
 
 (def (get-events-time start end)
   (let* ((ip datadog-host)
-	 (uri (make-dd-uri ip (format "events?start=~a&end=~a" start end))))
-    (do-get uri)))
+	 (url (make-dd-uri ip (format "events?start=~a&end=~a" start end))))
+    (with ([status . body] (rest-call 'get url (default-headers .basic-auth)))
+      (unless status
+        (error body))
+      (present-item body)))))
 
 (def (get-events-tags start end tags)
   (let* ((ip datadog-host)
-	 (uri (make-dd-uri ip (format "events?start=~a&end=~a&tags=~a" start end tags))))
-    (do-get uri)))
+	 (url (make-dd-uri ip (format "events?start=~a&end=~a&tags=~a" start end tags))))
+    (with ([status . body] (rest-call 'get url (default-headers .basic-auth)))
+      (unless status
+        (error body))
+      (present-item body))))
 
 (def (get-events-last-secs secs tags)
   (let* ((start (float->int (- (time->seconds (builtin-current-time)) secs)))
@@ -314,49 +324,53 @@
 
 (def (downtimes)
   (let* ((ip datadog-host)
-	 (uri (make-dd-uri ip "downtime"))
-	 (dts (from-json (do-get uri))))
+	 (url (make-dd-uri ip "downtime"))
+         (with ([status . body] (rest-call 'get url (default-headers .basic-auth)))
+           (unless status
+             (error body))
 
-    (for (dt dts)
-      (let
-          ((start (hash-get dt 'start))
-           (parent_id (hash-get dt 'parent_id))
-           (scope (hash-get dt 'scope))
-           (downtime_type (hash-get dt 'downtime_type))
-           (timezone (hash-get dt 'timezone))
-           (id (hash-get dt 'id))
-           (message (hash-get dt 'message))
-           (updater_id (hash-get dt 'updater_id))
-           (recurrence (hash-get dt 'recurrence))
-           (canceled (hash-get dt 'canceled))
-           (disabled (hash-get dt 'disabled))
-           (creator_id (hash-get dt 'creator_id))
-           (end (hash-get dt 'end))
-           (active (hash-get dt 'active))
-           (monitor_id (hash-get dt 'monitor_id)))
-        (displayln
-         " start:" start
-         " parent_id:" parent_id
-         " scope:" scope
-         " downtime_type:" downtime_type
-         " timezone:" timezone
-         " id:" id
-         " message:" message
-         " updater_id:" updater_id
-         " recurrence:" recurrence
-         " canceled:" canceled
-         " disabled:" disabled
-         " creator_id:" creator_id
-         " end:" end
-         " active:" active
-         " monitor_id:" monitor_id
-         )))))
+           (for (dt body)
+             (let
+                 ((start (hash-get dt 'start))
+                  (parent_id (hash-get dt 'parent_id))
+                  (scope (hash-get dt 'scope))
+                  (downtime_type (hash-get dt 'downtime_type))
+                  (timezone (hash-get dt 'timezone))
+                  (id (hash-get dt 'id))
+                  (message (hash-get dt 'message))
+                  (updater_id (hash-get dt 'updater_id))
+                  (recurrence (hash-get dt 'recurrence))
+                  (canceled (hash-get dt 'canceled))
+                  (disabled (hash-get dt 'disabled))
+                  (creator_id (hash-get dt 'creator_id))
+                  (end (hash-get dt 'end))
+                  (active (hash-get dt 'active))
+                  (monitor_id (hash-get dt 'monitor_id)))
+               (displayln
+                " start:" start
+                " parent_id:" parent_id
+                " scope:" scope
+                " downtime_type:" downtime_type
+                " timezone:" timezone
+                " id:" id
+                " message:" message
+                " updater_id:" updater_id
+                " recurrence:" recurrence
+                " canceled:" canceled
+                " disabled:" disabled
+                " creator_id:" creator_id
+                " end:" end
+                " active:" active
+                " monitor_id:" monitor_id
+                )))))))
 
 (def (screen id)
   (let* ((ip datadog-host)
-	 (uri (make-dd-uri ip (format "screen/~a" id)))
-	 (results (from-json (do-get uri))))
-    (print-screen results)))
+	 (url (make-dd-uri ip (format "screen/~a" id))))
+    (with ([status . body] (rest-call 'get url (default-headers .basic-auth)))
+      (unless status
+        (error body))
+      (print-screen body))))
 
 (def (print-screens screen)
   (let-hash
@@ -439,7 +453,7 @@
 
 (def (tboard-create title description)
   (let* ((ip datadog-host)
-	 (uri (make-dd-uri datadog-host "dash"))
+	 (url (make-dd-uri datadog-host "dash"))
 	 (data (json-object->string
 		(hash
 		 ("graphs" [ (make-graph (metric-name-to-title title) "avg:system.mem.free{*}" "timeseries")])
@@ -449,15 +463,16 @@
 		  [ (hash
 		     ("name" "host1")
 		     ("prefix" "host")
-		     ("default" "host:my-host")) ])
-		 )))
-	 (results (do-post uri default-headers data)))
-    (displayln results)))
+		     ("default" "host:my-host")) ])))))
+    (with ([status . body] (rest-call 'post url (default-headers .basic-auth) data)
+           (unless status
+             (error body))
+           (present-item body)))))
 
 (def (tboard-mass-add id metric-pattern host-clause groupby replace)
   (let* ((tbinfo (get-tboard id))
 	 (ip datadog-host)
-	 (uri (make-dd-uri ip (format "dash/~a" id)))
+	 (url (make-dd-uri ip (format "dash/~a" id)))
 	 (dash (hash-get tbinfo 'dash))
 	 (graphs (hash-get dash 'graphs))
 	 (title (hash-get dash 'title))
@@ -470,18 +485,21 @@
               (metric-name-to-title m)
               (format "avg:~a{~a}by{~a}" m host-clause groupby) "timeseries")))
         (set! new-graphs (append new-graphs [new-graph]))))
+    (let ((data (json-object->string
+                 (hash
+                  ("graphs" new-graphs)
+                  ("title" title)
+                  ("description" (hash-get dash 'description))))))
 
-    (do-put uri default-headers
-	    (json-object->string
-	     (hash
-	      ("graphs" new-graphs)
-	      ("title" title)
-	      ("description" (hash-get dash 'description)))))))
+          (with ([status . body] (rest-call 'get url (default-headers .basic-auth) data))
+            (unless status
+              (error body))
+            (present-item body)))))
 
 (def (tboard-netdata-dashboard id metric-pattern host-clause groupby replace)
   (let* ((tbinfo (get-tboard id))
 	 (ip datadog-host)
-	 (uri (make-dd-uri ip (format "dash/~a" id)))
+	 (url (make-dd-uri ip (format "dash/~a" id)))
 	 (dash (hash-get tbinfo 'dash))
 	 (graphs (hash-get dash 'graphs))
 	 (title (hash-get dash 'title))
@@ -512,7 +530,7 @@
   (let* ((tbinfo (get-tboard id))
 	 (hosts (search-hosts host-pattern))
 	 (ip datadog-host)
-	 (uri (make-dd-uri ip (format "dash/~a" id)))
+	 (url (make-dd-uri ip (format "dash/~a" id)))
 	 (dash (hash-get tbinfo 'dash))
 	 (graphs (hash-get dash 'graphs))
 	 (title (hash-get dash 'title))
@@ -542,7 +560,7 @@
 	(let ((groupby (if (string-contains tag ":")
 			 (car (pregexp-split ":" tag))
 			 tag))
-	      (uri (make-dd-uri datadog-host (format "dash/~a" id)))
+	      (url (make-dd-uri datadog-host (format "dash/~a" id)))
 	      (new-graphs []))
 	  (when .?dash
 	    (when (table? .dash)
@@ -584,7 +602,7 @@
 (def (tboard-add-chart id title request viz)
   (let* ((tbinfo (get-tboard id))
 	 (ip datadog-host)
-	 (uri (make-dd-uri ip (format "dash/~a" id)))
+	 (url (make-dd-uri ip (format "dash/~a" id)))
 	 (dash (hash-get tbinfo 'dash))
 	 (graphs (hash-get dash 'graphs))
 	 (new-graph (make-graph (metric-name-to-title title) request viz)))
@@ -597,7 +615,7 @@
 
 (def (get-tboard id)
   (let* ((ip datadog-host)
-         (uri (make-dd-uri ip (format "dash/~a" id))))
+         (url (make-dd-uri ip (format "dash/~a" id))))
     (from-json (do-get uri))))
 
 (def (tboard id)
@@ -622,7 +640,7 @@
 
 (def (dump id)
   (let* ((ip datadog-host)
-         (uri (make-dd-uri ip (format "dash/~a" id))))
+         (url (make-dd-uri ip (format "dash/~a" id))))
     (let-hash (from-json (do-get uri))
       (displayln (json-object->string .dash)))))
 
@@ -655,7 +673,7 @@
 
 (def (tboards)
   (let* ((ip datadog-host)
-         (uri (make-dd-uri ip "dash"))
+         (url (make-dd-uri ip "dash"))
          (tboardz (from-json (do-get uri)))
          (timeboards (hash-get tboardz 'dashes))
          (outs [[ "Description" "Id" "Resource" "Title" "Created" "Modified" "RO?" ]]))
@@ -666,7 +684,7 @@
 
 (def (screens)
   (let* ((ip datadog-host)
-         (uri (make-dd-uri ip "screen"))
+         (url (make-dd-uri ip "screen"))
          (screenz (from-json (do-get uri)))
          (screenboards (hash-get screenz 'screenboards)))
     (for (screen screenboards)
@@ -674,7 +692,7 @@
 
 (def (screen-create board_title widgets width height)
   (let* ((ip datadog-host)
-         (uri (make-dd-uri ip "screen"))
+         (url (make-dd-uri ip "screen"))
          (data (json-object->string
                 (hash
                  ("width" width)
@@ -694,7 +712,7 @@
 
 (def (screen-update id width height board_title)
   (let* ((ip datadog-host)
-         (uri (make-dd-uri ip (format "screen/~a" id)))
+         (url (make-dd-uri ip (format "screen/~a" id)))
          (data (json-object->string
                 (hash
                  ("width" width)
@@ -714,7 +732,7 @@
 
 (def (search query)
   (let* ((ip datadog-host)
-         (uri (make-dd-uri ip (format "search?q=~a" query)))
+         (url (make-dd-uri ip (format "search?q=~a" query)))
          (results (hash-get (from-json (do-get uri)) 'results))
          (metrics (hash-get results 'metrics))
          (hosts (hash-get results 'hosts)))
@@ -725,7 +743,7 @@
 
 (def (search-metrics pattern)
   (let* ((ip datadog-host)
-         (uri (make-dd-uri ip (format "search?q=~a" pattern)))
+         (url (make-dd-uri ip (format "search?q=~a" pattern)))
          (metrics-matched [])
          (results (hash-get (from-json (do-get uri)) 'results))
          (metrics (hash-get results 'metrics)))
@@ -752,7 +770,7 @@
 
 (def (search-hosts pattern)
   (let* ((safe-str (regexp->str pattern))
-         (uri (make-dd-uri datadog-host (format "search?q=~a" safe-str)))
+         (url (make-dd-uri datadog-host (format "search?q=~a" safe-str)))
          (hosts-matched [])
          (results (hash-get (from-json (do-get uri)) 'results))
          (hosts (hash-get results 'hosts)))
@@ -770,35 +788,35 @@
                 (hash
                  ("tags" [ tag ])))))
     (for (h hosts)
-      (let ((uri (make-dd-uri ip (format "tags/hosts/~a" h))))
+      (let ((url (make-dd-uri ip (format "tags/hosts/~a" h))))
         (displayln "doing " h)
         (displayln (do-post uri default-headers data))
         (dp (format "tag data is ~a uri: ~a" data uri))))))
 
 (def (tags)
   (let* ((ip datadog-host)
-         (uri (make-dd-uri ip "tags/hosts"))
+         (url (make-dd-uri ip "tags/hosts"))
          (tags (hash-get (from-json (do-get uri)) 'tags)))
     (for (k (hash-keys tags))
       (displayln k))))
 
 (def (tags-for-metric metric)
   (let* ((ip datadog-host)
-         (uri (make-dd-uri ip "tags/metrics"))
+         (url (make-dd-uri ip "tags/metrics"))
          (tags (hash-get (from-json (do-get uri)) 'tags)))
     (for (k (hash-keys tags))
       (displayln k))))
 
 (def (tags-for-source source)
   (let* ((ip datadog-host)
-         (uri (make-dd-uri ip (format "tags/hosts/~a" source)))
+         (url (make-dd-uri ip (format "tags/hosts/~a" source)))
          (tags (hash-get (from-json (do-get uri)) 'tags)))
     (for (k (hash-keys tags))
       (displayln k))))
 
 (def (graph query start end)
   (let* ((ip datadog-host)
-         (uri (make-dd-uri ip (format "graph/snapshot?metric_query=~a&start=~a&end=~a" query start end)))
+         (url (make-dd-uri ip (format "graph/snapshot?metric_query=~a&start=~a&end=~a" query start end)))
          (results (do-get uri))
          (url (hash-get (from-json results) 'snapshot_url)))
     (displayln url)))
@@ -816,7 +834,7 @@
 
 (def (edit-monitor id query name message)
   (let* ((ip datadog-host)
-         (uri (make-dd-uri ip (format "montior/~a" id)))
+         (url (make-dd-uri ip (format "montior/~a" id)))
          (data (json-object->string
                 (hash
                  ("query" query)
@@ -827,12 +845,12 @@
 
 (def (del-monitor id)
   (let* ((ip datadog-host)
-         (uri (make-dd-uri ip (format "monitor/~a" id))))
+         (url (make-dd-uri ip (format "monitor/~a" id))))
     (do-delete uri default-headers)))
 
 (def (new-monitor type query name message tags)
   (let* ((ip datadog-host)
-         (uri (make-dd-uri ip "monitor"))
+         (url (make-dd-uri ip "monitor"))
          (data (json-object->string
                 (hash
                  ("type" type)
@@ -849,7 +867,7 @@
 (def (monitor id)
   (displayln (format "* Datadog Monitor: ~a" id))
   (let* ((ip datadog-host)
-         (uri (make-dd-uri ip (format "monitor/~a" id)))
+         (url (make-dd-uri ip (format "monitor/~a" id)))
          (mon (from-json (do-get uri))))
     (print-monitor-long mon)))
 
@@ -889,7 +907,7 @@
 
 (def (monitors)
   (let* ((ip datadog-host)
-         (uri (make-dd-uri ip "monitor"))
+         (url (make-dd-uri ip "monitor"))
          (results (from-json (do-get uri))))
     (displayln "* Datadog Monitors")
     (for (monitor results)
@@ -897,7 +915,7 @@
 
 (def (dump-monitors dir)
   (let* ((ip datadog-host)
-         (uri (make-dd-uri ip "monitor"))
+         (url (make-dd-uri ip "monitor"))
          (results (from-json (do-get uri))))
     (for (monitor results)
       (let-hash monitor
@@ -906,7 +924,7 @@
 (def (monitors-table)
   (let* ((outs [[ "Id" "Name" "Query" ]])
          (ip datadog-host)
-         (uri (make-dd-uri ip "monitor"))
+         (url (make-dd-uri ip "monitor"))
          (results (from-json (do-get uri))))
     (for (monitor results)
       (let-hash monitor
@@ -1042,7 +1060,7 @@
 
 (def (datadog-get-dogwebu)
   (let-hash (load-config)
-    (let* ((uri datadog-auth-url)
+    (let* ((url datadog-auth-url)
            (data (strip-^m (format "username=~a&password=~a" .username .password)))
            (reply (http-post uri
                              headers: []
@@ -1061,7 +1079,7 @@
 
 (def (datadog-get-dogweb dogwebu)
   (let-hash (load-config)
-    (let* ((uri datadog-auth-url)
+    (let* ((url datadog-auth-url)
            (data (format "username=~a&password=~a&_authentication_token=~a" .username .password dogwebu))
            (reply (http-post uri
                              headers: [[ "Content-Type" :: "application/x-www-form-urlencoded" ]]
@@ -1080,7 +1098,7 @@
   (let-hash (load-config)
     (let* ((adds (format "hosts/live_metrics?hosts[]=~a" host))
            (ip datadog-host)
-           (uri (make-dd-uri ip adds))
+           (url (make-dd-uri ip adds))
            (results (do-get uri))
            (hosts (from-json results)))
       (let-hash hosts
@@ -1095,7 +1113,7 @@
   (let-hash (load-config)
     (let* ((adds "hosts/totals")
            (ip datadog-host)
-           (uri (make-dd-uri ip adds))
+           (url (make-dd-uri ip adds))
            (results (do-get uri))
            (myjson (from-json results)))
       (let-hash myjson
@@ -1476,7 +1494,7 @@
   "Get Usage metering from datadog"
   (let-hash (load-config)
     (let* ((outs [[ "Host Count" "Container Count" "Hour" "Apm Host Count" "Agent Host Count" "Gcp Host Count" "Aws Host Count" ]])
-           (uri (make-dd-uri datadog-host
+           (url (make-dd-uri datadog-host
                              (format "usage/hosts?start_hr=~a&end_hr=~a" start end)))
            (results (do-get uri))
            (myjson (from-json results)))
