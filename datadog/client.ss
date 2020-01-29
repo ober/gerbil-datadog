@@ -513,12 +513,15 @@
               (format "avg:~a{~a}by{~a}" m host-clause groupby) "timeseries")))
         (set! new-graphs (append new-graphs [new-graph]))))
 
-    (do-put uri default-headers
-	    (json-object->string
-	     (hash
-	      ("graphs" new-graphs)
-	      ("title" title)
-	      ("description" (hash-get dash 'description)))))))
+    (let ((data (json-object->string
+                 (hash
+                  ("graphs" new-graphs)
+                  ("title" title)
+                  ("description" (hash-get dash 'description))))))
+      (with ([status . body] (rest-call 'put url (default-headers .basic-auth) data))
+        (unless status
+          (error body))
+        (present-item body)))))
 
 (def (make-query-for-hosts metric hosts)
   (let ((results []))
@@ -544,13 +547,15 @@
               (make-query-for-hosts m hosts)
               "timeseries")))
         (set! new-graphs (append new-graphs [new-graph]))))
-
-    (do-put uri default-headers
-	    (json-object->string
-	     (hash
-	      ("graphs" new-graphs)
-	      ("title" title)
-	      ("description" (hash-get dash 'description)))))))
+    (let ((data (json-object->string
+                 (hash
+                  ("graphs" new-graphs)
+                  ("title" title)
+                  ("description" (hash-get dash 'description))))))
+      (with ([status . body] (rest-call 'put url (default-headers .basic-auth) data))
+        (unless status
+          (error body))
+        (present-item body)))))
 
 (def (tboard-fancy id metric-pattern tag replace)
   (let* ((dwl (datadog-web-login))
@@ -616,7 +621,10 @@
 (def (get-tboard id)
   (let* ((ip datadog-host)
          (url (make-dd-uri ip (format "dash/~a" id))))
-    (from-json (do-get uri))))
+    (with ([status . body] (rest-call 'get url (default-headers .basic-auth)))
+      (unless status
+        (error body))
+      (present-item body))))
 
 (def (tboard id)
   (let ((tbinfo (get-tboard id)))
@@ -641,8 +649,13 @@
 (def (dump id)
   (let* ((ip datadog-host)
          (url (make-dd-uri ip (format "dash/~a" id))))
-    (let-hash (from-json (do-get uri))
-      (displayln (json-object->string .dash)))))
+    (with ([status . body] (rest-call 'get url (default-headers .basic-auth)))
+      (unless status
+        (error body))
+      (when (table? body)
+        (let-hash body
+          (present-item (json-object->string .?dash)))))))
+
 
 (def (print-graphs graphs)
   (let ((results ""))
@@ -707,8 +720,11 @@
                     ("y" "7")
                     ("x" "32")
                     ("url" "https://upload.wikimedia.org/wikipedia/commons/b/b4/Kafka.jpg"))])))))
-    (displayln (hash-keys (from-json data)))
-    (do-post uri default-headers data)))
+    (with ([status . body] (rest-call 'post url (default-headers .basic-auth) data))
+      (unless status
+        (error body))
+      (present-item body))))
+
 
 (def (screen-update id width height board_title)
   (let* ((ip datadog-host)
