@@ -585,21 +585,21 @@
                     (set! new-graphs (flatten (cons new-graph new-graphs)))))
 
                 (if (length>n? new-graphs 0)
-                  (let* ((data (json-object->string
-                                (hash
-                                 ("graphs" new-graphs)
-                                 ("title" (if replace .?title (format "~a for ~a" metric-pattern tag)))
-                                 ("description" (if replace .?description (format "~a for ~a" metric-pattern tag))))))
-                         (results (do-put url default-headers data))
-                         (text (request-text results))
-                         (status (request-status results)))
-                    (if (success? status)
-                      (let-hash (from-json text)
-                        (when (table? .?dash)
-                          (let-hash .dash
-                            (dp (format "description: ~a title: ~a graphs: ~a" .?description .?title new-graphs))
-                            (displayln (format "https://app.datadoghq.com/dashboard/~a" .?new_id)))))
-                      (displayln (format "No metrics found matching tag ~a for metric ~a" tag metric-pattern)))))))))))))
+                  (let ((data (json-object->string
+                               (hash
+                                ("graphs" new-graphs)
+                                ("title" (if replace .?title (format "~a for ~a" metric-pattern tag)))
+                                ("description" (if replace .?description (format "~a for ~a" metric-pattern tag)))))))
+                    (with ([status . body] (rest-call 'put url (default-headers) data))
+                      (unless status
+                        (error body))
+                      (when (table? body)
+                        (let-hash body
+                          (when (table? .?dash)
+                            (let-hash .dash
+                              (dp (format "description: ~a title: ~a graphs: ~a" .?description .?title new-graphs))
+                              (displayln (format "https://~a/dashboard/~a" datadog-host .?new_id)))))
+                        (displayln (format "No metrics found matching tag ~a for metric ~a" tag metric-pattern))))))))))))))
 
 (def (metric-name-to-title metric)
   (let* ((no-netdata (pregexp-replace "^netdata." metric ""))
@@ -613,13 +613,16 @@
          (url (make-dd-url ip (format "dash/~a" id)))
          (dash (hash-get tbinfo 'dash))
          (graphs (hash-get dash 'graphs))
-         (new-graph (make-graph (metric-name-to-title title) request viz)))
-    (do-put url default-headers
-            (json-object->string
-             (hash
-              ("graphs" (append graphs [ new-graph ]))
-              ("title" (hash-get dash 'title))
-              ("description" (hash-get dash 'description)))))))
+         (new-graph (make-graph (metric-name-to-title title) request viz))
+         (data (json-object->string
+                (hash
+                 ("graphs" (append graphs [ new-graph ]))
+                 ("title" (hash-get dash 'title))
+                 ("description" (hash-get dash 'description))))))
+    (with ([status . body] (rest-call 'get url (default-headers) data))
+      (unless status
+        (error body))
+      (present-item body))))
 
 (def (get-tboard id)
   (let* ((ip datadog-host)
