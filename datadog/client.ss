@@ -244,13 +244,13 @@
                  ("tags" tags)
                  ("alert_type" alert_type)))))
 
-    (with ([status . body] (rest-call 'post url (default-headers) data))
+    (with ([status body] (rest-call 'post url (default-headers) data))
       (present-item body))))
 
 (def (get-events-time start end)
   (let* ((ip datadog-host)
          (url (make-dd-url ip (format "events?start=~a&end=~a" start end))))
-    (with ([status . body] (rest-call 'get url (default-headers )))
+    (with ([status body] (rest-call 'get url (default-headers )))
       (unless status
         (error body))
       (present-item body))))
@@ -258,7 +258,7 @@
 (def (get-events-tags start end tags)
   (let* ((ip datadog-host)
          (url (make-dd-url ip (format "events?start=~a&end=~a&tags=~a" start end tags))))
-    (with ([status . body] (rest-call 'get url (default-headers )))
+    (with ([status body] (rest-call 'get url (default-headers )))
       (unless status
         (error body))
       (present-item body))))
@@ -329,7 +329,7 @@
 (def (downtimes)
   (let* ((ip datadog-host)
          (url (make-dd-url ip "downtime")))
-    (with ([status . body] (rest-call 'get url (default-headers )))
+    (with ([status body] (rest-call 'get url (default-headers )))
       (unless status
         (error body))
       (for (dt body)
@@ -370,7 +370,7 @@
 (def (screen id)
   (let* ((ip datadog-host)
          (url (make-dd-url ip (format "screen/~a" id))))
-    (with ([status . body] (rest-call 'get url (default-headers )))
+    (with ([status body] (rest-call 'get url (default-headers )))
       (unless status
         (error body))
       (print-screen body))))
@@ -467,7 +467,7 @@
                      ("name" "host1")
                      ("prefix" "host")
                      ("default" "host:my-host")) ])))))
-    (with ([status . body] (rest-call 'post url (default-headers ) data))
+    (with ([status body] (rest-call 'post url (default-headers ) data))
       (unless status
         (error body))
       (present-item body))))
@@ -494,7 +494,7 @@
                   ("title" title)
                   ("description" (hash-get dash 'description))))))
 
-      (with ([status . body] (rest-call 'get url (default-headers ) data))
+      (with ([status body] (rest-call 'get url (default-headers ) data))
         (unless status
           (error body))
         (present-item body)))))
@@ -521,7 +521,7 @@
                   ("graphs" new-graphs)
                   ("title" title)
                   ("description" (hash-get dash 'description))))))
-      (with ([status . body] (rest-call 'put url (default-headers ) data))
+      (with ([status body] (rest-call 'put url (default-headers ) data))
         (unless status
           (error body))
         (present-item body)))))
@@ -555,7 +555,7 @@
                   ("graphs" new-graphs)
                   ("title" title)
                   ("description" (hash-get dash 'description))))))
-      (with ([status . body] (rest-call 'put url (default-headers ) data))
+      (with ([status body] (rest-call 'put url (default-headers ) data))
         (unless status
           (error body))
         (present-item body)))))
@@ -590,7 +590,7 @@
                                 ("graphs" new-graphs)
                                 ("title" (if replace .?title (format "~a for ~a" metric-pattern tag)))
                                 ("description" (if replace .?description (format "~a for ~a" metric-pattern tag)))))))
-                    (with ([status . body] (rest-call 'put url (default-headers) data))
+                    (with ([status body] (rest-call 'put url (default-headers) data))
                       (unless status
                         (error body))
                       (when (table? body)
@@ -619,7 +619,7 @@
                  ("graphs" (append graphs [ new-graph ]))
                  ("title" (hash-get dash 'title))
                  ("description" (hash-get dash 'description))))))
-    (with ([status . body] (rest-call 'get url (default-headers) data))
+    (with ([status body] (rest-call 'get url (default-headers) data))
       (unless status
         (error body))
       (present-item body))))
@@ -627,7 +627,7 @@
 (def (get-tboard id)
   (let* ((ip datadog-host)
          (url (make-dd-url ip (format "dash/~a" id))))
-    (with ([status . body] (rest-call 'get url (default-headers )))
+    (with ([status body] (rest-call 'get url (default-headers )))
       (unless status
         (error body))
       (present-item body))))
@@ -655,7 +655,7 @@
 (def (dump id)
   (let* ((ip datadog-host)
          (url (make-dd-url ip (format "dash/~a" id))))
-    (with ([status . body] (rest-call 'get url (default-headers )))
+    (with ([status body] (rest-call 'get url (default-headers )))
       (unless status
         (error body))
       (when (table? body)
@@ -694,7 +694,7 @@
   (let* ((ip datadog-host)
          (url (make-dd-url ip "dash"))
          (outs [[ "Description" "Id" "Resource" "Title" "Created" "Modified" "RO?" ]]))
-    (with ([status . body] (rest-call 'get url (default-headers)))
+    (with ([status body] (rest-call 'get url (default-headers)))
       (unless status
         (error body))
       (when (table? body)
@@ -707,7 +707,7 @@
 (def (screens)
   (let* ((ip datadog-host)
          (url (make-dd-url ip "screen")))
-    (with ([status . body] (rest-call 'get url (default-headers)))
+    (with ([status body] (rest-call 'get url (default-headers)))
       (unless status
         (error body))
       (when (table? body)
@@ -732,7 +732,7 @@
                     ("y" "7")
                     ("x" "32")
                     ("url" "https://upload.wikimedia.org/wikipedia/commons/b/b4/Kafka.jpg"))])))))
-    (with ([status . body] (rest-call 'post url (default-headers) data))
+    (with ([status body] (rest-call 'post url (default-headers) data))
       (unless status
         (error body))
       (present-item body))))
@@ -754,7 +754,7 @@
                     ("y" "7")
                     ("x" "32")
                     ("url" "https://upload.wikimedia.org/wikipedia/commons/b/b4/Kafka.jpg"))])))))
-    (with ([status . body] (rest-call 'put url (default-headers ) data))
+    (with ([status body] (rest-call 'put url (default-headers ) data))
       (unless status
         (error body))
       (present-item body))))
@@ -762,7 +762,7 @@
 (def (search query)
   (let* ((ip datadog-host)
          (url (make-dd-url ip (format "search?q=~a" query))))
-    (with ([status . body] (rest-call 'get url (default-headers)))
+    (with ([status body] (rest-call 'get url (default-headers)))
       (unless status
         (error body))
       (when (table? body)
@@ -777,7 +777,7 @@
   (let* ((ip datadog-host)
          (url (make-dd-url ip (format "search?q=~a" pattern)))
          (metrics-matched []))
-    (with ([status . body] (rest-call 'get url (default-headers)))
+    (with ([status body] (rest-call 'get url (default-headers)))
       (unless status
         (error body))
       (when (table? body)
@@ -807,7 +807,7 @@
   (let* ((safe-str (regexp->str pattern))
          (url (make-dd-url datadog-host (format "search?q=~a" safe-str)))
          (hosts-matched []))
-    (with ([status . body] (rest-call 'get url (default-headers)))
+    (with ([status body] (rest-call 'get url (default-headers)))
       (unless status
         (error body))
       (when (table? body)
@@ -829,7 +829,7 @@
                  ("tags" [ tag ])))))
     (for (h hosts)
       (let ((url (make-dd-url ip (format "tags/hosts/~a" h))))
-        (with ([status . body] (rest-call 'post url (default-headers ) data))
+        (with ([status body] (rest-call 'post url (default-headers ) data))
           (unless status
             (error body))
           (present-item body))))))
@@ -838,7 +838,7 @@
   "Return all tags known to Datadog"
   (let* ((ip datadog-host)
          (url (make-dd-url ip "tags/hosts")))
-    (with ([status . body] (rest-call 'get url (default-headers)))
+    (with ([status body] (rest-call 'get url (default-headers)))
       (unless status
         (error body))
       (when (table? body)
@@ -850,7 +850,7 @@
   "Return all tags found for a given metric"
   (let* ((ip datadog-host)
          (url (make-dd-url ip "tags/metrics")))
-    (with ([status . body] (rest-call 'get url (default-headers)))
+    (with ([status body] (rest-call 'get url (default-headers)))
       (unless status
         (error body))
       (when (table? body)
@@ -860,7 +860,7 @@
 
 (def (tags-for-source source)
   (let* ((url (make-dd-url datadog-host (format "tags/hosts/~a" source))))
-    (with ([status . body] (rest-call 'get url (default-headers)))
+    (with ([status body] (rest-call 'get url (default-headers)))
       (unless status
         (error body))
       (when (table? body)
@@ -870,7 +870,7 @@
 (def (graph query start end)
   (let* ((ip datadog-host)
          (url (make-dd-url ip (format "graph/snapshot?metric_query=~a&start=~a&end=~a" query start end))))
-    (with ([status . body] (rest-call 'get url (default-headers)))
+    (with ([status body] (rest-call 'get url (default-headers)))
       (unless status
         (error body))
       (when (table? body)
@@ -896,7 +896,7 @@
                  ("query" query)
                  ("name" name)
                  ("message" message)))))
-    (with ([status . body] (rest-call 'put url (default-headers) data))
+    (with ([status body] (rest-call 'put url (default-headers) data))
       (unless status
         (error body))
       (when (table? body)
@@ -906,7 +906,7 @@
   "Delete an existing Datadog Monitor by id"
   (let* ((ip datadog-host)
          (url (make-dd-url ip (format "monitor/~a" id))))
-    (with ([status . body] (rest-call 'delete url (default-headers)))
+    (with ([status body] (rest-call 'delete url (default-headers)))
       (unless status
         (error body))
       (present-item body))))
@@ -925,7 +925,7 @@
                   (hash
                    ("notify_no_data" #t)
                    ("no_data_timeframe" 20)))))))
-    (with ([status . body] (rest-call 'post url (default-headers) data))
+    (with ([status body] (rest-call 'post url (default-headers) data))
       (unless status
         (error body))
       (present-item body))))
@@ -934,7 +934,7 @@
   (displayln (format "* Datadog Monitor: ~a" id))
   (let* ((ip datadog-host)
          (url (make-dd-url ip (format "monitor/~a" id))))
-    (with ([status . body] (rest-call 'get url (default-headers)))
+    (with ([status body] (rest-call 'get url (default-headers)))
       (unless status
         (error body))
       (print-monitor-long body))))
@@ -976,7 +976,7 @@
 (def (monitors)
   (let* ((ip datadog-host)
          (url (make-dd-url ip "monitor")))
-    (with ([status . body] (rest-call 'get url (default-headers)))
+    (with ([status body] (rest-call 'get url (default-headers)))
       (unless status
         (error body))
       (displayln "* Datadog Monitors")
@@ -986,7 +986,7 @@
 (def (dump-monitors dir)
   (let* ((ip datadog-host)
          (url (make-dd-url ip "monitor")))
-    (with ([status . body] (rest-call 'get url (default-headers)))
+    (with ([status body] (rest-call 'get url (default-headers)))
       (unless status
         (error body))
       (when (table? body)
@@ -1003,7 +1003,7 @@
   (let* ((outs [[ "Id" "Name" "Query" ]])
          (ip datadog-host)
          (url (make-dd-url ip "monitor")))
-    (with ([status . body] (rest-call 'get url (default-headers)))
+    (with ([status body] (rest-call 'get url (default-headers)))
       (unless status
         (error body))
       (for (monitor body)
@@ -1179,7 +1179,7 @@
     (let* ((adds (format "hosts/live_metrics?hosts[]=~a" host))
            (ip datadog-host)
            (url (make-dd-url ip adds)))
-      (with ([status . body] (rest-call 'get url (default-headers)))
+      (with ([status body] (rest-call 'get url (default-headers)))
         (unless status
           (error body))
         (when (table? body)
@@ -1197,7 +1197,7 @@
     (let* ((adds "hosts/totals")
            (ip datadog-host)
            (url (make-dd-url ip adds)))
-      (with ([status . body] (rest-call 'get url (default-headers)))
+      (with ([status body] (rest-call 'get url (default-headers)))
         (unless status
           (error body))
         (when (table? body)
@@ -1207,7 +1207,7 @@
 (def (stories)
   (let-hash (datadog-web-login)
     (let ((url (format "https://~a/watchdog/stories?page_size=100&stories_api_v2=true" datadog-host)))
-      (with ([status . body] (rest-call 'get url .headers))
+      (with ([status body] (rest-call 'get url .headers))
         (unless status
           (error body))
         (present-item body)))))
@@ -1215,7 +1215,7 @@
 (def (livetail)
   (let-hash (datadog-web-login)
     (let (url (format "https://app.datadoghq.com/logs/livetail" datadog-host))
-      (with ([status . body] (rest-call 'get url .headers))
+      (with ([status body] (rest-call 'get url .headers))
         (unless status
           (error body))
         (present-item body)))))
@@ -1583,9 +1583,10 @@
   (let-hash (load-config)
     (let* ((outs [[ "Host Count" "Container Count" "Hour" "Apm Host Count" "Agent Host Count" "Gcp Host Count" "Aws Host Count" ]])
            (url (make-dd-url datadog-host (format "usage/hosts?start_hr=~a&end_hr=~a" start end))))
-      (with ([status . body] (rest-call 'get url (default-headers)))
+      (with ([status body] (rest-call 'get url (default-headers)))
         (unless status
           (error body))
+        (present-item body)
         (when (table? body)
           (let-hash body
             (for (entry .usage)
@@ -1651,7 +1652,7 @@
                   ("handle" handle)
                   ("name" name)
                   ("access_role" role)))))
-      (with ([status . body] (rest-call 'post url (default-headers) data))
+      (with ([status body] (rest-call 'post url (default-headers) data))
         (unless status
           (error body))
         (present-item body)))))
