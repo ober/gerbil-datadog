@@ -893,13 +893,20 @@
                  ("query" query)
                  ("name" name)
                  ("message" message)))))
-    (displayln "json is:"  data)
-    (do-put url default-headers data)))
+    (with ([status . body] (rest-call 'put url (default-headers) data))
+      (unless status
+        (error body))
+      (when (table? body)
+        (present-item body)))))
 
 (def (del-monitor id)
+  "Delete an existing Datadog Monitor by id"
   (let* ((ip datadog-host)
          (url (make-dd-url ip (format "monitor/~a" id))))
-    (do-delete url default-headers)))
+    (with ([status . body] (rest-call 'delete url (default-headers)))
+      (unless status
+        (error body))
+      (present-item body))))
 
 (def (new-monitor type query name message tags)
   (let* ((ip datadog-host)
@@ -915,14 +922,19 @@
                   (hash
                    ("notify_no_data" #t)
                    ("no_data_timeframe" 20)))))))
-    (do-post url default-headers data)))
+    (with ([status . body] (rest-call 'post url (default-headers) data))
+      (unless status
+        (error body))
+      (present-item body))))
 
 (def (monitor id)
   (displayln (format "* Datadog Monitor: ~a" id))
   (let* ((ip datadog-host)
-         (url (make-dd-url ip (format "monitor/~a" id)))
-         (mon (from-json (do-get url))))
-    (print-monitor-long mon)))
+         (url (make-dd-url ip (format "monitor/~a" id))))
+    (with ([status . body] (rest-call 'get url (default-headers)))
+      (unless status
+        (error body))
+      (print-monitor-long mon))))
 
 (def (print-monitor-long monitor)
   (let-hash monitor
@@ -960,29 +972,41 @@
 
 (def (monitors)
   (let* ((ip datadog-host)
-         (url (make-dd-url ip "monitor"))
-         (results (from-json (do-get url))))
-    (displayln "* Datadog Monitors")
-    (for (monitor results)
-      (print-monitor-long monitor))))
+         (url (make-dd-url ip "monitor")))
+    (with ([status . body] (rest-call 'get url (default-headers)))
+      (unless status
+        (error body))
+      (displayln "* Datadog Monitors")
+      (for (monitor body)
+        (print-monitor-long monitor)))))
 
 (def (dump-monitors dir)
   (let* ((ip datadog-host)
-         (url (make-dd-url ip "monitor"))
-         (results (from-json (do-get url))))
-    (for (monitor results)
-      (let-hash monitor
-        (yaml-dump (format "~a/~a.yaml" dir .id) (format-monitor monitor))))))
+         (url (make-dd-url ip "monitor")))
+    (with ([status . body] (rest-call 'get url (default-headers)))
+      (unless status
+        (error body))
+      (when (table? body)
+        (for (monitor body)
+          (let-hash monitor
+            (try
+             (yaml-dump
+              (format "~a/~a.yaml" dir .id)
+              (format-monitor monitor))
+             (catch (e)
+               (raise e)))))))))
 
 (def (monitors-table)
   (let* ((outs [[ "Id" "Name" "Query" ]])
          (ip datadog-host)
-         (url (make-dd-url ip "monitor"))
-         (results (from-json (do-get url))))
-    (for (monitor results)
-      (let-hash monitor
-        (set! outs (cons [ .id .name .query ] outs))))
-    (style-output outs)))
+         (url (make-dd-url ip "monitor")))
+    (with ([status . body] (rest-call 'get url (default-headers)))
+      (unless status
+        (error body))
+      (for (monitor body)
+        (let-hash monitor
+          (set! outs (cons [ .id .name .query ] outs))))
+      (style-output outs))))
 
 (def (format-monitor monitor)
   "Try to order the keys in this hash to consistently represent them in yaml"
