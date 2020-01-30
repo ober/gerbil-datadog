@@ -256,67 +256,67 @@
       (present-item body))))
 
 (def (get-events-tags start end tags)
-(let* ((ip datadog-host)
-       (url (make-dd-url ip (format "events?start=~a&end=~a&tags=~a" start end tags))))
-  (with ([status . body] (rest-call 'get url (default-headers )))
-    (unless status
-      (error body))
-    (present-item body))))
+  (let* ((ip datadog-host)
+         (url (make-dd-url ip (format "events?start=~a&end=~a&tags=~a" start end tags))))
+    (with ([status . body] (rest-call 'get url (default-headers )))
+      (unless status
+        (error body))
+      (present-item body))))
 
 (def (get-events-last-secs secs tags)
-(let* ((start (float->int (- (time->seconds (builtin-current-time)) secs)))
-       (end (float->int (time->seconds (builtin-current-time))))
-       (results (get-events-tags start end tags))
-       (events (from-json results))
-       (events2 (hash-get events 'events)))
-  (print-events events2)))
+  (let* ((start (float->int (- (time->seconds (builtin-current-time)) secs)))
+         (end (float->int (time->seconds (builtin-current-time))))
+         (results (get-events-tags start end tags))
+         (events (from-json results))
+         (events2 (hash-get events 'events)))
+    (print-events events2)))
 
 (def (get-events-last-secs-raw secs)
-(let* ((start (float->int (- (time->seconds (builtin-current-time)) secs)))
-       (end (float->int (time->seconds (builtin-current-time))))
-       (results (get-events-time start end))
-       (events (from-json results))
-       (events2 (hash-get events 'events)))
-  (print-events events2)))
+  (let* ((start (float->int (- (time->seconds (builtin-current-time)) secs)))
+         (end (float->int (time->seconds (builtin-current-time))))
+         (results (get-events-time start end))
+         (events (from-json results))
+         (events2 (hash-get events 'events)))
+    (print-events events2)))
 
 (def (events-raw secs)
-(get-events-last-secs-raw (string->number secs)))
+  (get-events-last-secs-raw (string->number secs)))
 
 (def (events-hour tags)
-(get-events-last-secs 3600 tags))
+  (get-events-last-secs 3600 tags))
 
 (def (events-min tags)
-(get-events-last-secs 60 tags))
+  (get-events-last-secs 60 tags))
 
 (def (events-day tags)
-(get-events-last-secs 86400 tags))
+  (get-events-last-secs 86400 tags))
 
 (def (events-week tags)
-(get-events-last-secs (* 7 86400) tags))
+  (get-events-last-secs (* 7 86400) tags))
 
 (def (events-month tags)
-(get-events-last-secs (* 30 86400) tags))
+  (get-events-last-secs (* 30 86400) tags))
 
 (def (print-events events)
-(for (event events)
-  (let-hash event
-    (displayln
-     " source: " .source
-     " priority: " .priority
-     " -" .date_happened
-     " title: " .title
-     " id: " .id
-     " url: " .url
-     " host: " .host
-     " is_aggregate: " .is_aggregate
-     " device_name: " .device_name
-     " tags: " .tags
-     " resource: " .resource
-     " alert_type: " .alert_type
-     " text: " .text
-     " comments: " .comments
-     (if (hash-key? event 'children)
-       (print-children .children))))))
+  (for (event events)
+    (let-hash event
+      (displayln
+       " source: " .source
+       " priority: " .priority
+       " -" .date_happened
+       " title: " .title
+       " id: " .id
+       " url: " .url
+       " host: " .host
+       " is_aggregate: " .is_aggregate
+       " device_name: " .device_name
+       " tags: " .tags
+       " resource: " .resource
+       " alert_type: " .alert_type
+       " text: " .text
+       " comments: " .comments
+       (if (hash-key? event 'children)
+         (print-children .children))))))
 
 (def (print-children children)
   (for (child children)
@@ -757,7 +757,7 @@
     (with ([status . body] (rest-call 'put url (default-headers ) data))
       (unless status
         (error body))
-      (present-item body)))
+      (present-item body))))
 
 (def (search query)
   (let* ((ip datadog-host)
@@ -861,8 +861,11 @@
 (def (tags-for-source source)
   (let* ((url (make-dd-url datadog-host (format "tags/hosts/~a" source))))
     (with ([status . body] (rest-call 'get url (default-headers)))
-      (for (k (hash-keys .tags))
-        (displayln k)))))
+      (unless status
+        (error body))
+      (when (table? body)
+        (for (k (hash-keys body))
+          (displayln k))))))
 
 (def (graph query start end)
   (let* ((ip datadog-host)
@@ -934,7 +937,7 @@
     (with ([status . body] (rest-call 'get url (default-headers)))
       (unless status
         (error body))
-      (print-monitor-long mon))))
+      (print-monitor-long body))))
 
 (def (print-monitor-long monitor)
   (let-hash monitor
@@ -1643,11 +1646,11 @@
    Role as st: standard user, adm: for admin, ro: for readonly"
   (let-hash (load-config)
     (let ((url (make-dd-url datadog-host "user"))
-           (data (json-object->string
-                  (hash
-                   ("handle" handle)
-                   ("name" name)
-                   ("access_role" role)))))
+          (data (json-object->string
+                 (hash
+                  ("handle" handle)
+                  ("name" name)
+                  ("access_role" role)))))
       (with ([status . body] (rest-call 'post url (default-headers) data))
         (unless status
           (error body))
