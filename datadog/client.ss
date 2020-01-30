@@ -737,7 +737,6 @@
         (error body))
       (present-item body))))
 
-
 (def (screen-update id width height board_title)
   (let* ((ip datadog-host)
          (url (make-dd-url ip (format "screen/~a" id)))
@@ -807,14 +806,19 @@
 (def (search-hosts pattern)
   (let* ((safe-str (regexp->str pattern))
          (url (make-dd-url datadog-host (format "search?q=~a" safe-str)))
-         (hosts-matched [])
-         (results (hash-get (from-json (do-get url)) 'results))
-         (hosts (hash-get results 'hosts)))
-    (for (h hosts)
-      (let ((matches (pregexp-match pattern h)))
-        (when matches
-          (set! hosts-matched (cons h hosts-matched)))))
-    hosts-matched))
+         (hosts-matched []))
+    (with ([status . body] (rest-call 'get url (default-headers)))
+      (unless status
+        (error body))
+      (when (table? body)
+        (let-hash body
+          (when (table? .?results)
+            (let-hash .results
+              (for (h .hosts)
+                (let ((matches (pregexp-match pattern h)))
+                  (when matches
+                    (set! hosts-matched (cons h hosts-matched)))))
+              hosts-matched)))))))
 
 (def (tag host-pattern tag)
   "Tag a given host pattern with a given tag"
