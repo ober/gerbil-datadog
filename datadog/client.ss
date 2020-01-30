@@ -693,13 +693,16 @@
 (def (tboards)
   (let* ((ip datadog-host)
          (url (make-dd-url ip "dash"))
-         (tboardz (from-json (do-get url)))
-         (timeboards (hash-get tboardz 'dashes))
          (outs [[ "Description" "Id" "Resource" "Title" "Created" "Modified" "RO?" ]]))
-    (for (timeboard timeboards)
-      (let-hash timeboard
-        (set! outs (cons [ .description .id .resource .title.created.modified .read_only ] outs))))
-    (style-output outs)))
+    (with ([status . body] (rest-call 'get url (default-headers)))
+      (unless status
+        (error body))
+      (when (table? body)
+        (let-hash body
+          (for (timeboard .dashes)
+            (let-hash timeboard
+              (set! outs (cons [ .description .id .resource .title.created.modified .read_only ] outs))))
+          (style-output outs))))))
 
 (def (screens)
   (let* ((ip datadog-host)
@@ -726,7 +729,7 @@
                     ("y" "7")
                     ("x" "32")
                     ("url" "https://upload.wikimedia.org/wikipedia/commons/b/b4/Kafka.jpg"))])))))
-    (with ([status . body] (rest-call 'post url (default-headers ) data))
+    (with ([status . body] (rest-call 'post url (default-headers) data))
       (unless status
         (error body))
       (present-item body))))
@@ -749,11 +752,10 @@
                     ("y" "7")
                     ("x" "32")
                     ("url" "https://upload.wikimedia.org/wikipedia/commons/b/b4/Kafka.jpg"))])))))
-    (displayln (hash-keys (from-json data)))
     (with ([status . body] (rest-call 'put url (default-headers ) data))
       (unless status
         (error body))
-      (present-item body))))
+      (present-item body)))
 
 (def (search query)
   (let* ((ip datadog-host)
@@ -764,10 +766,6 @@
       (when (table? body)
         (let-hash body
           (let-hash .results
-            ;;(results (hash-get (from-json (do-get url)) 'results))
-            ;;(metrics (hash-get results 'metrics))
-            ;;(hosts (hash-get results 'hosts)))
-
             (for (m .metrics)
               (displayln "metric: " m))
             (for (h .hosts)
@@ -776,14 +774,17 @@
 (def (search-metrics pattern)
   (let* ((ip datadog-host)
          (url (make-dd-url ip (format "search?q=~a" pattern)))
-         (metrics-matched [])
-         (results (hash-get (from-json (do-get url)) 'results))
-         (metrics (hash-get results 'metrics)))
-    (for (m metrics)
-      (dp (format "(pregexp-match \"~a\" ~a)" pattern m))
-      (when (pregexp-match pattern m)
-        (set! metrics-matched (cons m metrics-matched))))
-    metrics-matched))
+         (metrics-matched []))
+    (with ([status . body] (rest-call 'get url (default-headers)))
+      (unless status
+        (error body))
+      (when (table? body)
+        (let-hash body
+          (for (m .metrics)
+            (dp (format "(pregexp-match \"~a\" ~a)" pattern m))
+            (when (pregexp-match pattern m)
+              (set! metrics-matched (cons m metrics-matched))))
+          metrics-matched)))))
 
 (def (hosts pattern)
   (let ((results (search-hosts pattern)))
@@ -821,9 +822,10 @@
                  ("tags" [ tag ])))))
     (for (h hosts)
       (let ((url (make-dd-url ip (format "tags/hosts/~a" h))))
-        (displayln "doing " h)
-        (displayln (do-post url default-headers data))
-        (dp (format "tag data is ~a url: ~a" data url))))))
+        (with ([status . body] (rest-call 'post url (default-headers ) data))
+          (unless status
+            (error body))
+          (present-item body))))))
 
 (def (tags)
   (let* ((ip datadog-host)
