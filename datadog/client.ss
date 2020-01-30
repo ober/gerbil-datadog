@@ -706,11 +706,14 @@
 
 (def (screens)
   (let* ((ip datadog-host)
-         (url (make-dd-url ip "screen"))
-         (screenz (from-json (do-get url)))
-         (screenboards (hash-get screenz 'screenboards)))
-    (for (screen screenboards)
-      (print-screens screen))))
+         (url (make-dd-url ip "screen")))
+    (with ([status . body] (rest-call 'get url (default-headers)))
+      (unless status
+        (error body))
+      (when (table? body)
+        (let-hash body
+          (for (screen .screenboards)
+            (print-screens screen)))))))
 
 (def (screen-create board_title widgets width height)
   (let* ((ip datadog-host)
@@ -852,18 +855,20 @@
             (displayln k)))))))
 
 (def (tags-for-source source)
-  (let* ((ip datadog-host)
-         (url (make-dd-url ip (format "tags/hosts/~a" source)))
-         (tags (hash-get (from-json (do-get url)) 'tags)))
-    (for (k (hash-keys tags))
-      (displayln k))))
+  (let* ((url (make-dd-url datadog-host (format "tags/hosts/~a" source))))
+    (with ([status . body] (rest-call 'get url (default-headers)))
+      (for (k (hash-keys .tags))
+        (displayln k)))))
 
 (def (graph query start end)
   (let* ((ip datadog-host)
-         (url (make-dd-url ip (format "graph/snapshot?metric_query=~a&start=~a&end=~a" query start end)))
-         (results (do-get url))
-         (url (hash-get (from-json results) 'snapshot_url)))
-    (displayln url)))
+         (url (make-dd-url ip (format "graph/snapshot?metric_query=~a&start=~a&end=~a" query start end))))
+    (with ([status . body] (rest-call 'get url (default-headers)))
+      (unless status
+        (error body))
+      (when (table? body)
+        (let-hash body
+          (present-item .?snapshot_url))))))
 
 (def (graph-last-secs secs query)
   (let* ((start (float->int (- (time->seconds (builtin-current-time)) secs)))
