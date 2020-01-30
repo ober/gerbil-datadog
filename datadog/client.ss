@@ -1642,11 +1642,13 @@
    name as the user name
    Role as st: standard user, adm: for admin, ro: for readonly"
   (let-hash (load-config)
-    (let* ((url (make-dd-url datadog-host "user"))
+    (let ((url (make-dd-url datadog-host "user"))
            (data (json-object->string
                   (hash
                    ("handle" handle)
                    ("name" name)
-                   ("access_role" role))))
-           (results (do-post-generic url default-headers data)))
-      (displayln results))))
+                   ("access_role" role)))))
+      (with ([status . body] (rest-call 'post url (default-headers) data))
+        (unless status
+          (error body))
+        (present-item body)))))
