@@ -828,18 +828,28 @@
           (present-item body))))))
 
 (def (tags)
+  "Return all tags known to Datadog"
   (let* ((ip datadog-host)
-         (url (make-dd-url ip "tags/hosts"))
-         (tags (hash-get (from-json (do-get url)) 'tags)))
-    (for (k (hash-keys tags))
-      (displayln k))))
+         (url (make-dd-url ip "tags/hosts")))
+    (with ([status . body] (rest-call 'get url (default-headers)))
+      (unless status
+        (error body))
+      (when (table? body)
+        (let-hash body
+          (for (k (hash-keys .tags))
+            (displayln k)))))))
 
 (def (tags-for-metric metric)
+  "Return all tags found for a given metric"
   (let* ((ip datadog-host)
-         (url (make-dd-url ip "tags/metrics"))
-         (tags (hash-get (from-json (do-get url)) 'tags)))
-    (for (k (hash-keys tags))
-      (displayln k))))
+         (url (make-dd-url ip "tags/metrics")))
+    (with ([status . body] (rest-call 'get url (default-headers)))
+      (unless status
+        (error body))
+      (when (table? body)
+        (let-hash body
+          (for (k (hash-keys .tags))
+            (displayln k)))))))
 
 (def (tags-for-source source)
   (let* ((ip datadog-host)
