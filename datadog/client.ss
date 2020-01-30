@@ -1175,38 +1175,47 @@
   (let-hash (load-config)
     (let* ((adds (format "hosts/live_metrics?hosts[]=~a" host))
            (ip datadog-host)
-           (url (make-dd-url ip adds))
-           (results (do-get url))
-           (hosts (from-json results)))
-      (let-hash hosts
-        (for (host .host_list)
-          (displayln (hash->list host))
-          (let-hash host
-            (display .name)
-            (let-hash .live_metrics
-              (displayln ": iowait: " .?iowait " load15: " .?load15 " cpu: " .?cpu))))))))
+           (url (make-dd-url ip adds)))
+      (with ([status . body] (rest-call 'get url (default-headers)))
+        (unless status
+          (error body))
+        (when (table? body)
+          (let-hash body
+            (for (host .host_list)
+              (displayln (hash->list host))
+              (let-hash host
+                (display .name)
+                (let-hash .live_metrics
+                  (displayln ": iowait: " .?iowait " load15: " .?load15 " cpu: " .?cpu))))))))))
 
 (def (totals)
+  "Fetch Host totals"
   (let-hash (load-config)
     (let* ((adds "hosts/totals")
            (ip datadog-host)
-           (url (make-dd-url ip adds))
-           (results (do-get url))
-           (myjson (from-json results)))
-      (let-hash myjson
-        (displayln "Total Up: " .total_up " Total Active: " .total_active)))))
+           (url (make-dd-url ip adds)))
+      (with ([status . body] (rest-call 'get url (default-headers)))
+        (unless status
+          (error body))
+        (when (table? body)
+          (let-hash body
+            (displayln "Total Up: " .total_up " Total Active: " .total_active)))))))
 
 (def (stories)
   (let-hash (datadog-web-login)
-    (let* ((url "https://app.datadoghq.com/watchdog/stories?page_size=100&stories_api_v2=true")
-           (reply (http-get url headers: .headers)))
-      (displayln (request-text reply)))))
+    (let ((url (format "https://~a/watchdog/stories?page_size=100&stories_api_v2=true" datadog-host)))
+      (with ([status . body] (rest-call 'get url .headers))
+        (unless status
+          (error body))
+        (present-item body)))))
 
 (def (livetail)
   (let-hash (datadog-web-login)
-    (let* ((url "https://app.datadoghq.com/logs/livetail")
-           (reply (http-get url headers: .headers)))
-      (displayln (request-text reply)))))
+    (let (url (format "https://app.datadoghq.com/logs/livetail" datadog-host))
+      (with ([status . body] (rest-call 'get url .headers))
+        (unless status
+          (error body))
+        (present-item body)))))
 
 (def (spawn-proc-collectors hosts secs dwl)
   (let ((threads []))
@@ -1570,22 +1579,23 @@
   "Get Usage metering from datadog"
   (let-hash (load-config)
     (let* ((outs [[ "Host Count" "Container Count" "Hour" "Apm Host Count" "Agent Host Count" "Gcp Host Count" "Aws Host Count" ]])
-           (url (make-dd-url datadog-host
-                             (format "usage/hosts?start_hr=~a&end_hr=~a" start end)))
-           (results (do-get url))
-           (myjson (from-json results)))
-      (let-hash myjson
-        (for (entry .usage)
-          (let-hash entry
-            (set! outs (cons [ .?host_count
-                               .?container_count
-                               .?hour
-                               .?apm_host_count
-                               .?agent_host_count
-                               .?gcp_host_count
-                               .?aws_host_count
-                               ] outs)))))
-      (style-output outs))))
+           (url (make-dd-url datadog-host (format "usage/hosts?start_hr=~a&end_hr=~a" start end))))
+      (with ([status . body] (rest-call 'get url (default-headers)))
+        (unless status
+          (error body))
+        (when (table? body)
+          (let-hash body
+            (for (entry .usage)
+              (let-hash entry
+                (set! outs (cons [ .?host_count
+                                   .?container_count
+                                   .?hour
+                                   .?apm_host_count
+                                   .?agent_host_count
+                                   .?gcp_host_count
+                                   .?aws_host_count
+                                   ] outs)))))
+          (style-output outs))))))
 
 (def (metric-tags-from-file file)
   "Read a list of metrics from file and return all metrics associated with each metric"
