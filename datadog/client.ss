@@ -1656,3 +1656,45 @@
         (unless status
           (error body))
         (present-item body)))))
+
+(def (check-manifest manifest)
+  "Read in a manifest and run all of the checks against the hosts inventory within.
+    2. required-tags: (required) verify required-tags exists, and is not empty. Support for both foo:bar, as well as foo: to catch any references to foo:*
+      - Tags that are required for each host, and used in monitors, and or set thresholds for monitors
+    3. integrations: (required) verify integrations exist and is not empty. For each host ensure they are in the list of find-app integration
+      - Given integrations are specific to an application, these would be global to the manifest. e.g. mysql.yaml
+    4. metrics: (required) verify metrics list, and not empty. for each host verify they are in metric-tags for the given metric
+       - Each host must show up in metric-tags for metric. Tags may have variations on the name. might need new tag to not confuse with other names dd knows
+    5. monitors: templates that used the host value, and any specific tags.
+      - Setup templates to inherit all tags as variables so they can be used. #{foo:} vs #{foo:bar}"
+  (try
+   (let* ((manifest (car (yaml-load manifest)))
+          (hosts (hash-get manifest "hosts"))
+          (required-tags (hash-get manifest "required-tags"))
+          (integrations (hash-get manifest "integrations"))
+          (monitors (hash-get manifest "monitors")))
+     (when (list? hosts)
+       (for (host hosts)
+         ;; Check Host entries in datadog
+         (let (meta (car (get-meta-by-host host)))
+           (unless (table? meta)
+             (error (format "meta is not a table ~a" meta)))
+           (manifest-host-check host meta)
+           (manifest-tag-check required-tags meta)
+           (manifest-integration-check integrations meta)
+           (manifest-monitor-check monitors meta)))))
+   (catch (e)
+     (raise e))))
+
+
+(def (manifest-host-check host meta)
+  "Verify hostname matches exactly"
+  (let-hash meta
+    (unless .?host_name
+      (displayln "fail: host not found" host))
+    (if (string=? host .?host_name)
+      (displayln "ok: host " host " matches " .?host_name)
+      (displayln "fail: unknown. host: " host " meta: " (present-item meta)))))
+
+
+(def (
