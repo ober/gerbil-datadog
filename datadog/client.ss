@@ -140,17 +140,15 @@
   (verify-account)
   (let* ((adds (format "query?from=~a&to=~a&query=~a" from-s to-s query))
 	 (ip datadog-host)
-	 (url (make-dd-url ip adds))
-	 (results (rest-call 'get url (default-headers)))
-	 (myjson (from-json results))
-	 (status (hash-ref myjson 'status)))
-    (if (string= "ok" status)
-      (begin
-	(for (p (hash-get myjson 'series))
-          (displayln p)
-          (print-opts p)))
-      (begin ;; failure to find stuff
-	(displayln "Failed with status:" status)))))
+	 (url (make-dd-url ip adds)))
+    (with ([ status body ] (rest-call 'get url (default-headers)))
+      (unless status
+        (error body))
+      (when (table? body)
+        (let-hash body
+          (for (p .series)
+            (displayln p)
+            (print-opts p)))))))
 
 (def (query-last-secs secs query)
   (let* ((start (float->int (- (time->seconds (builtin-current-time)) secs)))
@@ -169,24 +167,21 @@
 (def (metrics pattern)
   (verify-account)
   (let* ((ip datadog-host)
-	 (url
-	  (make-dd-url ip
-		       (format "metrics?from=~a"
-			       (inexact->exact
-				(round
-				 (-
-				  (time->seconds
-				   (builtin-current-time)) 9000))))))
-	 (results (rest-call 'get url (default-headers)))
-	 (metrics
-	  (hash-get
-	   (from-json results)
-	   'metrics)))
-    (for (m metrics)
-      (if pattern
-        (if (string-contains m pattern)
-          (displayln m))))))
-
+	 (url (make-dd-url ip (format "metrics?from=~a"
+                                      (inexact->exact
+                                       (round
+                                        (-
+                                         (time->seconds
+                                          (builtin-current-time)) 9000)))))))
+         (with ([status body] (rest-call 'get url (default-headers)))
+           (unless status
+             (error body))
+           (when (table? body)
+             (let-hash body
+               (for (m .metrics)
+                 (if pattern
+                   (if (string-contains m pattern)
+                     (displayln m)))))))))
 
 (def (view-md metric)
   (verify-account)
@@ -198,12 +193,6 @@
         (error body))
       (when (table? body)
         (let-hash body
-          ;;(myjson (from-json results))
-          ;;(description (hash-get myjson 'description))
-          ;;(integration (hash-get myjson 'integration))
-          ;;(statsd_interval (hash-get myjson 'statsd_interval))
-          ;;(type (hash-get myjson 'type))
-          ;;(unit (hash-get myjson 'unit)))
           (displayln (format "description:~a integration:~a statsd_interval:~a type:~a unit:~a"
                              (if (void? .?description)
                                "N/A"
@@ -1672,6 +1661,7 @@
           (hosts (hash-get manifest "hosts"))
           (required-tags (hash-get manifest "required-tags"))
           (integrations (hash-get manifest "integrations"))
+          (metrics (hash-get manifest "metrics"))
           (monitors (hash-get manifest "monitors")))
      (when (list? hosts)
        (for (host hosts)
@@ -1682,10 +1672,10 @@
            (manifest-host-check host meta)
            (manifest-tag-check required-tags meta)
            (manifest-integration-check integrations meta)
+           (manifest-metric-check metrics meta)
            (manifest-monitor-check monitors meta)))))
    (catch (e)
      (raise e))))
-
 
 (def (manifest-host-check host meta)
   "Verify hostname matches exactly"
@@ -1696,5 +1686,22 @@
       (displayln "ok: host " host " matches " .?host_name)
       (displayln "fail: unknown. host: " host " meta: " (present-item meta)))))
 
+(def (manifest-tag-check required-tags meta)
+  "Verify that all the tags expected for this host are applied"
+  (display "tag-check: ")
+  (present-item required-tags))
 
-(def (
+(def (manifest-integration-check integrations meta)
+  "Verify that all the integrations expected for this host are applied"
+  (display "integration-check: ")
+  (present-item integrations))
+
+(def (manifest-metric-check metrics meta)
+  "Verify that all the tags expected for this host are applied"
+  (display "metrics-check: ")
+  (present-item metrics))
+
+(def (manifest-monitor-check monitors meta)
+  "Verify that all the monitors expected for this host are applied"
+  (display "monitors-check: ")
+  (present-item monitors))
