@@ -1658,7 +1658,8 @@
     5. monitors: templates that used the host value, and any specific tags.
       - Setup templates to inherit all tags as variables so they can be used. #{foo:} vs #{foo:bar}"
   (try
-   (let* ((manifest (car (yaml-load manifest)))
+   (let* ((dwl (datadog-web-login))
+          (manifest (car (yaml-load manifest)))
           (hosts (hash-get manifest "hosts"))
           (required-tags (hash-get manifest "required-tags"))
           (integrations (hash-get manifest "integrations"))
@@ -1673,7 +1674,7 @@
            (manifest-host-check host meta)
            (manifest-tag-check required-tags meta)
            (manifest-integration-check integrations meta)
-           (manifest-metric-check metrics meta)
+           (manifest-metric-check metrics meta dwl)
            (manifest-monitor-check monitors meta)))))
    (catch (e)
      (raise e))))
@@ -1713,12 +1714,16 @@
         (displayln (format "ok: ~a integration found" integration))
         (displayln (format "fail: ~a integration not found got: ~a" integration .apps))))))
 
-(def (manifest-metric-check metrics meta)
-  "Verify that all the tags expected for this host are applied"
-  (display "metrics-check: ")
-  (present-item metrics))
+(def (manifest-metric-check metrics meta dwl)
+  "Verify that all the hosts are submitting for a given metric"
+  (let-hash meta
+    (let (tag (format "host:~a" .host_name))
+      (for (metric metrics)
+        (if (tag-in-metric? tag metric dwl)
+          (displayln "ok: metric " metric " found.")
+          (displayln "fail: metric " metric " not found."))))))
 
 (def (manifest-monitor-check monitors meta)
   "Verify that all the monitors expected for this host are applied"
-  (display "monitors-check: ")
+;;  (display "monitors-check: ")
   (present-item monitors))
