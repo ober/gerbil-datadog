@@ -1,1 +1,1 @@
-(package: ober depend: ("github.com/ober/oberlib" "github.com/fare/gerbil-utils"))
+(package: ober depend: ("github.com/ober/oberlib"))
