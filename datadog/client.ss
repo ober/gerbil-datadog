@@ -32,7 +32,8 @@
   :std/text/yaml
   :std/text/zlib
   :ober/oberlib
-  :std/xml/ssax)
+  :std/xml/ssax
+  :clan/utils/string)
 
 (export #t)
 (def version "0.08")
@@ -1693,16 +1694,15 @@
       (let-hash .tags_by_source
         (for (tag required-tags)
           (let ((found #f)
-                (tag (if (string-contains tag "|")
-                       (pregexp-replace "|" tag ":")
-                       tag)))
+                (tag (string-substitute #\: #\| tag)))
+            (displayln "tag: " tag)
             (for (utag .Users)
               (when (pregexp-match tag utag)
                 (begin
                   (displayln (format "ok: required ~a found ~a " tag utag))
                   (set! found #t))))
             (unless found
-              (displayln "fail: missing tag" tag " found: " .Users))))))))
+              (displayln "fail: missing tag- " tag " found " .Users))))))))
 
 (def (manifest-integration-check integrations meta)
   "Verify that all the integrations expected for this host are applied"
