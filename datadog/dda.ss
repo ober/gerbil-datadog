@@ -97,6 +97,7 @@
    ("totals" (hash (description: "Host Totals.") (usage: "totals") (count: 0)))
    ("verify-account" (hash (description: "Verify account credentials") (usage: "validate") (count: 0)))
    ("verify-apps" (hash (description: "Verify account credentials") (usage: "verify-apps") (count: 0)))
+   ("check-manifest" (hash (description: "Check manifest yaml file") (usage: "check-manifest <manifest.yaml>") (count: 1)))
    ("view-md" (hash (description: "Describe metric metadata") (usage: "view-md") (count: 1)))
    ))
 
