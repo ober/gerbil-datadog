@@ -32,8 +32,7 @@
   :std/text/yaml
   :std/text/zlib
   :ober/oberlib
-  :std/xml/ssax
-  :clan/utils/string)
+  :std/xml/ssax)
 
 (export #t)
 (def version "0.09")
