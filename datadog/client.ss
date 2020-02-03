@@ -1,4 +1,4 @@
-; -*- Gerbil -*-
+;; -*- Gerbil -*-
 ;; © ober 2020
 
 (import
@@ -1693,21 +1693,25 @@
     (when (table? .tags_by_source)
       (let-hash .tags_by_source
         (for (tag required-tags)
-          (let ((found #f)
-                (tag (string-substitute #\: #\| tag)))
-            (displayln "tag: " tag)
+          (let* ((found #f)
+                 (tag (string-substitute #\: #\| tag))
+                 (pattern (if (pregexp-match "\\W+:$" tag)
+                            (format "^~a" tag)
+                            (format "^~a$" tag))))
             (for (utag .Users)
-              (when (pregexp-match tag utag)
-                (begin
-                  (displayln (format "ok: required ~a found ~a " tag utag))
-                  (set! found #t))))
+              (when (pregexp-match pattern utag)
+                (displayln (format "ok: required ~a found ~a " tag utag))
+                (set! found #t)))
             (unless found
               (displayln "fail: missing tag- " tag " found " .Users))))))))
 
 (def (manifest-integration-check integrations meta)
   "Verify that all the integrations expected for this host are applied"
-  (display "integration-check: ")
-  (present-item integrations))
+  (let-hash meta
+    (for (integration integrations)
+      (if (member integration .apps)
+        (displayln (format "ok: ~a integration found" integration))
+        (displayln (format "fail: ~a integration not found got: ~a" integration .apps))))))
 
 (def (manifest-metric-check metrics meta)
   "Verify that all the tags expected for this host are applied"
