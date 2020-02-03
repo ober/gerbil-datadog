@@ -1694,7 +1694,7 @@
       (let-hash .tags_by_source
         (for (tag required-tags)
           (let* ((found #f)
-                 (tag (string-substitute #\: #\| tag))
+                 (tag (pregexp-replace* "\\|" tag ":"))
                  (pattern (if (pregexp-match "\\W+:$" tag)
                             (format "^~a" tag)
                             (format "^~a$" tag))))
