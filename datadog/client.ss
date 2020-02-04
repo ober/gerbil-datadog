@@ -792,6 +792,21 @@
       (set! str (string-delete remove str)))
     str))
 
+(def (search-hosts-exact hostname)
+  (let ((found #f)
+        (url (make-dd-url datadog-host (format "search?q=~a" hostname))))
+    (with ([status body] (rest-call 'get url (default-headers)))
+      (unless status
+        (error body))
+      (when (table? body)
+        (let-hash body
+          (when (table? .?results)
+            (let-hash .results
+              (for (h .hosts)
+                (when (pregexp-match (format "^~a$" hostname) h)
+                  (set! found h))))))))
+    found))
+
 (def (search-hosts pattern)
   (let* ((safe-str (regexp->str pattern))
          (url (make-dd-url datadog-host (format "search?q=~a" safe-str)))
@@ -809,8 +824,22 @@
                     (set! hosts-matched (cons h hosts-matched)))))
               hosts-matched)))))))
 
-(def (tag host-pattern tag)
-  "Tag a given host pattern with a given tag"
+(def (tag hostname tag)
+  "Tag a given hostname with a tag"
+  (let* ((host (search-hosts-exact hostname))
+         (ip datadog-host)
+         (data (json-object->string
+                (hash
+                 ("tags" [ tag ])))))
+    (let ((url (make-dd-url ip (format "tags/hosts/~a" host))))
+      (present-item url)
+      (with ([status body] (rest-call 'post url (default-headers ) data))
+        (unless status
+          (error body))
+        (present-item body)))))
+
+(def (tag-all host-pattern tag)
+  "Tag a given hostname with a tag"
   (let* ((hosts (search-hosts host-pattern))
          (ip datadog-host)
          (data (json-object->string
@@ -1399,6 +1428,17 @@
               (lp (+ start .total_returned)))))))
     results))
 
+(def (get-meta-exact-host-name-match host)
+  "Many host are similarly named, we just want the exact match, with anchors"
+  (let ((result #f)
+        (hosts (get-meta-by-host host)))
+    (for (host2 hosts)
+      (let-hash host2
+        (when .?host_name
+          (when (pregexp-match (format "^~a$" host) .?host_name)
+            (set! result host2)))))
+      result))
+
 (def (agents)
   (let ((hosts (mytime (hosts-with-agent))))
     (for (host hosts)
@@ -1668,7 +1708,7 @@
        (for (host hosts)
          ;; Check Host entries in datadog
          (displayln "<=== " host)
-         (let (meta (car (get-meta-by-host host)))
+         (let (meta (get-meta-exact-host-name-match host))
            (unless (table? meta)
              (error (format "meta is not a table ~a" meta)))
            (manifest-host-check host meta)
