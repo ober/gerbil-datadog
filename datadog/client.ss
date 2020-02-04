@@ -73,9 +73,9 @@
       (set! datadog-app-key .datadog-app-key)
       (set! datadog-api-key .datadog-api-key))))
 
-(def (make-dd-url ip adds)
+(def (make-dd-url adds)
   (ensure-api-keys)
-  (let* ((datadog-base-url (format "https://~a/api/v1/" ip)))
+  (let* ((datadog-base-url (format "https://~a/api/v1/" datadog-host)))
     (let ((delim "?"))
       (when (string-contains adds "?")
         (set! delim "&"))
@@ -95,8 +95,7 @@
       (string-concatenate [ datadog-base-url adds (format "?api_key=~a&application_key=~a" datadog-api-key datadog-app-key)]))))
 
 (def (verify-account)
-  (let* ((ip datadog-host)
-	 (req (http-get (make-dd-url ip "validate")))
+  (let* ((req (http-get (make-dd-url "validate")))
 	 (status (request-status req))
 	 (valid (success? status)))
     (unless valid
@@ -139,8 +138,7 @@
 (def (query-metrics from-s to-s query)
   (verify-account)
   (let* ((adds (format "query?from=~a&to=~a&query=~a" from-s to-s query))
-	 (ip datadog-host)
-	 (url (make-dd-url ip adds)))
+	 (url (make-dd-url adds)))
     (with ([ status body ] (rest-call 'get url (default-headers)))
       (unless status
         (error body))
@@ -166,8 +164,7 @@
 
 (def (metrics pattern)
   (verify-account)
-  (let* ((ip datadog-host)
-	 (url (make-dd-url ip (format "metrics?from=~a"
+  (let* ((url (make-dd-url (format "metrics?from=~a"
                                       (inexact->exact
                                        (round
                                         (-
@@ -186,8 +183,7 @@
 (def (view-md metric)
   (verify-account)
   (let* ((adds (format "metrics/~a" metric))
-	 (ip datadog-host)
-	 (url (make-dd-url ip adds)))
+	 (url (make-dd-url adds)))
     (with ([ status body ] (rest-call 'get url (default-headers)))
       (unless status
         (error body))
@@ -211,8 +207,7 @@
                                .?unit))))))))
 
 (def (edit-metric-metadata metric description short_name)
-  (let* ((ip datadog-host)
-         (url (make-dd-url ip (format "metrics/~a" metric)))
+  (let* ((url (make-dd-url (format "metrics/~a" metric)))
          (data (json-object->string
                 (hash
                  ("description" description)
@@ -223,8 +218,8 @@
       (present-item body))))
 
 (def (submit-event title text priority tags alert_type)
-  (let* ((ip datadog-host)
-         (url (make-dd-url ip "events"))
+  (let* (
+         (url (make-dd-url "events"))
          (data (json-object->string
                 (hash
                  ("title" title)
@@ -237,16 +232,16 @@
       (present-item body))))
 
 (def (get-events-time start end)
-  (let* ((ip datadog-host)
-         (url (make-dd-url ip (format "events?start=~a&end=~a" start end))))
+  (let* (
+         (url (make-dd-url (format "events?start=~a&end=~a" start end))))
     (with ([status body] (rest-call 'get url (default-headers )))
       (unless status
         (error body))
       (present-item body))))
 
 (def (get-events-tags start end tags)
-  (let* ((ip datadog-host)
-         (url (make-dd-url ip (format "events?start=~a&end=~a&tags=~a" start end tags))))
+  (let* (
+         (url (make-dd-url (format "events?start=~a&end=~a&tags=~a" start end tags))))
     (with ([status body] (rest-call 'get url (default-headers )))
       (unless status
         (error body))
@@ -316,8 +311,8 @@
        " id: " .id))))
 
 (def (downtimes)
-  (let* ((ip datadog-host)
-         (url (make-dd-url ip "downtime")))
+  (let* (
+         (url (make-dd-url "downtime")))
     (with ([status body] (rest-call 'get url (default-headers )))
       (unless status
         (error body))
@@ -357,8 +352,8 @@
            ))))))
 
 (def (screen id)
-  (let* ((ip datadog-host)
-         (url (make-dd-url ip (format "screen/~a" id))))
+  (let* (
+         (url (make-dd-url (format "screen/~a" id))))
     (with ([status body] (rest-call 'get url (default-headers )))
       (unless status
         (error body))
@@ -444,8 +439,7 @@
    ("viz" viz)))
 
 (def (tboard-create title description)
-  (let* ((ip datadog-host)
-         (url (make-dd-url datadog-host "dash"))
+  (let* ((url (make-dd-url "dash"))
          (data (json-object->string
                 (hash
                  ("graphs" [ (make-graph (metric-name-to-title title) "avg:system.mem.free{*}" "timeseries")])
@@ -463,8 +457,8 @@
 
 (def (tboard-mass-add id metric-pattern host-clause groupby replace)
   (let* ((tbinfo (get-tboard id))
-         (ip datadog-host)
-         (url (make-dd-url ip (format "dash/~a" id)))
+
+         (url (make-dd-url (format "dash/~a" id)))
          (dash (hash-get tbinfo 'dash))
          (graphs (hash-get dash 'graphs))
          (title (hash-get dash 'title))
@@ -490,8 +484,8 @@
 
 (def (tboard-netdata-dashboard id metric-pattern host-clause groupby replace)
   (let* ((tbinfo (get-tboard id))
-         (ip datadog-host)
-         (url (make-dd-url ip (format "dash/~a" id)))
+
+         (url (make-dd-url (format "dash/~a" id)))
          (dash (hash-get tbinfo 'dash))
          (graphs (hash-get dash 'graphs))
          (title (hash-get dash 'title))
@@ -524,8 +518,8 @@
 (def (tboard-mass-add-many id metric-pattern host-pattern replace)
   (let* ((tbinfo (get-tboard id))
          (hosts (search-hosts host-pattern))
-         (ip datadog-host)
-         (url (make-dd-url ip (format "dash/~a" id)))
+
+         (url (make-dd-url (format "dash/~a" id)))
          (dash (hash-get tbinfo 'dash))
          (graphs (hash-get dash 'graphs))
          (title (hash-get dash 'title))
@@ -557,7 +551,7 @@
         (let ((groupby (if (string-contains tag ":")
                          (car (pregexp-split ":" tag))
                          tag))
-              (url (make-dd-url datadog-host (format "dash/~a" id)))
+              (url (make-dd-url (format "dash/~a" id)))
               (new-graphs []))
           (when .?dash
             (when (table? .dash)
@@ -598,8 +592,8 @@
 
 (def (tboard-add-chart id title request viz)
   (let* ((tbinfo (get-tboard id))
-         (ip datadog-host)
-         (url (make-dd-url ip (format "dash/~a" id)))
+
+         (url (make-dd-url (format "dash/~a" id)))
          (dash (hash-get tbinfo 'dash))
          (graphs (hash-get dash 'graphs))
          (new-graph (make-graph (metric-name-to-title title) request viz))
@@ -614,8 +608,8 @@
       (present-item body))))
 
 (def (get-tboard id)
-  (let* ((ip datadog-host)
-         (url (make-dd-url ip (format "dash/~a" id))))
+  (let* (
+         (url (make-dd-url (format "dash/~a" id))))
     (with ([status body] (rest-call 'get url (default-headers )))
       (unless status
         (error body))
@@ -642,8 +636,8 @@
         ))))
 
 (def (dump id)
-  (let* ((ip datadog-host)
-         (url (make-dd-url ip (format "dash/~a" id))))
+  (let* (
+         (url (make-dd-url (format "dash/~a" id))))
     (with ([status body] (rest-call 'get url (default-headers )))
       (unless status
         (error body))
@@ -680,8 +674,8 @@
     results))
 
 (def (tboards)
-  (let* ((ip datadog-host)
-         (url (make-dd-url ip "dash"))
+  (let* (
+         (url (make-dd-url "dash"))
          (outs [[ "Description" "Id" "Resource" "Title" "Created" "Modified" "RO?" ]]))
     (with ([status body] (rest-call 'get url (default-headers)))
       (unless status
@@ -694,8 +688,8 @@
           (style-output outs))))))
 
 (def (screens)
-  (let* ((ip datadog-host)
-         (url (make-dd-url ip "screen")))
+  (let* (
+         (url (make-dd-url "screen")))
     (with ([status body] (rest-call 'get url (default-headers)))
       (unless status
         (error body))
@@ -705,8 +699,8 @@
             (print-screens screen)))))))
 
 (def (screen-create board_title widgets width height)
-  (let* ((ip datadog-host)
-         (url (make-dd-url ip "screen"))
+  (let* (
+         (url (make-dd-url "screen"))
          (data (json-object->string
                 (hash
                  ("width" width)
@@ -727,8 +721,8 @@
       (present-item body))))
 
 (def (screen-update id width height board_title)
-  (let* ((ip datadog-host)
-         (url (make-dd-url ip (format "screen/~a" id)))
+  (let* (
+         (url (make-dd-url (format "screen/~a" id)))
          (data (json-object->string
                 (hash
                  ("width" width)
@@ -749,8 +743,8 @@
       (present-item body))))
 
 (def (search query)
-  (let* ((ip datadog-host)
-         (url (make-dd-url ip (format "search?q=~a" query))))
+  (let* (
+         (url (make-dd-url (format "search?q=~a" query))))
     (with ([status body] (rest-call 'get url (default-headers)))
       (unless status
         (error body))
@@ -763,8 +757,8 @@
               (displayln "host: " h))))))))
 
 (def (search-metrics pattern)
-  (let* ((ip datadog-host)
-         (url (make-dd-url ip (format "search?q=~a" pattern)))
+  (let* (
+         (url (make-dd-url (format "search?q=~a" pattern)))
          (metrics-matched []))
     (with ([status body] (rest-call 'get url (default-headers)))
       (unless status
@@ -794,7 +788,7 @@
 
 (def (search-hosts-exact hostname)
   (let ((found #f)
-        (url (make-dd-url datadog-host (format "search?q=~a" hostname))))
+        (url (make-dd-url (format "search?q=~a" hostname))))
     (with ([status body] (rest-call 'get url (default-headers)))
       (unless status
         (error body))
@@ -809,7 +803,7 @@
 
 (def (search-hosts pattern)
   (let* ((safe-str (regexp->str pattern))
-         (url (make-dd-url datadog-host (format "search?q=~a" safe-str)))
+         (url (make-dd-url (format "search?q=~a" safe-str)))
          (hosts-matched []))
     (with ([status body] (rest-call 'get url (default-headers)))
       (unless status
@@ -826,10 +820,9 @@
 
 (def (clear-tags hostname)
   "Remove a tag from a given hostname"
-  (let* ((host (search-hosts-exact hostname))
-         (ip datadog-host))
-    (let ((url (make-dd-url ip (format "tags/hosts/~a" host))))
-      (with ([status body] (rest-call 'delete url (default-headers )))
+  (let (host (search-hosts-exact hostname))
+    (let ((url (make-dd-url (format "tags/hosts/~a" host))))
+      (with ([status body] (rest-call 'delete url (default-headers)))
         (unless status
           (error body))
         (present-item body)))))
@@ -837,11 +830,11 @@
 (def (tag hostname tag)
   "Tag a given hostname with a tag"
   (let* ((host (search-hosts-exact hostname))
-         (ip datadog-host)
+
          (data (json-object->string
                 (hash
                  ("tags" [ tag ])))))
-    (let ((url (make-dd-url ip (format "tags/hosts/~a" host))))
+    (let ((url (make-dd-url (format "tags/hosts/~a" host))))
       (with ([status body] (rest-call 'post url (default-headers ) data))
         (unless status
           (error body))
@@ -850,12 +843,12 @@
 (def (tag-all host-pattern tag)
   "Tag a given hostname with a tag"
   (let* ((hosts (search-hosts host-pattern))
-         (ip datadog-host)
+
          (data (json-object->string
                 (hash
                  ("tags" [ tag ])))))
     (for (h hosts)
-      (let ((url (make-dd-url ip (format "tags/hosts/~a" h))))
+      (let ((url (make-dd-url (format "tags/hosts/~a" h))))
         (with ([status body] (rest-call 'post url (default-headers ) data))
           (unless status
             (error body))
@@ -863,8 +856,8 @@
 
 (def (tags)
   "Return all tags known to Datadog"
-  (let* ((ip datadog-host)
-         (url (make-dd-url ip "tags/hosts")))
+  (let* (
+         (url (make-dd-url "tags/hosts")))
     (with ([status body] (rest-call 'get url (default-headers)))
       (unless status
         (error body))
@@ -875,8 +868,8 @@
 
 (def (tags-for-metric metric)
   "Return all tags found for a given metric"
-  (let* ((ip datadog-host)
-         (url (make-dd-url ip "tags/metrics")))
+  (let* (
+         (url (make-dd-url "tags/metrics")))
     (with ([status body] (rest-call 'get url (default-headers)))
       (unless status
         (error body))
@@ -886,7 +879,7 @@
             (displayln k)))))))
 
 (def (tags-for-source source)
-  (let* ((url (make-dd-url datadog-host (format "tags/hosts/~a" source))))
+  (let* ((url (make-dd-url (format "tags/hosts/~a" source))))
     (with ([status body] (rest-call 'get url (default-headers)))
       (unless status
         (error body))
@@ -895,8 +888,8 @@
           (displayln k))))))
 
 (def (graph query start end)
-  (let* ((ip datadog-host)
-         (url (make-dd-url ip (format "graph/snapshot?metric_query=~a&start=~a&end=~a" query start end))))
+  (let* (
+         (url (make-dd-url (format "graph/snapshot?metric_query=~a&start=~a&end=~a" query start end))))
     (with ([status body] (rest-call 'get url (default-headers)))
       (unless status
         (error body))
@@ -916,8 +909,8 @@
   (query-last-secs 3600 query))
 
 (def (edit-monitor id query name message)
-  (let* ((ip datadog-host)
-         (url (make-dd-url ip (format "montior/~a" id)))
+  (let* (
+         (url (make-dd-url (format "montior/~a" id)))
          (data (json-object->string
                 (hash
                  ("query" query)
@@ -931,16 +924,16 @@
 
 (def (del-monitor id)
   "Delete an existing Datadog Monitor by id"
-  (let* ((ip datadog-host)
-         (url (make-dd-url ip (format "monitor/~a" id))))
+  (let* (
+         (url (make-dd-url (format "monitor/~a" id))))
     (with ([status body] (rest-call 'delete url (default-headers)))
       (unless status
         (error body))
       (present-item body))))
 
 (def (new-monitor type query name message tags)
-  (let* ((ip datadog-host)
-         (url (make-dd-url ip "monitor"))
+  (let* (
+         (url (make-dd-url "monitor"))
          (data (json-object->string
                 (hash
                  ("type" type)
@@ -959,8 +952,8 @@
 
 (def (monitor id)
   (displayln (format "* Datadog Monitor: ~a" id))
-  (let* ((ip datadog-host)
-         (url (make-dd-url ip (format "monitor/~a" id))))
+  (let* (
+         (url (make-dd-url (format "monitor/~a" id))))
     (with ([status body] (rest-call 'get url (default-headers)))
       (unless status
         (error body))
@@ -1001,8 +994,8 @@
     (displayln "*** Modified: " .?modified)))
 
 (def (monitors)
-  (let* ((ip datadog-host)
-         (url (make-dd-url ip "monitor")))
+  (let* (
+         (url (make-dd-url "monitor")))
     (with ([status body] (rest-call 'get url (default-headers)))
       (unless status
         (error body))
@@ -1011,8 +1004,8 @@
         (print-monitor-long monitor)))))
 
 (def (dump-monitors dir)
-  (let* ((ip datadog-host)
-         (url (make-dd-url ip "monitor")))
+  (let* (
+         (url (make-dd-url "monitor")))
     (with ([status body] (rest-call 'get url (default-headers)))
       (unless status
         (error body))
@@ -1028,8 +1021,8 @@
 
 (def (monitors-table)
   (let* ((outs [[ "Id" "Name" "Query" ]])
-         (ip datadog-host)
-         (url (make-dd-url ip "monitor")))
+
+         (url (make-dd-url "monitor")))
     (with ([status body] (rest-call 'get url (default-headers)))
       (unless status
         (error body))
@@ -1204,8 +1197,7 @@
 (def (live-metrics host)
   (let-hash (load-config)
     (let* ((adds (format "hosts/live_metrics?hosts[]=~a" host))
-           (ip datadog-host)
-           (url (make-dd-url ip adds)))
+           (url (make-dd-url adds)))
       (with ([status body] (rest-call 'get url (default-headers)))
         (unless status
           (error body))
@@ -1222,8 +1214,7 @@
   "Fetch Host totals"
   (let-hash (load-config)
     (let* ((adds "hosts/totals")
-           (ip datadog-host)
-           (url (make-dd-url ip adds)))
+           (url (make-dd-url adds)))
       (with ([status body] (rest-call 'get url (default-headers)))
         (unless status
           (error body))
@@ -1620,7 +1611,7 @@
   "Get Usage metering from datadog"
   (let-hash (load-config)
     (let* ((outs [[ "Host Count" "Container Count" "Hour" "Apm Host Count" "Agent Host Count" "Gcp Host Count" "Aws Host Count" ]])
-           (url (make-dd-url datadog-host (format "usage/hosts?start_hr=~a&end_hr=~a" start end))))
+           (url (make-dd-url (format "usage/hosts?start_hr=~a&end_hr=~a" start end))))
       (with ([status body] (rest-call 'get url (default-headers)))
         (unless status
           (error body))
@@ -1684,7 +1675,7 @@
    name as the user name
    Role as st: standard user, adm: for admin, ro: for readonly"
   (let-hash (load-config)
-    (let ((url (make-dd-url datadog-host "user"))
+    (let ((url (make-dd-url "user"))
           (data (json-object->string
                  (hash
                   ("handle" handle)
