@@ -1667,6 +1667,7 @@
      (when (list? hosts)
        (for (host hosts)
          ;; Check Host entries in datadog
+         (displayln "<=== " host)
          (let (meta (car (get-meta-by-host host)))
            (unless (table? meta)
              (error (format "meta is not a table ~a" meta)))
@@ -1695,15 +1696,20 @@
         (for (tag required-tags)
           (let* ((found #f)
                  (tag (pregexp-replace* "\\|" tag ":"))
-                 (pattern (if (pregexp-match "\\W+:$" tag)
+                 (pattern (if (pregexp-match "\\w+:$" tag)
                             (format "^~a" tag)
                             (format "^~a$" tag))))
-            (for (utag .Users)
-              (when (pregexp-match pattern utag)
-                (displayln (format "ok: required ~a found ~a " tag utag))
-                (set! found #t)))
-            (unless found
-              (displayln "fail: missing tag- " tag " found " .Users))))))))
+            (if (and
+                  .?Users
+                  (list? .Users))
+              (begin
+                (for (utag .Users)
+                  (when (pregexp-match pattern utag)
+                    (displayln (format "ok: required ~a found ~a " tag utag))
+                    (set! found #t)))
+                (unless found
+                  (displayln "fail: missing tag: " tag " found:" .Users)))
+              (displayln "fail: no User tags for host found"))))))))
 
 (def (manifest-integration-check integrations meta)
   "Verify that all the integrations expected for this host are applied"
@@ -1724,5 +1730,6 @@
 
 (def (manifest-monitor-check monitors meta)
   "Verify that all the monitors expected for this host are applied"
-;;  (display "monitors-check: ")
-  (present-item monitors))
+  #!void)
+  ;;  (display "monitors-check: "))
+;;  (present-item monitors))
