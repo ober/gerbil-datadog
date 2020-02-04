@@ -86,6 +86,7 @@
    ("status" (hash (description: "Get Datadog Status.") (usage: "status") (count: 0)))
    ("stories" (hash (description: "stories") (usage: "stories") (count: 0)))
    ("tag" (hash (description: "Add a tag to a hostname") (usage: "tag <host> <tag name:value>") (count: 2)))
+   ("clear-tags" (hash (description: "Remove all tags from hostname") (usage: "clear-tags <host>") (count: 1)))
    ("tag-all" (hash (description: "Add a tag to all hostnames matching pattern") (usage: "tag-all <hostname pattern> <tag name:value>") (count: 2)))
    ("tags" (hash (description: "list all tags and hosts") (usage: "tags") (count: 0)))
    ("tboard" (hash (description: "Get info on timeboard.") (usage: "timeboards <timeboard id>")(count: 1)))
