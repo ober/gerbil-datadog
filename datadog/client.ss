@@ -827,12 +827,9 @@
 (def (clear-tags hostname)
   "Remove a tag from a given hostname"
   (let* ((host (search-hosts-exact hostname))
-         (ip datadog-host)
-         (data (json-object->string
-                (hash
-                 ("tags" [ tag ])))))
+         (ip datadog-host))
     (let ((url (make-dd-url ip (format "tags/hosts/~a" host))))
-      (with ([status body] (rest-call 'delete url (default-headers ) data))
+      (with ([status body] (rest-call 'delete url (default-headers )))
         (unless status
           (error body))
         (present-item body)))))
