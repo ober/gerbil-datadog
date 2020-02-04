@@ -832,7 +832,6 @@
                 (hash
                  ("tags" [ tag ])))))
     (let ((url (make-dd-url ip (format "tags/hosts/~a" host))))
-      (present-item url)
       (with ([status body] (rest-call 'delete url (default-headers ) data))
         (unless status
           (error body))
@@ -846,7 +845,6 @@
                 (hash
                  ("tags" [ tag ])))))
     (let ((url (make-dd-url ip (format "tags/hosts/~a" host))))
-      (present-item url)
       (with ([status body] (rest-call 'post url (default-headers ) data))
         (unless status
           (error body))
