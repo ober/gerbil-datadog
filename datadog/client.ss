@@ -916,10 +916,10 @@
                  (hash
                   ("notify_no_data" #t)
                   ("no_data_timeframe" 20)))))))
-  (with ([status body] (rest-call 'post url (default-headers) data))
-    (unless status
-      (error body))
-    (present-item body))))
+    (with ([status body] (rest-call 'post url (default-headers) data))
+      (unless status
+        (error body))
+      (present-item body))))
 
 (def (monitor id)
   (displayln (format "* Datadog Monitor: ~a" id))
@@ -1404,7 +1404,7 @@
         (when .?host_name
           (when (pregexp-match (format "^~a$" host) .?host_name)
             (set! result host2)))))
-      result))
+    result))
 
 (def (agents)
   (let ((hosts (mytime (hosts-with-agent))))
@@ -1738,5 +1738,5 @@
 (def (manifest-monitor-check monitors meta)
   "Verify that all the monitors expected for this host are applied"
   #!void)
-  ;;  (display "monitors-check: "))
+;;  (display "monitors-check: "))
 ;;  (present-item monitors))
