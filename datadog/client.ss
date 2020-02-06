@@ -688,19 +688,16 @@
           (style-output outs))))))
 
 (def (screens)
-  (let* (
-         (url (make-dd-url "screen")))
-    (with ([status body] (rest-call 'get url (default-headers)))
-      (unless status
-        (error body))
-      (when (table? body)
-        (let-hash body
-          (for (screen .screenboards)
-            (print-screens screen)))))))
+  (with ([status body] (rest-call 'get (make-dd-url "screen") (default-headers)))
+    (unless status
+      (error body))
+    (when (table? body)
+      (let-hash body
+        (for (screen .screenboards)
+          (print-screens screen))))))
 
 (def (screen-create board_title widgets width height)
-  (let* (
-         (url (make-dd-url "screen"))
+  (let* ((url (make-dd-url "screen"))
          (data (json-object->string
                 (hash
                  ("width" width)
@@ -721,8 +718,7 @@
       (present-item body))))
 
 (def (screen-update id width height board_title)
-  (let* (
-         (url (make-dd-url (format "screen/~a" id)))
+  (let* ((url (make-dd-url (format "screen/~a" id)))
          (data (json-object->string
                 (hash
                  ("width" width)
@@ -743,8 +739,7 @@
       (present-item body))))
 
 (def (search query)
-  (let* (
-         (url (make-dd-url (format "search?q=~a" query))))
+  (let* ((url (make-dd-url (format "search?q=~a" query))))
     (with ([status body] (rest-call 'get url (default-headers)))
       (unless status
         (error body))
@@ -757,9 +752,8 @@
               (displayln "host: " h))))))))
 
 (def (search-metrics pattern)
-  (let* (
-         (url (make-dd-url (format "search?q=~a" pattern)))
-         (metrics-matched []))
+  (let ((url (make-dd-url (format "search?q=~a" pattern)))
+        (metrics-matched []))
     (with ([status body] (rest-call 'get url (default-headers)))
       (unless status
         (error body))
@@ -820,20 +814,19 @@
 
 (def (clear-tags hostname)
   "Remove a tag from a given hostname"
-  (let (host (search-hosts-exact hostname))
-    (let ((url (make-dd-url (format "tags/hosts/~a" host))))
-      (with ([status body] (rest-call 'delete url (default-headers)))
-        (unless status
-          (error body))
-        (present-item body)))))
+  (let* ((host (search-hosts-exact hostname))
+         (url (make-dd-url (format "tags/hosts/~a" (web-encode host)))))
+    (with ([status body] (rest-call 'delete url (default-headers)))
+      (unless status
+        (error body))
+      (present-item body))))
 
 (def (tag hostname tag)
   "Tag a given hostname with a tag"
-  (let* ((host (search-hosts-exact hostname))
-
-         (data (json-object->string
-                (hash
-                 ("tags" [ tag ])))))
+  (let ((host (search-hosts-exact hostname))
+        (data (json-object->string
+               (hash
+                ("tags" [ tag ])))))
     (let ((url (make-dd-url (format "tags/hosts/~a" host))))
       (with ([status body] (rest-call 'post url (default-headers ) data))
         (unless status
@@ -842,11 +835,8 @@
 
 (def (tag-all host-pattern tag)
   "Tag a given hostname with a tag"
-  (let* ((hosts (search-hosts host-pattern))
-
-         (data (json-object->string
-                (hash
-                 ("tags" [ tag ])))))
+  (let ((hosts (search-hosts host-pattern))
+        (data (json-object->string (hash ("tags" [ tag ])))))
     (for (h hosts)
       (let ((url (make-dd-url (format "tags/hosts/~a" h))))
         (with ([status body] (rest-call 'post url (default-headers ) data))
@@ -856,8 +846,7 @@
 
 (def (tags)
   "Return all tags known to Datadog"
-  (let* (
-         (url (make-dd-url "tags/hosts")))
+  (let (url (make-dd-url "tags/hosts"))
     (with ([status body] (rest-call 'get url (default-headers)))
       (unless status
         (error body))
@@ -868,8 +857,7 @@
 
 (def (tags-for-metric metric)
   "Return all tags found for a given metric"
-  (let* (
-         (url (make-dd-url "tags/metrics")))
+  (let* ((url (make-dd-url "tags/metrics")))
     (with ([status body] (rest-call 'get url (default-headers)))
       (unless status
         (error body))
@@ -888,8 +876,7 @@
           (displayln k))))))
 
 (def (graph query start end)
-  (let* (
-         (url (make-dd-url (format "graph/snapshot?metric_query=~a&start=~a&end=~a" query start end))))
+  (let (url (make-dd-url (format "graph/snapshot?metric_query=~a&start=~a&end=~a" query start end)))
     (with ([status body] (rest-call 'get url (default-headers)))
       (unless status
         (error body))
@@ -909,13 +896,12 @@
   (query-last-secs 3600 query))
 
 (def (edit-monitor id query name message)
-  (let* (
-         (url (make-dd-url (format "montior/~a" id)))
-         (data (json-object->string
-                (hash
-                 ("query" query)
-                 ("name" name)
-                 ("message" message)))))
+  (let ((url (make-dd-url (format "montior/~a" id)))
+        (data (json-object->string
+               (hash
+                ("query" query)
+                ("name" name)
+                ("message" message)))))
     (with ([status body] (rest-call 'put url (default-headers) data))
       (unless status
         (error body))
@@ -924,36 +910,33 @@
 
 (def (del-monitor id)
   "Delete an existing Datadog Monitor by id"
-  (let* (
-         (url (make-dd-url (format "monitor/~a" id))))
+  (let (url (make-dd-url (format "monitor/~a" id)))
     (with ([status body] (rest-call 'delete url (default-headers)))
       (unless status
         (error body))
       (present-item body))))
 
 (def (new-monitor type query name message tags)
-  (let* (
-         (url (make-dd-url "monitor"))
-         (data (json-object->string
-                (hash
-                 ("type" type)
-                 ("query" query)
-                 ("name" name)
-                 ("message" message)
-                 ("tags" [tags]) ;; this must be a list
-                 ("options"
-                  (hash
-                   ("notify_no_data" #t)
-                   ("no_data_timeframe" 20)))))))
-    (with ([status body] (rest-call 'post url (default-headers) data))
-      (unless status
-        (error body))
-      (present-item body))))
+  (let ((url (make-dd-url "monitor"))
+        (data (json-object->string
+               (hash
+                ("type" type)
+                ("query" query)
+                ("name" name)
+                ("message" message)
+                ("tags" [tags]) ;; this must be a list
+                ("options"
+                 (hash
+                  ("notify_no_data" #t)
+                  ("no_data_timeframe" 20)))))))
+  (with ([status body] (rest-call 'post url (default-headers) data))
+    (unless status
+      (error body))
+    (present-item body))))
 
 (def (monitor id)
   (displayln (format "* Datadog Monitor: ~a" id))
-  (let* (
-         (url (make-dd-url (format "monitor/~a" id))))
+  (let (url (make-dd-url (format "monitor/~a" id)))
     (with ([status body] (rest-call 'get url (default-headers)))
       (unless status
         (error body))
@@ -994,8 +977,7 @@
     (displayln "*** Modified: " .?modified)))
 
 (def (monitors)
-  (let* (
-         (url (make-dd-url "monitor")))
+  (let (url (make-dd-url "monitor"))
     (with ([status body] (rest-call 'get url (default-headers)))
       (unless status
         (error body))
@@ -1004,8 +986,7 @@
         (print-monitor-long monitor)))))
 
 (def (dump-monitors dir)
-  (let* (
-         (url (make-dd-url "monitor")))
+  (let (url (make-dd-url "monitor"))
     (with ([status body] (rest-call 'get url (default-headers)))
       (unless status
         (error body))
@@ -1020,9 +1001,8 @@
                (raise e)))))))))
 
 (def (monitors-table)
-  (let* ((outs [[ "Id" "Name" "Query" ]])
-
-         (url (make-dd-url "monitor")))
+  (let ((outs [[ "Id" "Name" "Query" ]])
+        (url (make-dd-url "monitor")))
     (with ([status body] (rest-call 'get url (default-headers)))
       (unless status
         (error body))
@@ -1224,7 +1204,7 @@
 
 (def (stories)
   (let-hash (datadog-web-login)
-    (let ((url (format "https://~a/watchdog/stories?page_size=100&stories_api_v2=true" datadog-host)))
+    (let (url (format "https://~a/watchdog/stories?page_size=100&stories_api_v2=true" datadog-host))
       (with ([status body] (rest-call 'get url .headers))
         (unless status
           (error body))
