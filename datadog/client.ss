@@ -1676,13 +1676,14 @@
          ;; Check Host entries in datadog
          (displayln "<=== " host)
          (let (meta (get-meta-exact-host-name-match host))
-           (unless (table? meta)
-             (error (format "meta is not a table ~a" meta)))
-           (manifest-host-check host meta)
-           (manifest-tag-check required-tags meta)
-           (manifest-integration-check integrations meta)
-           (manifest-metric-check metrics meta dwl)
-           (manifest-monitor-check monitors meta)))))
+           (if meta
+             (begin
+               (manifest-host-check host meta)
+               (manifest-tag-check required-tags meta)
+               (manifest-integration-check integrations meta)
+               (manifest-metric-check metrics meta dwl)
+               (manifest-monitor-check monitors meta))
+               (displayln (format "Host ~a does not exist in datadog." host)))))))
    (catch (e)
      (raise e))))
 
