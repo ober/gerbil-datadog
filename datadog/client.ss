@@ -139,7 +139,7 @@
   (verify-account)
   (let* ((adds (format "query?from=~a&to=~a&query=~a" from-s to-s query))
 	 (url (make-dd-url adds)))
-    (with ([ status body ] (rest-call 'get url (default-headers)))
+    (with ([status body] (rest-call 'get url (default-headers)))
       (unless status
         (error body))
       (when (table? body)
@@ -164,27 +164,27 @@
 
 (def (metrics pattern)
   (verify-account)
-  (let* ((url (make-dd-url (format "metrics?from=~a"
-                                      (inexact->exact
-                                       (round
-                                        (-
-                                         (time->seconds
-                                          (builtin-current-time)) 9000)))))))
-         (with ([status body] (rest-call 'get url (default-headers)))
-           (unless status
-             (error body))
-           (when (table? body)
-             (let-hash body
-               (for (m .metrics)
-                 (if pattern
-                   (if (string-contains m pattern)
-                     (displayln m)))))))))
+  (let (url (make-dd-url (format "metrics?from=~a"
+                                 (inexact->exact
+                                  (round
+                                   (-
+                                    (time->seconds
+                                     (builtin-current-time)) 9000))))))
+    (with ([status body] (rest-call 'get url (default-headers)))
+      (unless status
+        (error body))
+      (when (table? body)
+        (let-hash body
+          (for (m .metrics)
+            (if pattern
+              (if (string-contains m pattern)
+                (displayln m)))))))))
 
 (def (view-md metric)
   (verify-account)
   (let* ((adds (format "metrics/~a" metric))
 	 (url (make-dd-url adds)))
-    (with ([ status body ] (rest-call 'get url (default-headers)))
+    (with ([status body] (rest-call 'get url (default-headers)))
       (unless status
         (error body))
       (when (table? body)
@@ -207,42 +207,38 @@
                                .?unit))))))))
 
 (def (edit-metric-metadata metric description short_name)
-  (let* ((url (make-dd-url (format "metrics/~a" metric)))
-         (data (json-object->string
-                (hash
-                 ("description" description)
-                 ("short_name" short_name)))))
-    (with ([ status body ] (rest-call 'put url (default-headers) data))
+  (let ((url (make-dd-url (format "metrics/~a" metric)))
+        (data (json-object->string
+               (hash
+                ("description" description)
+                ("short_name" short_name)))))
+    (with ([status body] (rest-call 'put url (default-headers) data))
       (unless status
         (error body))
       (present-item body))))
 
 (def (submit-event title text priority tags alert_type)
-  (let* (
-         (url (make-dd-url "events"))
-         (data (json-object->string
-                (hash
-                 ("title" title)
-                 ("text" text)
-                 ("priority" priority)
-                 ("tags" tags)
-                 ("alert_type" alert_type)))))
-
+  (let ((url (make-dd-url "events"))
+        (data (json-object->string
+               (hash
+                ("title" title)
+                ("text" text)
+                ("priority" priority)
+                ("tags" tags)
+                ("alert_type" alert_type)))))
     (with ([status body] (rest-call 'post url (default-headers) data))
       (present-item body))))
 
 (def (get-events-time start end)
-  (let* (
-         (url (make-dd-url (format "events?start=~a&end=~a" start end))))
-    (with ([status body] (rest-call 'get url (default-headers )))
+  (let (url (make-dd-url (format "events?start=~a&end=~a" start end)))
+    (with ([status body] (rest-call 'get url (default-headers)))
       (unless status
         (error body))
       (present-item body))))
 
 (def (get-events-tags start end tags)
-  (let* (
-         (url (make-dd-url (format "events?start=~a&end=~a&tags=~a" start end tags))))
-    (with ([status body] (rest-call 'get url (default-headers )))
+  (let (url (make-dd-url (format "events?start=~a&end=~a&tags=~a" start end tags)))
+    (with ([status body] (rest-call 'get url (default-headers)))
       (unless status
         (error body))
       (present-item body))))
@@ -311,9 +307,8 @@
        " id: " .id))))
 
 (def (downtimes)
-  (let* (
-         (url (make-dd-url "downtime")))
-    (with ([status body] (rest-call 'get url (default-headers )))
+  (let (url (make-dd-url "downtime"))
+    (with ([status body] (rest-call 'get url (default-headers)))
       (unless status
         (error body))
       (for (dt body)
@@ -352,9 +347,8 @@
            ))))))
 
 (def (screen id)
-  (let* (
-         (url (make-dd-url (format "screen/~a" id))))
-    (with ([status body] (rest-call 'get url (default-headers )))
+  (let (url (make-dd-url (format "screen/~a" id)))
+    (with ([status body] (rest-call 'get url (default-headers)))
       (unless status
         (error body))
       (print-screen body))))
@@ -439,25 +433,24 @@
    ("viz" viz)))
 
 (def (tboard-create title description)
-  (let* ((url (make-dd-url "dash"))
-         (data (json-object->string
-                (hash
-                 ("graphs" [ (make-graph (metric-name-to-title title) "avg:system.mem.free{*}" "timeseries")])
-                 ("title" title)
-                 ("description" description)
-                 ("template_variables"
-                  [ (hash
-                     ("name" "host1")
-                     ("prefix" "host")
-                     ("default" "host:my-host")) ])))))
-    (with ([status body] (rest-call 'post url (default-headers ) data))
+  (let ((url (make-dd-url "dash"))
+        (data (json-object->string
+               (hash
+                ("graphs" [ (make-graph (metric-name-to-title title) "avg:system.mem.free{*}" "timeseries")])
+                ("title" title)
+                ("description" description)
+                ("template_variables"
+                 [ (hash
+                    ("name" "host1")
+                    ("prefix" "host")
+                    ("default" "host:my-host")) ])))))
+    (with ([status body] (rest-call 'post url (default-headers) data))
       (unless status
         (error body))
       (present-item body))))
 
 (def (tboard-mass-add id metric-pattern host-clause groupby replace)
   (let* ((tbinfo (get-tboard id))
-
          (url (make-dd-url (format "dash/~a" id)))
          (dash (hash-get tbinfo 'dash))
          (graphs (hash-get dash 'graphs))
@@ -477,14 +470,13 @@
                   ("title" title)
                   ("description" (hash-get dash 'description))))))
 
-      (with ([status body] (rest-call 'get url (default-headers ) data))
+      (with ([status body] (rest-call 'get url (default-headers) data))
         (unless status
           (error body))
         (present-item body)))))
 
 (def (tboard-netdata-dashboard id metric-pattern host-clause groupby replace)
   (let* ((tbinfo (get-tboard id))
-
          (url (make-dd-url (format "dash/~a" id)))
          (dash (hash-get tbinfo 'dash))
          (graphs (hash-get dash 'graphs))
@@ -504,7 +496,7 @@
                   ("graphs" new-graphs)
                   ("title" title)
                   ("description" (hash-get dash 'description))))))
-      (with ([status body] (rest-call 'put url (default-headers ) data))
+      (with ([status body] (rest-call 'put url (default-headers) data))
         (unless status
           (error body))
         (present-item body)))))
@@ -518,7 +510,6 @@
 (def (tboard-mass-add-many id metric-pattern host-pattern replace)
   (let* ((tbinfo (get-tboard id))
          (hosts (search-hosts host-pattern))
-
          (url (make-dd-url (format "dash/~a" id)))
          (dash (hash-get tbinfo 'dash))
          (graphs (hash-get dash 'graphs))
@@ -538,7 +529,7 @@
                   ("graphs" new-graphs)
                   ("title" title)
                   ("description" (hash-get dash 'description))))))
-      (with ([status body] (rest-call 'put url (default-headers ) data))
+      (with ([status body] (rest-call 'put url (default-headers) data))
         (unless status
           (error body))
         (present-item body)))))
@@ -592,7 +583,6 @@
 
 (def (tboard-add-chart id title request viz)
   (let* ((tbinfo (get-tboard id))
-
          (url (make-dd-url (format "dash/~a" id)))
          (dash (hash-get tbinfo 'dash))
          (graphs (hash-get dash 'graphs))
@@ -608,9 +598,8 @@
       (present-item body))))
 
 (def (get-tboard id)
-  (let* (
-         (url (make-dd-url (format "dash/~a" id))))
-    (with ([status body] (rest-call 'get url (default-headers )))
+  (let (url (make-dd-url (format "dash/~a" id)))
+    (with ([status body] (rest-call 'get url (default-headers)))
       (unless status
         (error body))
       (present-item body))))
@@ -636,9 +625,8 @@
         ))))
 
 (def (dump id)
-  (let* (
-         (url (make-dd-url (format "dash/~a" id))))
-    (with ([status body] (rest-call 'get url (default-headers )))
+  (let (url (make-dd-url (format "dash/~a" id)))
+    (with ([status body] (rest-call 'get url (default-headers)))
       (unless status
         (error body))
       (when (table? body)
@@ -674,9 +662,8 @@
     results))
 
 (def (tboards)
-  (let* (
-         (url (make-dd-url "dash"))
-         (outs [[ "Description" "Id" "Resource" "Title" "Created" "Modified" "RO?" ]]))
+  (let ((url (make-dd-url "dash"))
+        (outs [[ "Description" "Id" "Resource" "Title" "Created" "Modified" "RO?" ]]))
     (with ([status body] (rest-call 'get url (default-headers)))
       (unless status
         (error body))
@@ -697,49 +684,49 @@
           (print-screens screen))))))
 
 (def (screen-create board_title widgets width height)
-  (let* ((url (make-dd-url "screen"))
-         (data (json-object->string
-                (hash
-                 ("width" width)
-                 ("height" height)
-                 ("board_title" board_title)
-                 ("widgets"
-                  [
-                   (hash
-                    ("type" "image")
-                    ("height" 20)
-                    ("width" 32)
-                    ("y" "7")
-                    ("x" "32")
-                    ("url" "https://upload.wikimedia.org/wikipedia/commons/b/b4/Kafka.jpg"))])))))
+  (let ((url (make-dd-url "screen"))
+        (data (json-object->string
+               (hash
+                ("width" width)
+                ("height" height)
+                ("board_title" board_title)
+                ("widgets"
+                 [
+                  (hash
+                   ("type" "image")
+                   ("height" 20)
+                   ("width" 32)
+                   ("y" "7")
+                   ("x" "32")
+                   ("url" "https://upload.wikimedia.org/wikipedia/commons/b/b4/Kafka.jpg"))])))))
     (with ([status body] (rest-call 'post url (default-headers) data))
       (unless status
         (error body))
       (present-item body))))
 
 (def (screen-update id width height board_title)
-  (let* ((url (make-dd-url (format "screen/~a" id)))
-         (data (json-object->string
-                (hash
-                 ("width" width)
-                 ("height" height)
-                 ("board_title" board_title)
-                 ("widgets"
-                  [
-                   (hash
-                    ("type" "image")
-                    ("height" 20)
-                    ("width" 32)
-                    ("y" "7")
-                    ("x" "32")
-                    ("url" "https://upload.wikimedia.org/wikipedia/commons/b/b4/Kafka.jpg"))])))))
-    (with ([status body] (rest-call 'put url (default-headers ) data))
+  (let ((url (make-dd-url (format "screen/~a" id)))
+        (data (json-object->string
+               (hash
+                ("width" width)
+                ("height" height)
+                ("board_title" board_title)
+                ("widgets"
+                 [
+                  (hash
+                   ("type" "image")
+                   ("height" 20)
+                   ("width" 32)
+                   ("y" "7")
+                   ("x" "32")
+                   ("url" "https://upload.wikimedia.org/wikipedia/commons/b/b4/Kafka.jpg"))])))))
+    (with ([status body] (rest-call 'put url (default-headers) data))
       (unless status
         (error body))
       (present-item body))))
 
 (def (search query)
-  (let* ((url (make-dd-url (format "search?q=~a" query))))
+  (let (url (make-dd-url (format "search?q=~a" query)))
     (with ([status body] (rest-call 'get url (default-headers)))
       (unless status
         (error body))
@@ -827,8 +814,8 @@
         (data (json-object->string
                (hash
                 ("tags" [ tag ])))))
-    (let ((url (make-dd-url (format "tags/hosts/~a" host))))
-      (with ([status body] (rest-call 'post url (default-headers ) data))
+    (let (url (make-dd-url (format "tags/hosts/~a" host)))
+      (with ([status body] (rest-call 'post url (default-headers) data))
         (unless status
           (error body))
         (present-item body)))))
@@ -838,8 +825,8 @@
   (let ((hosts (search-hosts host-pattern))
         (data (json-object->string (hash ("tags" [ tag ])))))
     (for (h hosts)
-      (let ((url (make-dd-url (format "tags/hosts/~a" h))))
-        (with ([status body] (rest-call 'post url (default-headers ) data))
+      (let (url (make-dd-url (format "tags/hosts/~a" h)))
+        (with ([status body] (rest-call 'post url (default-headers) data))
           (unless status
             (error body))
           (present-item body))))))
@@ -857,7 +844,7 @@
 
 (def (tags-for-metric metric)
   "Return all tags found for a given metric"
-  (let* ((url (make-dd-url "tags/metrics")))
+  (let (url (make-dd-url "tags/metrics"))
     (with ([status body] (rest-call 'get url (default-headers)))
       (unless status
         (error body))
@@ -867,7 +854,7 @@
             (displayln k)))))))
 
 (def (tags-for-source source)
-  (let* ((url (make-dd-url (format "tags/hosts/~a" source))))
+  (let (url (make-dd-url (format "tags/hosts/~a" source)))
     (with ([status body] (rest-call 'get url (default-headers)))
       (unless status
         (error body))
