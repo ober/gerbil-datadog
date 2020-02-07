@@ -777,7 +777,7 @@
         (let-hash body
           (when (table? .?results)
             (let-hash .results
-              (when (and .hosts
+              (when (and .?hosts
                          (list? .hosts))
                 (for (h .hosts)
                   (when (pregexp-match (format "^~a$" hostname) h)
