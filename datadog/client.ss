@@ -777,9 +777,11 @@
         (let-hash body
           (when (table? .?results)
             (let-hash .results
-              (for (h .hosts)
-                (when (pregexp-match (format "^~a$" hostname) h)
-                  (set! found h))))))))
+              (when (and .hosts
+                         (list? .hosts))
+                (for (h .hosts)
+                  (when (pregexp-match (format "^~a$" hostname) h)
+                    (set! found h)))))))))
     found))
 
 (def (search-hosts pattern)
