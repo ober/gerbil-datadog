@@ -979,7 +979,7 @@
     (with ([status body] (rest-call 'get url (default-headers)))
       (unless status
         (error body))
-      (when (table? body)
+      (when (list? body)
         (for (monitor body)
           (let-hash monitor
             (try
