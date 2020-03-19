@@ -1517,20 +1517,23 @@
         (let-hash group
           (displayln "****** " .status " message: " (or .message "None") " " .tags " " .modified))))))
 
-
 ;; ********************* Reporting stuff here. todo move to other project
 
 (def (run-agent-report file)
   "Read in a json inventory and find if they are in Datadog. Identify if they are and spit out the meta info on them"
   (let* ((raw (read-file-string file))
          (inventory (from-json raw))
-         (raw2 (get-all-metas))
+         (raw2 (cache-or-run "~/.get-all-metas.yaml" 86400 '(get-all-metas)))
          (metas (convert-metas-hash-name raw2))
          (alias-hash (convert-metas-hash-aliases raw2)))
+    (displayln "length of inventory:" (length inventory))
+    (displayln "length of metas:" (length raw2))
+
     (displayln "|Name|host name|Id|Apps|Muted?|Sources|Meta|Tags By Source| aliases| up?|metrics|")
     (displayln "|-|-|")
     (for (host inventory)
       (let-hash host
+        (present-item host)
         (if .?instance_id
           (let (found (hash-get alias-hash .instance_id))
             (if found
@@ -1540,7 +1543,9 @@
                   (format-host (hash-get alias-hash .host))
                   (format-no-host (format "~a ~a ~a" .instance_id .ip .host))))))
           (begin
-            (when (and (string? .in_service) (string=? .in_service "t"))
+            (unless (and .?active
+                         (not .active))
+              ;;(string? .active) (string=? .in_service "t"))
               (let ((found (or (hash-get alias-hash .host) (hash-key-like alias-hash .host))))
                 (if found
                   (format-host (hash-get alias-hash .host))
@@ -1685,7 +1690,7 @@
                (manifest-integration-check integrations meta)
                (manifest-metric-check metrics meta dwl)
                (manifest-monitor-check monitors meta))
-               (displayln (format "Host ~a does not exist in datadog." host)))))))
+             (displayln (format "Host ~a does not exist in datadog." host)))))))
    (catch (e)
      (raise e))))
 
