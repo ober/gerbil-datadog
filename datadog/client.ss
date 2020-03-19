@@ -1525,7 +1525,7 @@
          (raw2 (cache-or-run "~/.datadog-metas.cache" 86400 '(ober/datadog/client#get-all-metas)))
          (metas (convert-metas-hash-name raw2))
          (alias-hash (convert-metas-hash-aliases raw2))
-         (outs [[ "Name" "HostName" "Id" "Applications" "Muted?" "Sources" "Meta" "Tags" "Aliases" "Up?" "metrics" ]]))
+         (outs [[ "Name" "HostName" "Id" "Applications" "Muted?" "Sources" "Tags" "Aliases" "Up?" "metrics" ]]))
     (for (host inventory)
       (let-hash host
         (if .?instance_id ;; aws
