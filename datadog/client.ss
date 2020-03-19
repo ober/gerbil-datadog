@@ -1532,33 +1532,33 @@
         (if .?instance_id ;; aws
           (let (found (hash-get alias-hash .instance_id))
             (if found
-              (set! outs [
-                          .?name
-                          .?host_name
-                          .?id
-                          (jif (sort! .apps string<?) ",")
-                          (if .is_muted "True" "False")
-                          (jif .sources ",")
-                          (hash->str .tags_by_source)
-                          (jif .aliases ",")
-                          (if .up "True" "False")
-                          (hash->str .metrics) ] outs)
+              (set! outs (cons [
+                                .?name
+                                .?host_name
+                                .?id
+                                (jif (sort! .apps string<?) ",")
+                                (if .is_muted "True" "False")
+                                (jif .sources ",")
+                                (hash->str .tags_by_source)
+                                (jif .aliases ",")
+                                (if .up "True" "False")
+                                (hash->str .metrics) ] outs))
               (begin ;; not found
                 (let (alias (hash-get alias-hash .host))
                   (if alias
                     (let-hash alias
-                      (set! outs [
-                                  .?name
-                                  .?host_name
-                                  .?id
-                                  (jif (sort! .apps string<?) ",")
-                                  (if .is_muted "True" "False")
-                                  (jif .sources ",")
-                                  (hash->str .tags_by_source)
-                                  (jif .aliases ",")
-                                  (if .up "True" "False")
-                                  (hash->str .metrics) ] outs))
-                    (set! outs [ .instance_id .ip .host ] outs))))))
+                      (set! outs (cons [
+                                        .?name
+                                        .?host_name
+                                        .?id
+                                        (jif (sort! .apps string<?) ",")
+                                        (if .is_muted "True" "False")
+                                        (jif .sources ",")
+                                        (hash->str .tags_by_source)
+                                        (jif .aliases ",")
+                                        (if .up "True" "False")
+                                        (hash->str .metrics) ] outs)))
+                    (set! outs (cons [ .instance_id .ip .host ] outs)))))))
           (begin
             (unless (and .?active
                          (not .active))
@@ -1566,7 +1566,7 @@
                      (lookup2 (hash-key-like alias-hash .?host))
                      (found (or lookup1 lookup2)))
                 (if found
-                  (let-hash lookup1
+                  (let-hash found
                       (set! outs (cons [
                                         .?name
                                         .?host_name
