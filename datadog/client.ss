@@ -1523,7 +1523,7 @@
   "Read in a json inventory and find if they are in Datadog. Identify if they are and spit out the meta info on them"
   (let* ((raw (read-file-string file))
          (inventory (from-json raw))
-         (raw2 (cache-or-run "~/.get-all-metas.yaml" 86400 '(ober/datadog/client#get-all-metas)))
+         (raw2 (cache-or-run "~/.datadog-metas.cache" 86400 '(ober/datadog/client#get-all-metas)))
          (metas (convert-metas-hash-name raw2))
          (alias-hash (convert-metas-hash-aliases raw2)))
     (displayln "length of inventory:" (length inventory))
