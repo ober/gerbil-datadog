@@ -1451,32 +1451,31 @@
                              ] outs)))))
     (style-output outs)))
 
-(def (format-no-host host)
+(def (format-no-host host outs)
+  (displayln "fnh:" host (length outs))
   (let* ((split (pregexp-split " " host))
          (a (or (car split) "None"))
          (b (if (length>n? split 2) (cadr split) "None"))
          (c (if (length>n? split 3) (cadr split) "None")))
-    (displayln "|" a
-               "|" b
-               "|" c
-               "| Empty"
-               )))
+    (cons [ a b c ] outs)))
 
-(def (format-host host)
+(def (format-host host outs)
+  (displayln "fh:" host (length outs))
   (when (table? host)
     (let-hash host
-      (displayln "|" .?name
-                 "|" .?host_name
-                 "|" .?id
-                 "|" (jif (sort! .apps string<?) ",")
-                 "|" (if .is_muted "True" "False")
-                 "|" (jif .sources ",")
-                 ;;	       "|" (hash->str .meta)
-                 "|" (hash->str .tags_by_source)
-                 "|" (jif .aliases ",")
-                 "|" (if .up "True" "False")
-                 "|" (hash->str .metrics)
-                 "|" ))))
+      (cons [
+             .?name
+             .?host_name
+             .?id
+             (jif (sort! .apps string<?) ",")
+             (if .is_muted "True" "False")
+             (jif .sources ",")
+             ;;	       "|" (hash->str .meta)
+             (hash->str .tags_by_source)
+             (jif .aliases ",")
+             (if .up "True" "False")
+             (hash->str .metrics)
+             ] outs))))
 
 (def (format-host-lite host)
   (let-hash host
@@ -1525,39 +1524,73 @@
          (inventory (from-json raw))
          (raw2 (cache-or-run "~/.datadog-metas.cache" 86400 '(ober/datadog/client#get-all-metas)))
          (metas (convert-metas-hash-name raw2))
-         (alias-hash (convert-metas-hash-aliases raw2)))
-    (displayln "length of inventory:" (length inventory))
-    (displayln "length of metas:" (length raw2))
-
-    (displayln "|Name|host name|Id|Apps|Muted?|Sources|Meta|Tags By Source| aliases| up?|metrics|")
-    (displayln "|-|-|")
+         (alias-hash (convert-metas-hash-aliases raw2))
+         (outs [[ "Name" "HostName" "Id" "Applications" "Muted?" "Sources" "Meta" "Tags" "Aliases" "Up?" "metrics" ]]))
     (for (host inventory)
+      (present-item host)
       (let-hash host
-        (present-item host)
-        (if .?instance_id
+        (if .?instance_id ;; aws
           (let (found (hash-get alias-hash .instance_id))
             (if found
-              (format-host found)
+              (set! outs [
+                          .?name
+                          .?host_name
+                          .?id
+                          (jif (sort! .apps string<?) ",")
+                          (if .is_muted "True" "False")
+                          (jif .sources ",")
+                          (hash->str .tags_by_source)
+                          (jif .aliases ",")
+                          (if .up "True" "False")
+                          (hash->str .metrics) ] outs)
               (begin ;; not found
-                (if (hash-get alias-hash .host)
-                  (format-host (hash-get alias-hash .host))
-                  (format-no-host (format "~a ~a ~a" .instance_id .ip .host))))))
+                (let (alias (hash-get alias-hash .host))
+                  (if alias
+                    (let-hash alias
+                      (set! outs [
+                                  .?name
+                                  .?host_name
+                                  .?id
+                                  (jif (sort! .apps string<?) ",")
+                                  (if .is_muted "True" "False")
+                                  (jif .sources ",")
+                                  (hash->str .tags_by_source)
+                                  (jif .aliases ",")
+                                  (if .up "True" "False")
+                                  (hash->str .metrics) ] outs))
+                    (set! outs [ .instance_id .ip .host ] outs))))))
           (begin
             (unless (and .?active
                          (not .active))
-              ;;(string? .active) (string=? .in_service "t"))
-              (let ((found (or (hash-get alias-hash .host) (hash-key-like alias-hash .host))))
+              (let* ((lookup1 (hash-get alias-hash .?host))
+                     (lookup2 (hash-key-like alias-hash .?host))
+                     (found (or lookup1 lookup2)))
                 (if found
-                  (format-host (hash-get alias-hash .host))
-                  (format-no-host (format "~a ~a" .host .ip)))))))))))
+                  (let-hash lookup1
+                      (set! outs (cons [
+                                        .?name
+                                        .?host_name
+                                        .?id
+                                        (jif (sort! .apps string<?) ",")
+                                        (if .is_muted "True" "False")
+                                        (jif .sources ",")
+                                        (hash->str .tags_by_source)
+                                        (jif .aliases ",")
+                                        (if .up "True" "False")
+                                        (hash->str .metrics) ] outs))
+                  (set! outs (cons [ .?host .?ip ] outs))))))))))
+    (style-output outs)))
 
 (def (hash-key-like hsh pat)
   "Search a hash for keys that match a given regexp and return value"
   (when (table? hsh)
     (let ((found #f))
-      (hash-map (lambda (k v)
-                  (when (pregexp-match pat k)
-                    (set! found v))) hsh)
+      (hash-map
+       (lambda (k v)
+         (when (and
+                 (string? pat)
+                 (pregexp-match pat k))
+           (set! found v))) hsh)
       found)))
 
 (def (convert-metas-hash-name metas)
