@@ -1527,7 +1527,6 @@
          (alias-hash (convert-metas-hash-aliases raw2))
          (outs [[ "Name" "HostName" "Id" "Applications" "Muted?" "Sources" "Meta" "Tags" "Aliases" "Up?" "metrics" ]]))
     (for (host inventory)
-      (present-item host)
       (let-hash host
         (if .?instance_id ;; aws
           (let (found (hash-get alias-hash .instance_id))
@@ -1567,18 +1566,18 @@
                      (found (or lookup1 lookup2)))
                 (if found
                   (let-hash found
-                      (set! outs (cons [
-                                        .?name
-                                        .?host_name
-                                        .?id
-                                        (jif (sort! .apps string<?) ",")
-                                        (if .is_muted "True" "False")
-                                        (jif .sources ",")
-                                        (hash->str .tags_by_source)
-                                        (jif .aliases ",")
-                                        (if .up "True" "False")
-                                        (hash->str .metrics) ] outs))
-                  (set! outs (cons [ .?host .?ip ] outs))))))))))
+                    (set! outs (cons [
+                                      .?name
+                                      .?host_name
+                                      .?id
+                                      (jif (sort! .apps string<?) ",")
+                                      (if .is_muted "True" "False")
+                                      (jif .sources ",")
+                                      (hash->str .tags_by_source)
+                                      (jif .aliases ",")
+                                      (if .up "True" "False")
+                                      (hash->str .metrics) ] outs)))
+                  (set! outs (cons [ .?host .?ip ] outs)))))))))
     (style-output outs)))
 
 (def (hash-key-like hsh pat)
