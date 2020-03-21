@@ -1389,25 +1389,20 @@
 
 (def (get-meta-by-host host)
   "Given a pattern, return all the hosts along with meta data about the hosts"
-  (let ((results [])
-        (dwl (datadog-web-login)))
-    (present-item dwl)
-    (let-hash dwl
+  (let-hash (load-config)
+    (let ((results []))
       (let lp ((start 0))
-        (let ((url (format "https://app.datadoghq.com/api/v1/hosts?filter=~a&group=&start=~a&count=100&discovery=true" host start)))
-          (with ([status body] (rest-call 'get url .headers))
+        (let ((url (make-dd-url (format "hosts?filter=~a&group=&start=~a&count=100&discovery=true" host start))))
+          (with ([status body] (rest-call 'get url (default-headers)))
             (unless status
               (error body))
             (when (table? body)
               (let-hash body
                 (when .?host_list
-                  ;;     (reply (http-get url headers: .headers))
-                  ;;     (myjson (from-json (request-text reply)))
-                  ;;     (hosts (let-hash myjson .?host_list)))
                   (set! results (flatten (cons .host_list results)))
                   (when (> .total_matching (+ start .total_returned))
-                    (lp (+ start .total_returned))))))))))
-    results))
+                    (lp (+ start .total_returned)))))))))
+      results)))
 
 (def (get-meta-exact-host-name-match host)
   "Many host are similarly named, we just want the exact match, with anchors"
@@ -1716,8 +1711,7 @@
     5. monitors: templates that used the host value, and any specific tags.
       - Setup templates to inherit all tags as variables so they can be used. #{foo:} vs #{foo:bar}"
   (try
-   (let* ((dwl (datadog-web-login))
-          (manifest (car (yaml-load manifest)))
+   (let* ((manifest (car (yaml-load manifest)))
           (hosts (hash-get manifest "hosts"))
           (required-tags (hash-get manifest "required-tags"))
           (integrations (hash-get manifest "integrations"))
@@ -1733,7 +1727,7 @@
                (manifest-host-check host meta)
                (manifest-tag-check required-tags meta)
                (manifest-integration-check integrations meta)
-               (manifest-metric-check metrics meta dwl)
+               ;;(manifest-metric-check metrics meta dwl)
                (manifest-monitor-check monitors meta))
              (displayln (format "Host ~a does not exist in datadog." host)))))))
    (catch (e)
@@ -1779,9 +1773,9 @@
         (displayln (format "ok: ~a integration found" integration))
         (displayln (format "fail: ~a integration not found got: ~a" integration .apps))))))
 
-(def (manifest-metric-check metrics meta dwl)
+(def (manifest-metric-check metrics meta)
   "Verify that all the hosts are submitting for a given metric"
-  (let-hash meta
+   (let-hash meta
     (let (tag (format "host:~a" .host_name))
       (for (metric metrics)
         (if (tag-in-metric? tag metric dwl)
