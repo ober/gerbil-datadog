@@ -1,3 +1,6 @@
+** 0.13
+   - rework get-metas to use the api
+   - comment out all functions, sproc, livetail, tboard-fancy that need reworking to use api only.
 ** 0.12
    - Disable datadog-web-login due to ReCaptcha now used.
    - Add caching for get-metas.
