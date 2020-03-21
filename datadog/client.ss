@@ -1773,7 +1773,7 @@
         (displayln (format "ok: ~a integration found" integration))
         (displayln (format "fail: ~a integration not found got: ~a" integration .apps))))))
 
-(def (manifest-metric-check metrics meta)
+(def (manifest-metric-check metrics meta dwl)
   "Verify that all the hosts are submitting for a given metric"
    (let-hash meta
     (let (tag (format "host:~a" .host_name))
