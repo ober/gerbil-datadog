@@ -1194,7 +1194,6 @@
         (when (table? body)
           (let-hash body
             (for (host .host_list)
-              (displayln (hash->list host))
               (let-hash host
                 (display .name)
                 (let-hash .live_metrics
