@@ -1,3 +1,12 @@
+** 0.12
+   - Disable datadog-web-login due to ReCaptcha now used.
+   - Add caching for get-metas.
+   - change http requests to use rest-call with proper error handling
+   - asorted bug fixes
+   - Add clear-tags option
+   - Fixed tagging to only do a specific exact matched host.
+   - Added tag-all for applying tags to host patterns
+
 ** 0.08
    - Add monitors-table for table format
 
