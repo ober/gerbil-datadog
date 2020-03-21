@@ -1064,17 +1064,18 @@
   (def api-key (read-password ##console-port))
   (displayln "Please enter your DataDog Application Key:")
   (def app-key (read-password ##console-port))
-  (displayln "Please enter your DataDog Username:")
-  (def username (read-password ##console-port))
-  (displayln "Please enter your DataDog Password:")
-  (def password (read-password ##console-port))
+  ;; (displayln "Please enter your DataDog Username:")
+  ;; (def username (read-password ##console-port))
+  ;; (displayln "Please enter your DataDog Password:")
+  ;; (def password (read-password ##console-port))
   (def secrets (base64-encode
                 (object->u8vector
                  (hash
                   (api-key (encrypt-string api-key))
                   (app-key (encrypt-string app-key))
-                  (username (encrypt-string username))
-                  (password (encrypt-string password))))))
+                  ;;(username (encrypt-string username))
+                  ;;(password (encrypt-string password))))))
+                  ))))
 
   (displayln "Add the following lines to your " config-file)
   (displayln "secrets: " secrets))
