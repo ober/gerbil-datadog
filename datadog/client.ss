@@ -592,7 +592,7 @@
                  ("graphs" (append graphs [ new-graph ]))
                  ("title" (hash-get dash 'title))
                  ("description" (hash-get dash 'description))))))
-    (with ([status body] (rest-call 'get url (default-headers) data))
+    (with ([status body] (rest-call 'post url (default-headers) data))
       (unless status
         (error body))
       (present-item body))))
@@ -1118,14 +1118,17 @@
       #f)))
 
 (def (datadog-web-login)
-  (let-hash (load-config)
-    (let* ((dogwebu (datadog-get-dogwebu))
-           (dogweb (datadog-get-dogweb dogwebu))
-           (headers [[ "Cookie:" :: (format "dogwebu=~a; dogweb=~a" dogwebu dogweb) ]]))
-      (hash
-       (headers headers)
-       (dogwebu dogwebu)
-       (dogweb dogweb)))))
+  (error "Datadog implemented ReCaptcha, so the web only features are disabled"))
+  ;; (let-hash (load-config)
+  ;;   (let* ((dogcooks (datadog-get-dogwebu))
+  ;;          (dogwebu (nth 1 dogcooks)) ;; (datadog-get-dogweb dogwebu))
+  ;;          (dogweb (nth 0 dogcooks))
+  ;;          (headers [[ "Cookie:" :: (format "dogwebu=~a; dogweb=~a" dogwebu dogweb) ]]))
+  ;;     (present-item dogcooks)
+  ;;     (hash
+  ;;      (headers headers)
+  ;;      (dogwebu dogwebu)
+  ;;      (dogweb dogweb)))))
 
 (def (datadog-get-dogwebu)
   (let-hash (load-config)
@@ -1135,8 +1138,10 @@
                              headers: []
                              data: data))
            (cookies (request-cookies reply))
-           (dogwebu (find-cookie cookies "^dogwebu=")))
-      (strip-^m dogwebu))))
+           (dogwebu (find-cookie cookies "^dogwebu="))
+           (dogweb (find-cookie cookies "^dogweb=")))
+      (present-item cookies)
+      [ (strip-^m dogweb) (strip-^m dogwebu) ])))
 
 (def (find-cookie cookies pattern)
   (let ((cookie-of-interest ""))
@@ -1384,17 +1389,24 @@
 
 (def (get-meta-by-host host)
   "Given a pattern, return all the hosts along with meta data about the hosts"
-  (let ((results []))
-    (let-hash (datadog-web-login)
+  (let ((results [])
+        (dwl (datadog-web-login)))
+    (present-item dwl)
+    (let-hash dwl
       (let lp ((start 0))
-        (let* ((url (format "https://app.datadoghq.com/api/v1/hosts?filter=~a&group=&start=~a&count=100&discovery=true" host start))
-               (reply (http-get url headers: .headers))
-               (myjson (from-json (request-text reply)))
-               (hosts (let-hash myjson .?host_list)))
-          (let-hash myjson
-            (set! results (flatten (cons hosts results)))
-            (when (> .total_matching (+ start .total_returned))
-              (lp (+ start .total_returned)))))))
+        (let ((url (format "https://app.datadoghq.com/api/v1/hosts?filter=~a&group=&start=~a&count=100&discovery=true" host start)))
+          (with ([status body] (rest-call 'get url .headers))
+            (unless status
+              (error body))
+            (when (table? body)
+              (let-hash body
+                (when .?host_list
+                  ;;     (reply (http-get url headers: .headers))
+                  ;;     (myjson (from-json (request-text reply)))
+                  ;;     (hosts (let-hash myjson .?host_list)))
+                  (set! results (flatten (cons .host_list results)))
+                  (when (> .total_matching (+ start .total_returned))
+                    (lp (+ start .total_returned))))))))))
     results))
 
 (def (get-meta-exact-host-name-match host)
@@ -1582,6 +1594,7 @@
 
 (def (hash-key-like hsh pat)
   "Search a hash for keys that match a given regexp and return value"
+  (present-item pat)
   (when (table? hsh)
     (let ((found #f))
       (hash-map
