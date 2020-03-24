@@ -814,12 +814,14 @@
 
 (def (clear-tags hostname)
   "Remove a tag from a given hostname"
-  (let* ((host (search-hosts-exact hostname))
-         (url (make-dd-url (format "tags/hosts/~a" (web-encode host)))))
-    (with ([status body] (rest-call 'delete url (default-headers)))
-      (unless status
-        (error body))
-      (present-item body))))
+  (let (host (search-hosts-exact hostname))
+    (unless host
+      (error (format "Host not found: ~a" hostname)))
+    (let (url (make-dd-url (format "tags/hosts/~a" (web-encode host))))
+      (with ([status body] (rest-call 'delete url (default-headers)))
+        (unless status
+          (error body))
+        (present-item body)))))
 
 (def (tag hostname tag)
   "Tag a given hostname with a tag"
