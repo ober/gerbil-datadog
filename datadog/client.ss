@@ -463,29 +463,29 @@
 
 (def (tboard-mass-add id metric-pattern host-clause groupby replace)
   (let* ((tbinfo (get-tboard id))
-         (url (make-dd-url (format "dash/~a" id)))
-         (dash (hash-get tbinfo 'dash))
-         (graphs (hash-get dash 'graphs))
-         (title (hash-get dash 'title))
-         (new-graphs []))
-    (unless (string=? replace "t")
-      (set! new-graphs graphs))
-    (for (m (sort! (search-metrics metric-pattern) string<?))
-      (let ((new-graph
-             (make-graph
-              (metric-name-to-title m)
-              (format "avg:~a{~a}by{~a}" m host-clause groupby) "timeseries")))
-        (set! new-graphs (append new-graphs [new-graph]))))
-    (let ((data (json-object->string
-                 (hash
-                  ("graphs" new-graphs)
-                  ("title" title)
-                  ("description" (hash-get dash 'description))))))
-
-      (with ([status body] (rest-call 'get url (default-headers) data))
-        (unless status
-          (error body))
-        (present-item body)))))
+        (new-graphs [])
+        (url (make-dd-url (format "dash/~a" id))))
+    (when (table? tbinfo)
+      (let-hash tbinfo
+        (when (table? .?dash)
+          (let-hash .dash
+            (unless (string=? replace "t")
+              (set! new-graphs .?graphs))
+            (for (m (sort! (search-metrics metric-pattern) string<?))
+              (let ((new-graph
+                     (make-graph
+                      (metric-name-to-title m)
+                      (format "avg:~a{~a}by{~a}" m host-clause groupby) "timeseries")))
+                (set! new-graphs (append new-graphs [new-graph]))))
+            (let ((data (json-object->string
+                         (hash
+                          ("graphs" new-graphs)
+                          ("title" .?title)
+                          ("description" .?description)))))
+              (with ([status body] (rest-call 'put url (default-headers) data))
+                (unless status
+                  (error body))
+                (present-item body)))))))))
 
 (def (tboard-netdata-dashboard id metric-pattern host-clause groupby replace)
   (let* ((tbinfo (get-tboard id))
@@ -613,7 +613,7 @@
     (with ([status body] (rest-call 'get url (default-headers)))
       (unless status
         (error body))
-      (present-item body))))
+      body)))
 
 (def (tboard id)
   (let ((tbinfo (get-tboard id)))
@@ -757,11 +757,14 @@
         (error body))
       (when (table? body)
         (let-hash body
-          (for (m .metrics)
-            (dp (format "(pregexp-match \"~a\" ~a)" pattern m))
-            (when (pregexp-match pattern m)
-              (set! metrics-matched (cons m metrics-matched))))
-          metrics-matched)))))
+          (when (table? .?results)
+            (pi .results)
+            (let-hash .results
+              (for (m .metrics)
+                (dp (format "(pregexp-match \"~a\" ~a)" pattern m))
+                (when (pregexp-match pattern m)
+                  (set! metrics-matched (cons m metrics-matched))))
+              metrics-matched)))))))
 
 (def (hosts pattern)
   (let ((results (search-hosts pattern)))
@@ -815,9 +818,11 @@
 (def (clear-tags hostname)
   "Remove a tag from a given hostname"
   (let (host (search-hosts-exact hostname))
+    (pi host)
     (unless host
       (error (format "Host not found: ~a" hostname)))
     (let (url (make-dd-url (format "tags/hosts/~a" (web-encode host))))
+      (pi url)
       (with ([status body] (rest-call 'delete url (default-headers)))
         (unless status
           (error body))
