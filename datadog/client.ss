@@ -35,7 +35,7 @@
   :std/xml/ssax)
 
 (export #t)
-(def version "0.13")
+(def version "0.14")
 (declare (not optimize-dead-definitions))
 (def datadog-host "app.datadoghq.com")
 (import (rename-in :gerbil/gambit/os (current-time builtin-current-time)))
@@ -161,8 +161,8 @@
 
 (def (query-last-sec secs query)
   "Non-interactive version"
-  (let* ((start (float->int (- (time->seconds (builtin-current-time)) secs)))
-	 (end (float->int (time->seconds (builtin-current-time)))))
+  (let ((start (float->int (- (time->seconds (builtin-current-time)) secs)))
+        (end (float->int (time->seconds (builtin-current-time)))))
     (query-metric start end query)))
 
 (def (query-min query)
