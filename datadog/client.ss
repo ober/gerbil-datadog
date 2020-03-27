@@ -253,15 +253,17 @@
     (with ([status body] (rest-call 'get url (default-headers)))
       (unless status
         (error body))
-      (present-item body))))
+      body)))
 
 (def (get-events-last-secs secs tags)
   (let* ((start (float->int (- (time->seconds (builtin-current-time)) secs)))
          (end (float->int (time->seconds (builtin-current-time))))
-         (results (get-events-tags start end tags))
-         (events (from-json results))
-         (events2 (hash-get events 'events)))
-    (print-events events2)))
+         (evtags (get-events-tags start end tags)))
+    (unless (table? evtags)
+      (error (format "evtags is not a table: ~a" evtags)))
+    (let-hash evtags
+      (when (list? .?events)
+        (print-events .events)))))
 
 (def (get-events-last-secs-raw secs)
   (let* ((start (float->int (- (time->seconds (builtin-current-time)) secs)))
@@ -290,25 +292,26 @@
   (get-events-last-secs (* 30 86400) tags))
 
 (def (print-events events)
-  (for (event events)
-    (let-hash event
-      (displayln
-       " source: " .source
-       " priority: " .priority
-       " -" .date_happened
-       " title: " .title
-       " id: " .id
-       " url: " .url
-       " host: " .host
-       " is_aggregate: " .is_aggregate
-       " device_name: " .device_name
-       " tags: " .tags
-       " resource: " .resource
-       " alert_type: " .alert_type
-       " text: " .text
-       " comments: " .comments
-       (if (hash-key? event 'children)
-         (print-children .children))))))
+  (when (list? events)
+    (for (event events)
+      (let-hash event
+        (displayln
+         " source: " .source
+         " priority: " .priority
+         " -" .date_happened
+         " title: " .title
+         " id: " .id
+         " url: " .url
+         " host: " .host
+         " is_aggregate: " .is_aggregate
+         " device_name: " .device_name
+         " tags: " .tags
+         " resource: " .resource
+         " alert_type: " .alert_type
+         " text: " .text
+         " comments: " .comments
+         (if (hash-key? event 'children)
+           (print-children .children)))))))
 
 (def (print-children children)
   (for (child children)
