@@ -1690,9 +1690,8 @@
   (let* ((metrics (read-file-lines file))
          (dwl (datadog-web-login)))
     (for (metric metrics)
-      (for (tag (get-metric-tags metric dwl))
-        (displayln "|" metric
-                   "|" tag "|")))))
+      (for (tag (get-metric-tags metric))
+        (displayln "|" metric "|" tag "|")))))
 
 (def (datadog-usage)
   "Get Usage metering from datadog"
