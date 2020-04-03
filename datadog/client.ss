@@ -9,15 +9,16 @@
   :std/crypto/libcrypto
   :std/db/dbi
   :std/debug/heap
-  :std/iter
   :std/error
   :std/format
   :std/generic
   :std/generic/dispatch
+  :std/iter
   :std/misc/channel
   :std/misc/list
   :std/misc/ports
   :std/net/address
+  :std/net/httpd
   :std/net/request
   :std/net/uri
   :std/pregexp
@@ -31,7 +32,8 @@
   :std/text/utf8
   :std/text/yaml
   :std/text/zlib
-  :ober/oberlib
+  ;;  :ober/oberlib
+  "~/src/oberlib/oberlib.ss"
   :std/xml/ssax)
 
 (export #t)
@@ -466,8 +468,8 @@
 
 (def (tboard-mass-add id metric-pattern host-clause groupby replace)
   (let* ((tbinfo (get-tboard id))
-        (new-graphs [])
-        (url (make-dd-url (format "dash/~a" id))))
+         (new-graphs [])
+         (url (make-dd-url (format "dash/~a" id))))
     (when (table? tbinfo)
       (let-hash tbinfo
         (when (table? .?dash)
@@ -821,15 +823,15 @@
 (def (clear-tags hostname)
   "Remove a tag from a given hostname"
   (let (host (search-hosts-exact hostname))
-    (pi host)
     (unless host
       (error (format "Host not found: ~a" hostname)))
     (let (url (make-dd-url (format "tags/hosts/~a" (web-encode host))))
-      (pi url)
-      (with ([status body] (rest-call 'delete url (default-headers)))
-        (unless status
-          (error body))
-        (present-item body)))))
+      (try
+       (with ([status body] (rest-call 'delete url (default-headers)))
+         (unless status
+           (error (format "call failed: ~a" body))))
+       (catch (e)
+         (raise (e)))))))
 
 (def (tag hostname tag)
   "Tag a given hostname with a tag"
@@ -1145,17 +1147,15 @@
       #f)))
 
 (def (datadog-web-login)
-  (error "Datadog implemented ReCaptcha, so the web only features are disabled"))
-;; (let-hash (load-config)
-;;   (let* ((dogcooks (datadog-get-dogwebu))
-;;          (dogwebu (nth 1 dogcooks)) ;; (datadog-get-dogweb dogwebu))
-;;          (dogweb (nth 0 dogcooks))
-;;          (headers [[ "Cookie:" :: (format "dogwebu=~a; dogweb=~a" dogwebu dogweb) ]]))
-;;     (present-item dogcooks)
-;;     (hash
-;;      (headers headers)
-;;      (dogwebu dogwebu)
-;;      (dogweb dogweb)))))
+  ;;  (error "Datadog implemented ReCaptcha, so the web only features are disabled"))
+  (let-hash (load-config)
+    (let* ((dogwebu (datadog-get-dogwebu))
+           (dogweb (datadog-get-dogweb dogwebu))
+           (headers [[ "Cookie:" :: (format "dogwebu=~a; dogweb=~a" dogwebu dogweb) ]]))
+      (hash
+       (headers headers)
+       (dogwebu dogwebu)
+       (dogweb dogweb)))))
 
 (def (datadog-get-dogwebu)
   (let-hash (load-config)
@@ -1165,10 +1165,9 @@
                              headers: []
                              data: data))
            (cookies (request-cookies reply))
-           (dogwebu (find-cookie cookies "^dogwebu="))
-           (dogweb (find-cookie cookies "^dogweb=")))
-      (present-item cookies)
-      [ (strip-^m dogweb) (strip-^m dogwebu) ])))
+           (dogwebu (find-cookie cookies "^dogwebu=")))
+      ;;(dogweb (find-cookie cookies "^dogweb=")))
+      (strip-^m dogwebu))))
 
 (def (find-cookie cookies pattern)
   (let ((cookie-of-interest ""))
@@ -1222,187 +1221,185 @@
           (let-hash body
             (displayln "Total Up: " .total_up " Total Active: " .total_active)))))))
 
-;; (def (stories)
-;;   (let-hash (datadog-web-login)
-;;     (let (url (format "https://~a/watchdog/stories?page_size=100&stories_api_v2=true" datadog-host))
-;;       (with ([status body] (rest-call 'get url .headers))
-;;         (unless status
-;;           (error body))
-;;         (present-item body)))))
+(def (stories)
+  (let-hash (datadog-web-login)
+    (let (url (format "https://~a/watchdog/stories?page_size=100&stories_api_v2=true" datadog-host))
+      (with ([status body] (rest-call 'get url .headers))
+        (unless status
+          (error body))
+        (present-item body)))))
 
-;; (def (livetail)
-;;   (let-hash (datadog-web-login)
-;;     (let (url (format "https://app.datadoghq.com/logs/livetail" datadog-host))
-;;       (with ([status body] (rest-call 'get url .headers))
-;;         (unless status
-;;           (error body))
-;;         (present-item body)))))
+(def (livetail)
+  (let-hash (datadog-web-login)
+    (let (url (format "https://app.datadoghq.com/logs/livetail" datadog-host))
+      (with ([status body] (rest-call 'get url .headers))
+        (unless status
+          (error body))
+        (present-item body)))))
 
-;; (def (spawn-proc-collectors hosts secs)
-;;   (let ((dwl (datadog-web-login))
-;;         (threads []))
-;;     (for (host hosts)
-;;       (let ((thread
-;;              (spawn
-;;               (lambda ()
-;;                 (get-procs-by-host host secs)))))
-;;         (set! threads (cons thread threads))))
-;;     threads))
+(def (spawn-proc-collectors hosts secs dwl)
+  (let ((threads []))
+    (for (host hosts)
+      (let ((t (spawn
+                (lambda ()
+                  (get-procs-by-host host secs dwl)))))
+        (set! threads (cons thread t))))
+    threads))
 
-;; (def (spawn-metric-tags metrics tag secs)
-;;   (let ((threads []))
-;;     (for (metric metrics)
-;;       (let ((thread
-;;              (spawn
-;;               (lambda ()
-;;                 (tag-in-metric? tag metric)))))
-;;         ;;			  (get-procs-by-host host secs dwl)))))
-;;         (set! threads (cons thread threads))))
-;;     threads))
+(def (spawn-metric-tags metrics tag secs dwl)
+  (let ((threads []))
+    (for (metric metrics)
+      (let ((thread
+             (spawn
+              (lambda ()
+                (tag-in-metric? tag metric)))))
+        ;;(get-procs-by-host host secs dwl))))
+        (set! threads (cons thread threads))))
+    threads))
 
-;; (def (collect-from-pool threads)
-;;   (when (list? threads)
-;;     (let ((data []))
-;;       (while (> (length threads) 0)
-;;         (let ((running_t 0)
-;;               (waiting_t 0)
-;;               (abterminated_t 0)
-;;               (terminated_t 0))
-;;           (for (thread threads)
-;;             (let* ((thread (car threads))
-;;                    (state (thread-state thread)))
-;;               (cond
-;;                ((thread-state-running? state) (set! running_t (+ running_t 1)))
-;;                ((thread-state-waiting? state) (set! waiting_t (+ waiting_t 1)))
-;;                ((thread-state-abnormally-terminated? state) (set! abterminated_t (+ abterminated_t 1))
-;;                 (let ((state (thread-state-abnormally-terminated-reason state)))
-;;                   (displayln "Error: msg: " (display-exception state))
-;;                   (set! threads (cdr threads))))
-;;                ((thread-state-normally-terminated? state) (set! terminated_t (+ terminated_t 1))
-;;                 (let* ((results (thread-state-normally-terminated-result state)))
-;;                   (set! data (cons results data))
-;;                   (set! threads (cdr threads))))
-;;                (else
-;;                 (displayln "unknown state: " (thread-state thread))
-;;                 (set! threads (cdr threads))))))
-;;           (dp (format "loop: total: ~a running: ~a waiting: ~a terminated: ~a abnormal_terminated: ~a" (length threads) running_t waiting_t terminated_t abterminated_t))
-;;           (thread-sleep! 1)))
-;;       data)))
+(def (collect-from-pool threads)
+  (when (list? threads)
+    (let ((data []))
+      (while (> (length threads) 0)
+        (let ((running_t 0)
+              (waiting_t 0)
+              (abterminated_t 0)
+              (terminated_t 0))
+          (for (thread threads)
+            (let* ((thread (car threads))
+                   (state (thread-state thread)))
+              (cond
+               ((thread-state-running? state) (set! running_t (+ running_t 1)))
+               ((thread-state-waiting? state) (set! waiting_t (+ waiting_t 1)))
+               ((thread-state-abnormally-terminated? state) (set! abterminated_t (+ abterminated_t 1))
+                (let ((state (thread-state-abnormally-terminated-reason state)))
+                  (displayln "Error: msg: " (display-exception state))
+                  (set! threads (cdr threads))))
+               ((thread-state-normally-terminated? state) (set! terminated_t (+ terminated_t 1))
+                (let* ((results (thread-state-normally-terminated-result state)))
+                  (set! data (cons results data))
+                  (set! threads (cdr threads))))
+               (else
+                (displayln "unknown state: " (thread-state thread))
+                (set! threads (cdr threads))))))
+          (dp (format "loop: total: ~a running: ~a waiting: ~a terminated: ~a abnormal_terminated: ~a" (length threads) running_t waiting_t terminated_t abterminated_t))
+          (thread-sleep! 1)))
+      data)))
 
-;; (def (get-procs-by-host host secs)
-;;   (let-hash (datadog-web-login)
-;;     (let* ((start (float->int (* (- (time->seconds (builtin-current-time)) secs) 1000)))
-;;            (end (float->int (* (time->seconds (builtin-current-time)) 1000)))
-;;            (url (format "https://app.datadoghq.com/proc/query?from=~a&to=~a&size_by=pct_mem&group_by=family&color_by=user&q=processes{host:~a}" start end host))
-;;            (headers [[ "cookie" :: (format "dogweb=~a; intercom-session=please-add-flat_tags_for_metric-to-your-api-thanks" .dogweb) ]
-;;                      [ "authority" :: "app.datadoghq.com" ]
-;;                      ] )
-;;            (reply (http-get url headers:  headers))
-;;            (text (request-text reply))
-;;            (procs (from-json text)))
-;;       procs)))
+(def (get-procs-by-host host secs dwl)
+  (let-hash dwl
+    (let* ((start (float->int (* (- (time->seconds (builtin-current-time)) secs) 1000)))
+           (end (float->int (* (time->seconds (builtin-current-time)) 1000)))
+           (url (format "https://app.datadoghq.com/proc/query?from=~a&to=~a&size_by=pct_mem&group_by=family&color_by=user&q=processes{host:~a}" start end host))
+           (headers [[ "cookie" :: (format "dogweb=~a; intercom-session=please-add-flat_tags_for_metric-to-your-api-thanks" .dogweb) ]
+                     [ "authority" :: "app.datadoghq.com" ]])
+           (reply (http-get url headers:  headers))
+           (text (request-text reply))
+           (procs (from-json text)))
+      procs)))
 
-;; (def (sproc pattern)
-;;   (hosts-proc-search pattern))
+(def (sproc pattern)
+  (hosts-proc-search pattern))
 
-;; (def (hosts-proc-search procpat)
-;;   (let* ((dwl (datadog-web-login))
-;;          (hosts (hosts-with-agent))
-;;          (threads (spawn-proc-collectors hosts 300 dwl))
-;;          (results (collect-from-pool threads)))
-;;     (for (result results)
-;;       (when (table? result)
-;;         (proc-format result procpat)))))
+(def (hosts-proc-search procpat)
+  (let* ((dwl (datadog-web-login))
+         (hosts (hosts-with-agent))
+         (threads (spawn-proc-collectors hosts 300 dwl))
+         (results (collect-from-pool threads)))
+    (for (result results)
+      (pi result)
+      (when (table? result)
+        (proc-format result procpat)))))
 
-;; (def (metrics-tag-search metric-pattern tag)
-;;   (let* ((dwl (datadog-web-login))
-;;          (found [])
-;;          (metrics (search-metrics metric-pattern))
-;;          (threads (spawn-metric-tags metrics tag 40 dwl))
-;;          (results (collect-from-pool threads)))
-;;     (for (result results)
-;;       (when result
-;;         (set! found (flatten (cons result found)))))
-;;     found))
+(def (metrics-tag-search metric-pattern tag)
+  (let* ((dwl (datadog-web-login))
+         (found [])
+         (metrics (search-metrics metric-pattern))
+         (threads (spawn-metric-tags metrics tag 40 dwl))
+         (results (collect-from-pool threads)))
+    (for (result results)
+      (when result
+        (set! found (flatten (cons result found)))))
+    found))
 
-;; (def (procs host secs)
-;;   "Return all processes for a given host in last n seconds"
-;;   (let ((dwl (datadog-web-login)))
-;;     (let-hash (get-procs-by-host host secs dwl)
-;;       (for (snapshot .snapshots)
-;;         (format-snapshot snapshot)))))
+(def (procs host secs)
+  "Return all processes for a given host in last n seconds"
+  (let ((dwl (datadog-web-login)))
+    (let-hash (get-procs-by-host host secs dwl)
+      (for (snapshot .snapshots)
+        (format-snapshot snapshot)))))
 
-;; (def (proc host pattern dwl)
-;;   "Find any processes who's name matches pattern on the given host and seconds window"
-;;   (let ((procs (mytime (get-procs-by-host host 100 dwl))))
-;;     (let-hash procs
-;;       (let ((results #f)
-;;             (matches []))
-;;         (for (snapshot .snapshots)
-;;           (set! matches (cons (match-snapshot snapshot pattern) matches)))
-;;         matches))))
+(def (proc host pattern dwl)
+  "Find any processes who's name matches pattern on the given host and seconds window"
+  (let ((procs (mytime (get-procs-by-host host 100 dwl))))
+    (let-hash procs
+      (let ((results #f)
+            (matches []))
+        (for (snapshot .snapshots)
+          (set! matches (cons (match-snapshot snapshot pattern) matches)))
+        matches))))
 
-;; (def (proc-format procs procpat)
-;;   "Find any processes who's name matches pattern on the given host and seconds window"
-;;   (let-hash procs
-;;     (let ((results #f)
-;;           (matches []))
-;;       (for (snapshot .snapshots)
-;;         (set! matches (flatten (cons (match-snapshot snapshot procpat) matches))))
-;;       (when (length>n? (flatten matches) 0)
-;;         (let ((host (car (pregexp-split "\\}" (cadr (pregexp-split "\\{" .query))))))
-;;           (displayln host ": " (string-join (delete-duplicates (flatten matches)) ",")))))))
+(def (proc-format procs procpat)
+  "Find any processes who's name matches pattern on the given host and seconds window"
+  (let-hash procs
+    (let ((results #f)
+          (matches []))
+      (for (snapshot .snapshots)
+        (set! matches (flatten (cons (match-snapshot snapshot procpat) matches))))
+      (when (length>n? (flatten matches) 0)
+        (let ((host (car (pregexp-split "\\}" (cadr (pregexp-split "\\{" .query))))))
+          (displayln host ": " (string-join (delete-duplicates (flatten matches)) ",")))))))
 
-;; (def (format-snapshot snapshot)
-;;   "Snapshots are lists of pslists."
-;;   ;; [ 1, "rabbitmq", "0.0", "25.84", 14841081856, 8697987072, 0, 0, "beam.smp", 1 ],
-;;   (when (table? snapshot)
-;;     (let-hash snapshot
-;;       (for (proc .pslist)
-;;         (with ([
-;;                 ppid
-;;                 user
-;;                 pct1
-;;                 pctmem
-;;                 vsz
-;;                 rss
-;;                 zero1
-;;                 zero2
-;;                 name
-;;                 nprocs
-;;                 ] proc)
-;;           (displayln (format "ppid?:~a user:~a pct1?:~a pctmem:~a vsz:~a rss:~a zero1?:~a zero2?:~a name:~a nprocs:~a"
-;;                              ppid
-;;                              user
-;;                              pct1
-;;                              pctmem
-;;                              vsz
-;;                              rss
-;;                              zero1
-;;                              zero2
-;;                              name
-;;                              nprocs)))))))
+(def (format-snapshot snapshot)
+  "Snapshots are lists of pslists."
+  ;; [ 1, "rabbitmq", "0.0", "25.84", 14841081856, 8697987072, 0, 0, "beam.smp", 1 ],
+  (when (table? snapshot)
+    (let-hash snapshot
+      (for (proc .pslist)
+        (with ([
+                ppid
+                user
+                pct1
+                pctmem
+                vsz
+                rss
+                zero1
+                zero2
+                name
+                nprocs
+                ] proc)
+          (displayln (format "ppid?:~a user:~a pct1?:~a pctmem:~a vsz:~a rss:~a zero1?:~a zero2?:~a name:~a nprocs:~a"
+                             ppid
+                             user
+                             pct1
+                             pctmem
+                             vsz
+                             rss
+                             zero1
+                             zero2
+                             name
+                             nprocs)))))))
 
-;; (def (match-snapshot snapshot pattern)
-;;   "Snapshots are lists of pslists."
-;;   ;; [ 1, "rabbitmq", "0.0", "25.84", 14841081856, 8697987072, 0, 0, "beam.smp", 1 ],
-;;   (when (table? snapshot)
-;;     (let ((results []))
-;;       (let-hash snapshot
-;;         (for (proc .pslist)
-;;           (with ([ ppid user pct1 pctmem vsz rss zero1 zero2 name nprocs ] proc)
-;;             (when (pregexp-match pattern name)
-;;               (set! results (cons name results)))))
-;;         results))))
+(def (match-snapshot snapshot pattern)
+  "Snapshots are lists of pslists."
+  ;; [ 1, "rabbitmq", "0.0", "25.84", 14841081856, 8697987072, 0, 0, "beam.smp", 1 ],
+  (when (table? snapshot)
+    (let ((results []))
+      (let-hash snapshot
+        (for (proc .pslist)
+          (with ([ ppid user pct1 pctmem vsz rss zero1 zero2 name nprocs ] proc)
+            (when (pregexp-match pattern name)
+              (set! results (cons name results)))))
+        results))))
 
-;; (def (indexes)
-;;   (let-hash (datadog-web-login)
-;;     (let* ((url "https://app.datadoghq.com/api/v1/logs/indexes?type=logs")
-;;            (reply (http-get url headers: .headers))
-;;            (myjson (from-json (request-text reply))))
-;;       (let-hash myjson
-;;         (for (index .indexes)
-;;           (displayln (hash->list index)))))))
+(def (indexes)
+  (let-hash (datadog-web-login)
+    (let* ((url "https://app.datadoghq.com/api/v1/logs/indexes?type=logs")
+           (reply (http-get url headers: .headers))
+           (myjson (from-json (request-text reply))))
+      (let-hash myjson
+        (for (index .indexes)
+          (displayln (hash->list index)))))))
 
 (def (status)
   (let* ((url "https://1k6wzpspjf99.statuspage.io/api/v2/status.json")
@@ -1433,6 +1430,22 @@
                     (lp (+ start .total_returned)))))))))
       results)))
 
+(def (get-meta-by-host-web host)
+  "Given a pattern, return all the hosts along with meta data about the hosts"
+  (let ((results [])
+        (dwl (datadog-web-login)))
+    (let-hash dwl
+      (let lp ((start 0))
+        (let* ((url (format "https://app.datadoghq.com/api/v1/hosts?filter=~a&group=&start=~a&count=100&discovery=true" host start))
+               (reply (http-get url headers: .headers))
+               (myjson (from-json (request-text reply)))
+               (hosts (let-hash myjson .?host_list)))
+          (let-hash myjson
+            (set! results (flatten (cons hosts results)))
+            (when (> .total_matching (+ start .total_returned))
+              (lp (+ start .total_returned)))))))
+    results))
+
 (def (get-meta-exact-host-name-match host)
   "Many host are similarly named, we just want the exact match, with anchors"
   (let ((result #f)
@@ -1460,7 +1473,7 @@
 (def (hosts-with-app app)
   "Return a list of hostnames for all servers with agent listed in their apps. Used with proc search to avoid hitting hosts without proc info"
   (let ((secret-agents [])
-        (hosts (get-meta-by-host "")))
+        (hosts (get-meta-by-host-web "")))
     (for (host hosts)
       (let-hash host
         (when (member app .apps)
@@ -1506,7 +1519,6 @@
              (jif (sort! .apps string<?) ",")
              (if .is_muted "True" "False")
              (jif .sources ",")
-             ;;	       "|" (hash->str .meta)
              (hash->str .tags_by_source)
              (jif .aliases ",")
              (if .up "True" "False")
@@ -1673,16 +1685,16 @@
                                    ] outs)))))
           (style-output outs))))))
 
-;; (def (metric-tags-from-file file)
-;;   "Read a list of metrics from file and return all metrics associated with each metric"
-;;   (displayln "| Metric | Tag |")
-;;   (displayln "|-|")
-;;   (let* ((metrics (read-file-lines file))
-;;          (dwl (datadog-web-login)))
-;;     (for (metric metrics)
-;;       (for (tag (get-metric-tags metric dwl))
-;;         (displayln "|" metric
-;;                    "|" tag "|")))))
+(def (metric-tags-from-file file)
+  "Read a list of metrics from file and return all metrics associated with each metric"
+  (displayln "| Metric | Tag |")
+  (displayln "|-|")
+  (let* ((metrics (read-file-lines file))
+         (dwl (datadog-web-login)))
+    (for (metric metrics)
+      (for (tag (get-metric-tags metric dwl))
+        (displayln "|" metric
+                   "|" tag "|")))))
 
 (def (datadog-usage)
   "Get Usage metering from datadog"
@@ -1816,3 +1828,28 @@
   #!void)
 ;;  (display "monitors-check: "))
 ;;  (present-item monitors))
+
+;; web stuff
+(def server-address
+  "127.0.0.1:9999")
+
+(def server-url
+  (string-append "http://" server-address))
+
+(def (write-simple-handler req res)
+  (http-response-write res 200 '(("Content-Type" . "text/plain")) "hello"))
+
+(def (write-chunked-handler req res)
+  (http-response-begin res 200 '(("Content-Type" . "text/plain")))
+  (http-response-chunk res "hello ")
+  (http-response-chunk res "there!")
+  (http-response-end res))
+
+(def (start-dd-web)
+  (let ((httpd (start-http-server! server-address mux: (make-recursive-http-mux))))
+    (http-register-handler httpd "/" root-handler)
+    (thread-join! httpd)))
+
+(def (root-handler req res)
+  (http-response-write res 200 '(("Content-Type" . "text/plain"))
+                       (string-append "hello, " (inet-address->string (http-request-client req)) "\n")))
