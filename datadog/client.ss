@@ -1240,10 +1240,8 @@
 (def (spawn-proc-collectors hosts secs dwl)
   (let ((threads []))
     (for (host hosts)
-      (let ((t (spawn
-                (lambda ()
-                  (get-procs-by-host host secs dwl)))))
-        (set! threads (cons thread t))))
+      (let (t (spawn (lambda () (get-procs-by-host host secs dwl))))
+        (set! threads (cons t threads))))
     threads))
 
 (def (spawn-metric-tags metrics tag secs dwl)
