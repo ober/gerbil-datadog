@@ -1305,7 +1305,6 @@
          (threads (spawn-proc-collectors hosts 300 dwl))
          (results (collect-from-pool threads)))
     (for (result results)
-      (pi result)
       (when (table? result)
         (proc-format result procpat)))))
 
