@@ -1522,20 +1522,6 @@
              (hash->str .metrics)
              ] outs))))
 
-(def (format-host-lite host)
-  (let-hash host
-    (displayln "|" .?name
-               "|" .?host_name
-               "|" .?id
-               "|" (jif (sort! .apps string<?) ",")
-               "|" (if .is_muted "True" "False")
-               "|" (jif .sources ",")
-               "|" (hash->str .tags_by_source)
-               "|" (jif .aliases ",")
-               "|" (if .up "True" "False")
-               "|" (hash->str .metrics)
-               "|" )))
-
 (def (jif lst sep)
   "If we get a list, join it on sep"
   (if (list? lst)
