@@ -1506,7 +1506,6 @@
     (cons [ a b c ] outs)))
 
 (def (format-host host outs)
-  (displayln "fh:" host (length outs))
   (when (table? host)
     (let-hash host
       (cons [
