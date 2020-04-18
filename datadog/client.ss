@@ -32,8 +32,7 @@
   :std/text/utf8
   :std/text/yaml
   :std/text/zlib
-  ;;  :ober/oberlib
-  "~/src/oberlib/oberlib.ss"
+  :ober/oberlib
   :std/xml/ssax)
 
 (export #t)
@@ -1125,6 +1124,13 @@
     (for (tag tags)
       (present-item tag))))
 
+(def (metric-tags-web metric)
+  "Return all tags for a given metric"
+  (let* ((dwl (datadog-web-login))
+         (tags (get-metric-tags-web metric dwl)))
+    (for (tag tags)
+      (present-item tag))))
+
 (def (get-metric-tags metric)
   "Non-interactive version of metric-tags"
   (let ((tags [])
@@ -1138,6 +1144,14 @@
                 (unless (member t tags)
                   (set! tags (cons t tags)))))))))
     (sort! tags string<?)))
+
+(def (get-metric-tags-web metric dwl)
+  "Non-interactive version of metric-tags"
+  (let-hash dwl
+        (let* ((url (format "https://app.datadoghq.com/metric/flat_tags_for_metric?metric=~a&window=86400" metric))
+                (reply (http-get url headers: .headers))
+           (tags (let-hash (from-json (request-text reply)) .tags)))
+      tags)))
 
 (def (tag-in-metric? tag metric)
   "Get a bool for if the given tag submits to the given metric"
