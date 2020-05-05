@@ -39,7 +39,7 @@ linux-static:
 linux-static-intern:
 	export GERBIL_HOME=/root/gerbil
 	gxpkg install github.com/ober/oberlib
-	gxc -o dda-linux-static -cc-options "-Bstatic -DOPENSSL_NO_KRB5 -I/usr/local/include -I/usr/local/ssl/include" -static -ld-options "-static -L/usr/lib64 -L/usr/local/ssl/lib -lssl -L/usr/local/lib -ldl -lyaml -lz" -gsc-option -prelude '(declare (not safe))' -exe datadog/dda.ss datadog/client.ss
+	gxc -o dda-linux-static -cc-options "-Bstatic -DOPENSSL_NO_KRB5 -I/usr/local/include -I/usr/local/ssl/include" -static -ld-options "-static -L/usr/lib64 -L/usr/local/ssl/lib -lssl -L/usr/local/lib -ldl -lyaml -lz" -gsc-option -prelude '(declare (not safe))' -exe datadog/dda.ss
 
 linux:
 	gxc -o dd-linux -cc-options "-Bstatic -DOPENSSL_NO_KRB5 -I/usr/local/include -I/usr/local/ssl/include" -static -ld-options "-static -L/usr/lib64 -L/usr/local/ssl/lib -lssl -L/usr/local/lib -ldl -lyaml -lz" -exe datadog/dda.ss

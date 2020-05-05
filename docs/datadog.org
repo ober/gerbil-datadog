@@ -2519,6 +2519,9 @@ SIGNATURE
 DELETE /api/v1/tags/hosts/:host_name
 EXAMPLE REQUEST
 
+#+BEGIN_SRC sh
+
+
 #!/bin/sh
 # Make sure you replace the API and/or APP key below
 # with the ones for your account
@@ -2538,6 +2541,7 @@ curl  -X POST -H "Content-type: application/json" \
 
 
 curl -X DELETE "https://app.datadoghq.com/api/v1/tags/hosts/${host_name}?api_key=${api_key}&application_key=${app_key}"
+#+END_SRC
 EXAMPLE RESPONSE
 
 This end point does not return JSON on successful requests.

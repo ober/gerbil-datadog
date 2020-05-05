@@ -34,7 +34,7 @@
   :std/text/zlib
   :std/xml/ssax
   :ober/oberlib
-  :ober/datadog/client)
+  "client.ss")
 
 (export main)
 
@@ -70,6 +70,7 @@
    ("live-metrics" (hash (description: "List Datadog live metrics for host.") (usage: "live-metrics <hostname>") (count: 1)))
    ("livetail" (hash (description: "List Log Indexes.") (usage: "indexes") (count: 0)))
    ("metric-tags" (hash (description: "metric-tags <metric>.") (usage: "metric-tags <metric>") (count: 1)))
+   ("metric-tags-web" (hash (description: "metric-tags <metric>.") (usage: "metric-tags <metric>") (count: 1)))
    ("metric-tags-from-file" (hash (description: "metric-tags-from-file <file>.") (usage: "metric-tags-from-file <file>") (count: 1)))
    ("metrics" (hash (description: "List Datadog Metrics and search on argument 1.") (usage: "metrics <pattern of metric to search for>") (count: 1)))
    ("monitor" (hash (description: "Describe Monitor.") (usage: "monitor <monitor id>") (count: 1)))
