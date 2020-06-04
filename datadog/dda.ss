@@ -79,7 +79,7 @@
    ("new-monitor" (hash (description: "Create new monitor.") (usage: "new-monitor <type> <query> <name> <message> <tags>") (count: 5)))
    ("query-day" (hash (description: "<query>: Query metrics for last day.") (usage: "query-day") (count: 1)))
    ("query-hour" (hash (description: "<query>: Query metrics for last hour.") (usage: "query-hour") (count: 1)))
-   ("query-metrics" (hash (description: "<query>: Query metrics for last min.") (usage: "query-metrics") (count: 1)))
+   ("query-metrics" (hash (description: "<query>: Query metrics for last min.") (usage: "query-metrics begin_epoch end_epoch query") (count: 3)))
    ("query-min" (hash (description: "<query>: Query metrics for last min.") (usage: "query-min") (count: 1)))
    ("run-agent-report" (hash (description: "Hosts Process Search.") (usage: "run-agent-report <inventory>") (count: 1)))
    ("screen" (hash (description: "Descript existing screen") (usage: "screen <screen id>") (count: 1)))

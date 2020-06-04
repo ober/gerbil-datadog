@@ -154,6 +154,21 @@
           (when .?series
             .series))))))
 
+(def (users)
+  (let* ((adds "user")
+	 (url (make-dd-url adds))
+         (outs [[ "Handle" "Admin?" "Disabled?" "Title" "Verified" "Email" "Icon" "Name" "Role" "Access Role" ]]))
+    (with ([status body] (rest-call 'get url (default-headers)))
+      (unless status
+        (error body))
+      (when (table? body)
+        (let-hash body
+          (when .?users
+            (for (user .users)
+              (let-hash user
+                (set! outs (cons [ .?handle .?is_admin .?disabled .?title .?verified .?email .?icon .?name .?role .?access_role ] outs))))))))
+    (style-output outs)))
+
 (def (query-last-secs secs query)
   "Interactive version of query-last-sec"
   (let* ((start (float->int (- (time->seconds (builtin-current-time)) secs)))
@@ -1566,7 +1581,7 @@
   "Read in a json inventory and find if they are in Datadog. Identify if they are and spit out the meta info on them"
   (let* ((raw (read-file-string file))
          (inventory (from-json raw))
-         (raw2 (cache-or-run "~/.datadog-metas.cache" 86400 '(ober/datadog/client#get-all-metas)))
+         (raw2 (get-all-metas))
          (metas (convert-metas-hash-name raw2))
          (alias-hash (convert-metas-hash-aliases raw2))
          (outs [[ "Name" "HostName" "Id" "Applications" "Muted?" "Sources" "Tags" "Aliases" "Up?" "metrics" ]]))
