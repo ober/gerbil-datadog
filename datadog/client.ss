@@ -62,8 +62,9 @@
 	(let-hash (u8vector->object (base64-decode .secrets))
 	  (hash-put! config 'datadog-api-key (decrypt-bundle .api-key))
 	  (hash-put! config 'datadog-app-key (decrypt-bundle .app-key))
-	  (hash-put! config 'username (decrypt-bundle .username))
-	  (hash-put! config 'password (decrypt-bundle .password)))))
+	  ;;(hash-put! config 'username (decrypt-bundle .username))
+	  ;;(hash-put! config 'password (decrypt-bundle .password))
+          )))
     config))
 
 (def (ensure-api-keys)
