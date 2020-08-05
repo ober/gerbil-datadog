@@ -655,15 +655,22 @@
         (displayln (format "https://app.datadoghq.com/dashboard/~a" .new_id))
         ))))
 
-(def (dump id)
-  (let (url (make-dd-url (format "dash/~a" id)))
+(def (dump-tboards dir)
+  (let (url (make-dd-url "dash"))
     (with ([status body] (rest-call 'get url (default-headers)))
       (unless status
         (error body))
       (when (table? body)
         (let-hash body
-          (present-item (json-object->string .?dash)))))))
-
+          (when (and .?dashes (list? .dashes))
+            (for (tboard .dashes)
+              (let-hash tboard
+                (try
+                 (yaml-dump
+                  (format "~a/~a.yaml" dir .?id)
+                  (format-tboard (get-tboard .?id)))
+                 (catch (e)
+                   (raise e)))))))))))
 
 (def (print-graphs graphs)
   (let ((results ""))
@@ -691,27 +698,6 @@
            (set! results (string-append results (format " ~a:~a " k v)))))
        request))
     results))
-
-(def (tboards)
-  (let ((url (make-dd-url "dash"))
-        (outs [[ "Description" "Id" "Resource" "Title" "Created" "Modified" "RO?" ]]))
-    (with ([status body] (rest-call 'get url (default-headers)))
-      (unless status
-        (error body))
-      (when (table? body)
-        (let-hash body
-          (for (timeboard .dashes)
-            (let-hash timeboard
-              (set! outs (cons [ .description
-                                 .id
-                                 .resource
-                                 .title
-                                 .created
-                                 .modified
-                                 .read_only
-                                 ]
-                               outs))))
-          (style-output outs))))))
 
 (def (screens)
   (with ([status body] (rest-call 'get (make-dd-url "screen") (default-headers)))
@@ -1046,6 +1032,12 @@
           (set! outs (cons [ .id .name .query ] outs))))
       (style-output outs))))
 
+(def (format-tboard tboard)
+  "Try to order the keys in this hash to consistenly represent them in yaml"
+  (let-hash tboard
+    (hash
+     (tboard tboard))))
+
 (def (format-monitor monitor)
   "Try to order the keys in this hash to consistently represent them in yaml"
   (let-hash monitor
@@ -1172,8 +1164,8 @@
 (def (get-metric-tags-web metric dwl)
   "Non-interactive version of metric-tags"
   (let-hash dwl
-        (let* ((url (format "https://app.datadoghq.com/metric/flat_tags_for_metric?metric=~a&window=86400" metric))
-                (reply (http-get url headers: .headers))
+    (let* ((url (format "https://app.datadoghq.com/metric/flat_tags_for_metric?metric=~a&window=86400" metric))
+           (reply (http-get url headers: .headers))
            (tags (let-hash (from-json (request-text reply)) .tags)))
       tags)))
 
