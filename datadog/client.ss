@@ -635,6 +635,13 @@
         (error body))
       body)))
 
+(def (get-sboard id)
+  (let (url (make-dd-url (format "screen/~a" id)))
+    (with ([status body] (rest-call 'get url (default-headers)))
+      (unless status
+        (error body))
+      body)))
+
 (def (tboard id)
   (let ((tbinfo (get-tboard id)))
     (let-hash tbinfo
@@ -671,6 +678,24 @@
                   (format-tboard (get-tboard .?id)))
                  (catch (e)
                    (raise e)))))))))))
+
+(def (dump-sboards dir)
+  (let (url (make-dd-url "screen"))
+    (with ([status body] (rest-call 'get url (default-headers)))
+      (unless status
+        (error body))
+       (when (table? body)
+         (let-hash body
+           (when (and .?screenboards (list? .screenboards))
+             (for (screen .screenboards)
+               (let-hash screen
+                 (when .?id
+                   (try
+                    (yaml-dump
+                     (format "~a/~a.yaml" dir .?id)
+                     (get-sboard .id))
+                 (catch (e)
+                   (raise e))))))))))))
 
 (def (print-graphs graphs)
   (let ((results ""))
