@@ -702,7 +702,15 @@
         (let-hash body
           (for (timeboard .dashes)
             (let-hash timeboard
-              (set! outs (cons [ .description .id .resource .title.created.modified .read_only ] outs))))
+              (set! outs (cons [ .description
+                                 .id
+                                 .resource
+                                 .title
+                                 .created
+                                 .modified
+                                 .read_only
+                                 ]
+                               outs))))
           (style-output outs))))))
 
 (def (screens)
