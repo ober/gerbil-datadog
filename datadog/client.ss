@@ -6,17 +6,14 @@
   :gerbil/gambit/ports
   :ober/oberlib
   :std/crypto/cipher
-  :std/error
   :std/format
   :std/generic
   :std/iter
-  :std/logger
   :std/misc/list
   :std/misc/ports
   :std/net/address
   :std/net/httpd
   :std/net/request
-  :std/net/uri
   :std/net/websocket
   :std/pregexp
   :std/srfi/1
