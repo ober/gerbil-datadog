@@ -4,23 +4,20 @@
 (import
   :gerbil/gambit
   :gerbil/gambit/ports
+  :ober/oberlib
   :std/crypto/cipher
-  :std/crypto/etc
-  :std/crypto/libcrypto
-  :std/db/dbi
-  :std/debug/heap
   :std/error
   :std/format
   :std/generic
-  :std/generic/dispatch
   :std/iter
-  :std/misc/channel
+  :std/logger
   :std/misc/list
   :std/misc/ports
   :std/net/address
   :std/net/httpd
   :std/net/request
   :std/net/uri
+  :std/net/websocket
   :std/pregexp
   :std/srfi/1
   :std/srfi/13
@@ -29,11 +26,8 @@
   :std/sugar
   :std/text/base64
   :std/text/json
-  :std/text/utf8
   :std/text/yaml
-  :std/text/zlib
-  :ober/oberlib
-  :std/xml/ssax)
+  )
 
 (export #t)
 (def version "0.14")
