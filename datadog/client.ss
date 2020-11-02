@@ -23,8 +23,8 @@
   :std/sugar
   :std/text/base64
   :std/text/json
-  :std/text/yaml
-  )
+  :std/text/yaml)
+
 
 (export #t)
 (def version "0.14")
