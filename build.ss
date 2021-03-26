@@ -5,5 +5,7 @@
 
 (defbuild-script
   '("datadog/client"
-    ;;(exe: "datadog/dda" "-ld-options" "-lyaml -lssl -lz -L/usr/local/opt/openssl/lib/ -L/usr/local/lib" "-cc-options" "-I/usr/local/opt/openssl/include -I/usr/local/include")))
-    (static-exe: "datadog/dda" "-ld-options" "-lyaml -lssl -lz -L/usr/local/opt/openssl/lib/ -L/usr/local/lib" "-cc-options" "-I/usr/local/opt/openssl/include -I/usr/local/include")))
+    (static-exe:
+     "datadog/datadog"
+     "-ld-options"
+     "-lpthread -lyaml -ldl -lssl -lz -L/usr/lib64")))
