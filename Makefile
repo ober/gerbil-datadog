@@ -1,58 +1,34 @@
-.PHONY: datadog
+PROJECT := datadog
+$(eval uid := $(shell id -u))
+$(eval gid := $(shell id -g))
 
-default: datadog
+default: linux-static-docker
 
-SYSTEM := $(shell uname -s)
+deps:
+	$(GERBIL_HOME)/bin/gxpkg install github.com/ober/oberlib
+	$(GERBIL_HOME)/bin/gxpkg install github.com/yanndegat/colorstring
 
-ifeq ($(SYSTEM),Darwin)
-SSL-BASE :=$(lastword $(wildcard /usr/local/Cellar/openssl/*/))
-SED := sed
-MYSQL-BASE := $(lastword $(wildcard /usr/local/Cellar/mysql/*/))
-LIBYAML-BASE := $(lastword $(wildcard /usr/local/Cellar/libyaml/*/))
-#$(eval LDFLAGS := "-L$(SSL-BASE)lib -L$(LIBYAML-BASE)lib -lz -lssl -lyaml -L/usr/local/lib")
-#$(eval CPPFLAGS := "-I$(SSL-BASE)include -I$(LIBYAML-BASE)include -I/usr/local/include")
-else
-LDFLAGS := "-L/usr/lib -lssl -lyaml"
-CPPFLAGS := "-I/usr/include"
-LIBYAML-BASE := "/usr/include"
-SED := sed
-endif
+build: deps
+	$(GERBIL_HOME)/bin/gxpkg link $(PROJECT) /src || true
+	$(GERBIL_HOME)/bin/gxpkg build $(PROJECT)
 
-datadog: $(eval CPPFLAGS := "-I$(SSL-BASE)include -I$(LIBYAML-BASE)include -I/usr/local/include")
-datadog: $(eval LDFLAGS := "-L$(SSL-BASE)lib -L$(LIBYAML-BASE)lib -lz -lssl -lyaml -L/usr/local/lib")
-datadog:
-	gxc -O -o dda -static -exe -g -genv -cc-options $(CPPFLAGS) -ld-options $(LDFLAGS) -gsrc -gsc-flag -keep-c datadog/dda.ss
+linux-static-docker:
+	docker run -it \
+	-e GERBIL_PATH=/tmp/.gerbil \
+	-u "$(uid):$(gid)" \
+	-v $(PWD):/src \
+	jaimef/alpine-current:static \
+	make -C /src linux-static
 
-datadog-fat: $(eval CPPFLAGS := "-I$(SSL-BASE)include -I$(LIBYAML-BASE)include -I/usr/local/include")
-datadog-fat: $(eval LDFLAGS := "-L$(SSL-BASE)lib -L$(LIBYAML-BASE)lib -lz -lssl -lyaml -L/usr/local/lib")
-datadog-fat:
-	gxc -O -o dda-fat -static -exe -cc-options $(CPPFLAGS) -ld-options $(LDFLAGS) -gsrc datadog/dda.ss
+linux-static: build
+	$(GERBIL_HOME)/bin/gxc -o $(PROJECT)-bin -static \
+	-cc-options "-Bstatic" \
+	-static \
+	-ld-options "-static -lpthread -L/usr/lib64 -lssl -ldl -lyaml -lz" \
+	-exe $(PROJECT)/$(PROJECT).ss
 
-datadog-skinny: $(eval CPPFLAGS := "-I$(SSL-BASE)include -I$(LIBYAML-BASE)include -I/usr/local/include")
-datadog-skinny: $(eval LDFLAGS := "-L$(SSL-BASE)lib -L$(LIBYAML-BASE)lib -lz -lssl -lyaml -L/usr/local/lib")
-datadog-skinny:
-	gxc -O -o dda-skinny -static -exe -cc-options $(CPPFLAGS) -ld-options $(LDFLAGS) datadog/dda.ss
+clean:
+	rm -Rf $(PROJECT)-bin
 
-linux-static:
-	docker run -e GERBIL_PATH=/dd/.gerbil -e GERBIL_HOME=/root/gerbil -e PATH='/root/gerbil/bin:/usr/local/gambit/current/bin:/bin:/usr/bin:/sbin:/usr/sbin' -v $(PWD):/dd -it jaimef/centos bash -c 'cd /dd && unset http_proxy; unset https_proxy; make linux-static-intern'
-
-linux-static-intern:
-	export GERBIL_HOME=/root/gerbil
-	gxpkg install github.com/ober/oberlib
-	gxc -o dda-linux-static -cc-options "-Bstatic -DOPENSSL_NO_KRB5 -I/usr/local/include -I/usr/local/ssl/include" -static -ld-options "-static -L/usr/lib64 -L/usr/local/ssl/lib -lssl -L/usr/local/lib -ldl -lyaml -lz" -gsc-option -prelude '(declare (not safe))' -exe datadog/dda.ss
-
-linux:
-	gxc -o dd-linux -cc-options "-Bstatic -DOPENSSL_NO_KRB5 -I/usr/local/include -I/usr/local/ssl/include" -static -ld-options "-static -L/usr/lib64 -L/usr/local/ssl/lib -lssl -L/usr/local/lib -ldl -lyaml -lz" -exe datadog/dda.ss
-
-linux-debug:
-	gxc -o dd-linux -cc-options "-Bstatic -DOPENSSL_NO_KRB5 -I/usr/local/include -I/usr/local/ssl/include" -g -gsrc -genv -static -ld-options "-static -L/usr/lib64 -L/usr/local/ssl/lib -lssl -L/usr/local/lib -ldl -lyaml -lz" -exe datadog/dda.ss
-
-fast: $(eval CPPFLAGS := "-I$(SSL-BASE)include -I$(LIBYAML-BASE)include -I/usr/local/include")
-fast: $(eval LDFLAGS := "-L$(SSL-BASE)lib -L$(LIBYAML-BASE)lib -lz -lssl -lyaml -L/usr/local/lib")
-fast:
-	gxc -O -o dda -exe -g -genv -cc-options $(CPPFLAGS) -ld-options $(LDFLAGS) -gsrc -gsc-flag -keep-c datadog/dda.ss
-
-docker:
-	docker build --rm=true -t datadog .
-	docker tag datadog jaimef/datadog
-	docker push jaimef/datadog
+install:
+	mv $(PROJECT)-bin /usr/local/bin/$(PROJECT)

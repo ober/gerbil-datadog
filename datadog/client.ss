@@ -53,8 +53,10 @@
 	(let-hash (u8vector->object (base64-decode .secrets))
 	  (hash-put! config 'datadog-api-key (decrypt-bundle .api-key))
 	  (hash-put! config 'datadog-app-key (decrypt-bundle .app-key))
-	  ;;(hash-put! config 'username (decrypt-bundle .username))
-	  ;;(hash-put! config 'password (decrypt-bundle .password))
+          (when .?username
+            (hash-put! config 'username (decrypt-bundle .username)))
+          (when .?password
+	    (hash-put! config 'password (decrypt-bundle .password)))
           )))
     config))
 
@@ -374,21 +376,28 @@
     (with ([status body] (rest-call 'get url (default-headers)))
       (unless status
         (error body))
-      (print-screen body))))
+      (print-screens body))))
 
 (def (print-screens screen)
-  (let-hash
-      screen
+  (let-hash screen
     (displayln
-     " created: "  .created
-     " resource: " .resource
-     " id: " .id
-     " description: " .description
-     " modified: " .modified
-     " read_only: " .read_only
-     " created_by: " (hash-keys .created_by)
-     " title: " .title
-     )))
+     "|" (format "[[~a][~a]]" (make-dd-url .resource) .id)
+     "|" (let-hash .created_by .email)
+     "|" .title
+     "|" .modified
+     "|" .created
+     "|")))
+
+(def (print-dash dash)
+  (let-hash dash
+    (pi dash)))
+    ;; (displayln
+    ;;  "|" (format "[[~a][~a]]" (make-dd-url .resource) .id)
+    ;;  "|" (let-hash .created_by .email)
+    ;;  "|" .title
+    ;;  "|" .modified
+    ;;  "|" .created
+    ;;  "|")))
 
 (def (print-widgets widgets)
   (for (widget widgets)
@@ -579,7 +588,6 @@
 ;;                            (metric-name-to-title metric)
 ;;                            (format "avg:~a{~a}by{~a}" metric tag groupby) "timeseries")))
 ;;                     (set! new-graphs (flatten (cons new-graph new-graphs)))))
-
 ;;                 (if (length>n? new-graphs 0)
 ;;                   (let ((data (json-object->string
 ;;                                (hash
@@ -675,18 +683,18 @@
     (with ([status body] (rest-call 'get url (default-headers)))
       (unless status
         (error body))
-       (when (table? body)
-         (let-hash body
-           (when (and .?screenboards (list? .screenboards))
-             (for (screen .screenboards)
-               (let-hash screen
-                 (when .?id
-                   (try
-                    (yaml-dump
-                     (format "~a/~a.yaml" dir .?id)
-                     (get-sboard .id))
-                 (catch (e)
-                   (raise e))))))))))))
+      (when (table? body)
+        (let-hash body
+          (when (and .?screenboards (list? .screenboards))
+            (for (screen .screenboards)
+              (let-hash screen
+                (when .?id
+                  (try
+                   (yaml-dump
+                    (format "~a/~a.yaml" dir .?id)
+                    (get-sboard .id))
+                   (catch (e)
+                     (raise e))))))))))))
 
 (def (print-graphs graphs)
   (let ((results ""))
@@ -723,6 +731,16 @@
       (let-hash body
         (for (screen .screenboards)
           (print-screens screen))))))
+
+(def (dashes)
+  (let (url (make-dd-url "dash"))
+    (with ([status body] (rest-call 'get url (default-headers)))
+      (unless status
+        (error body))
+      (when (table? body)
+        (let-hash body
+          (for (dash .dashes)
+            (print-screens dash)))))))
 
 (def (screen-create board_title widgets width height)
   (let ((url (make-dd-url "screen"))
@@ -788,7 +806,7 @@
       (when (table? body)
         (let-hash body
           (when (table? .?results)
-            (pi .results)
+            ;;(pi .results)
             (let-hash .results
               (for (m .metrics)
                 (dp (format "(pregexp-match \"~a\" ~a)" pattern m))
@@ -1038,14 +1056,14 @@
                (raise e)))))))))
 
 (def (monitors-table)
-  (let ((outs [[ "Id" "Name" "Query" ]])
+  (let ((outs [[ "Id" "Name" "Query" "Tags" "Url" ]])
         (url (make-dd-url "monitor")))
     (with ([status body] (rest-call 'get url (default-headers)))
       (unless status
         (error body))
       (for (monitor body)
         (let-hash monitor
-          (set! outs (cons [ .id .name .query ] outs))))
+          (set! outs (cons [ .id .name .query (string-join .tags ",") (format "https://~a/monitors/~a" datadog-host .id)] outs))))
       (style-output outs))))
 
 (def (format-tboard tboard)
@@ -1354,11 +1372,15 @@
       (when (table? result)
         (proc-format result procpat)))))
 
+(def (metrics-by-tag metric-pattern tag)
+  (for (metric (sort! (metrics-tag-search metric-pattern tag) string<?))
+    (displayln "< " metric)))
+
 (def (metrics-tag-search metric-pattern tag)
   (let* ((dwl (datadog-web-login))
          (found [])
          (metrics (search-metrics metric-pattern))
-         (threads (spawn-metric-tags metrics tag 40 dwl))
+         (threads (spawn-metric-tags metrics tag 4 dwl))
          (results (collect-from-pool threads)))
     (for (result results)
       (when result
@@ -1767,6 +1789,17 @@
         (unless status
           (error body))
         (present-item body)))))
+
+(def (del-user handle)
+  "Delete a Datadog user with:
+   Handle must be a valid email address"
+  (let-hash (load-config)
+    (let ((url (make-dd-url (format "user/~a" handle))))
+      (with ([status body] (rest-call 'delete url (default-headers)))
+        (unless status
+          (error body))
+        (present-item body)))))
+
 
 (def (check-manifest manifest)
   "Read in a manifest and run all of the checks against the hosts inventory within.
