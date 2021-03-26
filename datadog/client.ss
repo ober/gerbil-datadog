@@ -1,5 +1,5 @@
 ;; -*- Gerbil -*-
-;; © ober 2020
+;; © ober 2021
 
 (import
   :gerbil/gambit
@@ -27,7 +27,7 @@
 
 
 (export #t)
-(def version "0.14")
+(def version "0.15")
 (declare (not optimize-dead-definitions))
 (def datadog-host "app.datadoghq.com")
 (import (rename-in :gerbil/gambit/os (current-time builtin-current-time)))
