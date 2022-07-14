@@ -14,7 +14,7 @@ build: deps
 
 linux-static-docker:
 	docker run -it \
-	-e GERBIL_PATH=/tmp/.gerbil \
+	-e GERBIL_PATH=/src/.gerbil \
 	-u "$(uid):$(gid)" \
 	-v $(PWD):/src \
 	jaimef/alpine-current:static \
@@ -24,7 +24,6 @@ linux-static: build
 	$(GERBIL_HOME)/bin/gxc -o $(PROJECT)-bin -static \
 	-cc-options "-Bstatic" \
 	-g -gsrc -genv \
-	-static \
 	-ld-options "-static -lpthread -L/usr/lib64 -lssl -ldl -lyaml -lz" \
 	-exe $(PROJECT)/$(PROJECT).ss
 
