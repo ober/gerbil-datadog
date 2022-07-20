@@ -16,7 +16,7 @@ linux-static-docker:
 	docker run -it \
 	-e GERBIL_PATH=/src/.gerbil \
 	-u "$(uid):$(gid)" \
-	-v $(PWD):/src \
+	-v $(PWD):/src:z \
     gerbil/alpine \
 	make -C /src linux-static
 
