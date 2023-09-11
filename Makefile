@@ -5,17 +5,17 @@ DOCKER_IMAGE := "gerbil/gerbilxx:$(ARCH)"
 default: linux-static-docker
 
 deps:
-	$(GERBIL_HOME)/bin/gxpkg install github.com/ober/oberlib
+	/opt/gerbil/bin/gxpkg install github.com/ober/oberlib
 
 build: deps
-	$(GERBIL_HOME)/bin/gxpkg link $(PROJECT) /src || true
-	$(GERBIL_HOME)/bin/gxpkg build $(PROJECT)
+	/opt/gerbil/bin/gxpkg link $(PROJECT) /src || true
+	/opt/gerbil/bin/gxpkg build $(PROJECT)
 
 linux-static-docker:
 	docker run -it \
 	-e GERBIL_PATH=/src/.gerbil \
 	-v $(PWD):/src:z \
-	gerbil/alpine \
+	$(DOCKER_IMAGE) \
 	make -C /src build
 
 clean:
