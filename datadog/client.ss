@@ -14,7 +14,6 @@
   :std/net/address
   :std/net/httpd
   :std/net/request
-  :std/net/websocket
   :std/pregexp
   :std/srfi/1
   :std/srfi/13
