@@ -4,7 +4,6 @@
 
 (import
   :gerbil/gambit
-  :gerbil/gambit/ports
   :std/crypto/cipher
   :std/crypto/etc
   :std/crypto/libcrypto
@@ -30,7 +29,7 @@
   :std/text/base64
   :std/text/json
   :std/text/utf8
-  :std/text/yaml
+  :clan/text/yaml
   :std/text/zlib
   :std/xml/ssax
   :ober/oberlib
