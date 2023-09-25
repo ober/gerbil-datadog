@@ -162,14 +162,14 @@
 
 (def (query-last-secs secs query)
   "Interactive version of query-last-sec"
-  (let* ((start (float->int (- (time->seconds (builtin-current-time)) secs)))
-	 (end (float->int (time->seconds (builtin-current-time)))))
+  (let* ((start (float->int (- (time->seconds (current-time)) secs)))
+	 (end (float->int (time->seconds (current-time)))))
     (query-metrics start end query)))
 
 (def (query-last-sec secs query)
   "Non-interactive version"
-  (let ((start (float->int (- (time->seconds (builtin-current-time)) secs)))
-        (end (float->int (time->seconds (builtin-current-time)))))
+  (let ((start (float->int (- (time->seconds (current-time)) secs)))
+        (end (float->int (time->seconds (current-time)))))
     (query-metric start end query)))
 
 (def (query-min query)
@@ -188,7 +188,7 @@
                                   (round
                                    (-
                                     (time->seconds
-                                     (builtin-current-time)) 9000))))))
+                                     (current-time)) 9000))))))
     (with ([status body] (rest-call 'get url (default-headers)))
       (unless status
         (error body))
@@ -263,8 +263,8 @@
       body)))
 
 (def (get-events-last-secs secs tags)
-  (let* ((start (float->int (- (time->seconds (builtin-current-time)) secs)))
-         (end (float->int (time->seconds (builtin-current-time))))
+  (let* ((start (float->int (- (time->seconds (current-time)) secs)))
+         (end (float->int (time->seconds (current-time))))
          (evtags (get-events-tags start end tags)))
     (unless (table? evtags)
       (error (format "evtags is not a table: ~a" evtags)))
@@ -273,8 +273,8 @@
         (print-events .events)))))
 
 (def (get-events-last-secs-raw secs)
-  (let* ((start (float->int (- (time->seconds (builtin-current-time)) secs)))
-         (end (float->int (time->seconds (builtin-current-time))))
+  (let* ((start (float->int (- (time->seconds (current-time)) secs)))
+         (end (float->int (time->seconds (current-time))))
          (results (get-events-time start end))
          (events (from-json results))
          (events2 (hash-get events 'events)))
@@ -937,8 +937,8 @@
           (present-item .?snapshot_url))))))
 
 (def (graph-last-secs secs query)
-  (let* ((start (float->int (- (time->seconds (builtin-current-time)) secs)))
-         (end (float->int (time->seconds (builtin-current-time)))))
+  (let* ((start (float->int (- (time->seconds (current-time)) secs)))
+         (end (float->int (time->seconds (current-time)))))
     (graph query start end)))
 
 (def (graph-min query)
@@ -1347,8 +1347,8 @@
 
 (def (get-procs-by-host host secs dwl)
   (let-hash dwl
-    (let* ((start (float->int (* (- (time->seconds (builtin-current-time)) secs) 1000)))
-           (end (float->int (* (time->seconds (builtin-current-time)) 1000)))
+    (let* ((start (float->int (* (- (time->seconds (current-time)) secs) 1000)))
+           (end (float->int (* (time->seconds (current-time)) 1000)))
            (url (format "https://app.datadoghq.com/proc/query?from=~a&to=~a&size_by=pct_mem&group_by=family&color_by=user&q=processes{host:~a}" start end host))
            (headers [[ "cookie" :: (format "dogweb=~a; intercom-session=please-add-flat_tags_for_metric-to-your-api-thanks" .dogweb) ]
                      [ "authority" :: "app.datadoghq.com" ]])
