@@ -2,8 +2,8 @@
 ;; © ober 2021
 
 (import
+  :clan/text/yaml
   :gerbil/gambit
-  :gerbil/gambit/ports
   :ober/oberlib
   :std/crypto/cipher
   :std/format
@@ -22,15 +22,13 @@
   :std/sugar
   :std/text/base64
   :std/text/json
-  :std/text/yaml)
+  )
 
 
 (export #t)
 (def version "0.15")
 (declare (not optimize-dead-definitions))
 (def datadog-host "app.datadoghq.com")
-(import (rename-in :gerbil/gambit/os (current-time builtin-current-time)))
-(import (rename-in :gerbil/gambit/os (time mytime)))
 (def datadog-api-key #f)
 (def datadog-app-key #f)
 (def config-file "~/.datadog.yaml")
@@ -1395,7 +1393,7 @@
 
 (def (proc host pattern dwl)
   "Find any processes who's name matches pattern on the given host and seconds window"
-  (let ((procs (mytime (get-procs-by-host host 100 dwl))))
+  (let ((procs (time (get-procs-by-host host 100 dwl))))
     (let-hash procs
       (let ((results #f)
             (matches []))
@@ -1522,7 +1520,7 @@
     result))
 
 (def (agents)
-  (let ((hosts (mytime (hosts-with-agent))))
+  (let ((hosts (time (hosts-with-agent))))
     (for (host hosts)
       (displayln host))))
 
