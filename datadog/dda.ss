@@ -5,8 +5,6 @@
 (import
   :gerbil/gambit
   :std/crypto/cipher
-  :std/crypto/etc
-  :std/crypto/libcrypto
   :std/db/dbi
   :std/debug/heap
   :std/iter
