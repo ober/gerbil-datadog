@@ -35,42 +35,116 @@
 
 (export main)
 
-(declare (not optimize-dead-definitions))
-
 (def program-name "datadog")
 
-(def interactives
-  (hash
-   ("agents" (hash (description: "List all servers with Datadog Agent running.") (usage: "agents") (count: 0)))
-   ("billing" (hash (description: "List Metering/Billing information for timeframe.") (usage: "billing <2010-01-02T12> <2010-02-03T12>") (count: 2)))
-   ("check-manifest" (hash (description: "Check manifest yaml file") (usage: "check-manifest <manifest.yaml>") (count: 1)))
-   ("clear-tags" (hash (description: "Remove all tags from hostname") (usage: "clear-tags <host>") (count: 1)))
-   ("config" (hash (description: "Configure credentials for datadog.") (usage: "config") (count: 0)))
-   ("contexts" (hash (description: "List all contexts") (usage: "contexts") (count: 0)))
-   ("create-user" (hash (description: "Create a Datadog user. ") (usage: "create-user <email> <full user name> <role: Standard User: st, Admin: adm, Readonly: ro>") (count: 3)))
-   ("del-user" (hash (description: "Disable a Datadog user. ") (usage: "del-user <email>") (count: 1)))
-   ("users" (hash (description: "List all Datadog users. ") (usage: "users") (count: 0)))
-   ("del-monitor" (hash (description: "Delete monitor.") (usage: "del-monitor <monitor id>") (count: 1)))
-   ("dump-monitors" (hash (description: "Dump all monitors to yaml definitions in directory passed.") (usage: "dump-monitors <directory>") (count: 1)))
-   ("dump-sboards" (hash (description: "Dump: dump json definitions of all screenboards to <directory>") (usage: "dump-sboards <directory>") (count: 1)))
-   ("dump-tboards" (hash (description: "Dump: dump json definitions of all timeboards to <directory>") (usage: "dump-tboards <directory>") (count: 1)))
-   ("edit-monitor" (hash (description: "Update a monitor with new values.") (usage: "edit-monitor <id> <new query> <new name> <new message>") (count: 4)))
-   ("ems" (hash (description: "Search event for last minute matching tag.") (usage: "ems") (count: 1)))
-   ("events-day" (hash (description: "List all events for the past day") (usage: "events-day <tags string>") (count: 1)))
-   ("events-hour" (hash (description: "List all events for past hours") (usage: "events-hour <tags string>") (count: 1)))
-   ("events-min" (hash (description: "List all events for the past minute") (usage: "events-min <tags string>") (count: 1)))
-   ("events-month" (hash (description: "List all events for the past month") (usage: "events-month <tags string>") (count: 1)))
-   ("events-raw" (hash (description: "List all events for the past day") (usage: "events-raw <secs>") (count: 1)))
-   ("events-week" (hash (description: "List all events for the past week") (usage: "events-week <tags string>") (count: 1)))
-   ("find-app" (hash (description: "List all servers with app") (usage: "find-app <application name>") (count: 1)))
-   ("graph-min" (hash (description: "Create a graph from query.") (usage: "graph-min <query>") (count: 1)))
-   ("host" (hash (description: "host") (usage: "host <host pattern>") (count: 1)))
-   ("hosts" (hash (description: "List Datadog Hosts that match argument 1.") (usage: "hosts <pattern of host to search for>") (count: 1)))
-   ("indexes" (hash (description: "List Log Indexes.") (usage: "indexes") (count: 0)))
-   ("live-metrics" (hash (description: "List Datadog live metrics for host.") (usage: "live-metrics <hostname>") (count: 1)))
-   ("livetail" (hash (description: "List Log Indexes.") (usage: "indexes") (count: 0)))
-   ("metric-tags" (hash (description: "metric-tags <metric>.") (usage: "metric-tags <metric>") (count: 1)))
-   ("metrics-by-tag" (hash (description: "metrics-by-tag <metric pattern> <tag>") (usage: "metrics-by-tags <metric pattern> <tag>") (count: 2)))
+
+(def (main . args)
+  (def agents
+    (command 'agents help: "List all servers with Datadog Agent running."))
+
+  (def billing
+    (command 'billing  help: "List Metering/Billing information for timeframe."
+	     (argument 'from-date help: "From Date in YYYY-MM-DDTHH. e.g. 2010-02-03T12")
+             (agument 'to-date help: "From Date in YYYY-MM-DDTHH. e.g. 2010-02-03T12")))
+
+  (def check-manifest
+    (command 'check-manifest help: "Check manifest yaml file"
+	     (arguments 'manifest help:  "manifest.yaml")))
+
+  (def clear-tags
+    (command 'clear-tags help: "Remove all tags from hostname"
+	     (argument 'host help: "Hostname to clear the tags on")))
+
+  (def config
+    (command 'config help: "Configure credentials for datadog."))
+
+  (def contexts
+    (command 'contexts help: "List all contexts"))
+
+  (def create
+    (command 'create-user help: "Create a Datadog user. "
+	     (argument 'email help: "Email address of user")
+	     (argument 'full-user-name help: "Full user name")
+	     (argument 'role help: "Standard User: st, Admin: adm, Readonly: ro")))
+  (def del
+    (command 'del-user help: "Disable a Datadog user. "
+	     (argument 'email help: "Email of user to remove")))
+  (def users
+    (command 'users help "List all Datadog users. "))
+
+  (def del-monitor
+    (command 'del-monitor help: "Delete monitor."
+	     (argument 'id help: "Id of monitor to remove")))
+
+  (def dump-monitors
+    (command 'dump-monitors help: "Dump all monitors to yaml definitions in directory passed."
+	     (argument 'directory help: "Directory to download all monitors")))
+
+  (def dump-sboards
+    (command 'dump-sboards help: "Dump: dump json definitions of all screenboards to <directory>"
+	     (argument 'directory help: "Directory to dump sboards to")))
+
+  (def dump-tboards
+    (command 'dump-tboards help: "Dump: dump json definitions of all timeboards to <directory>"
+	     (argument 'directory help: "Directory to dump tboards to")))
+
+  (def edit-monitor
+    (command 'edit-monitor help: "Update a monitor with new values."
+	     (argument 'id)
+	     (argument 'new-query)
+	     (argument 'new-name)
+	     (argument 'new-message)))
+  (def ems
+    (command 'ems help: "Search event for last minute matching tag."))
+
+  (def events-day
+    (command 'events-day help: "List all events for the past day"
+	     (argument 'tag-string)))
+
+  (def events-hour
+    (command 'events-hour help: "List all events for past hours"
+	     (argument 'tag-string)))
+
+  (def events-min
+    (command 'events-min help: "List all events for the past minute"
+	     (argument 'tag-string)))
+  (def events-month
+    (command 'events-month help: "List all events for the past month"
+	     (argument 'tag-string)))
+  (def events-raw
+    (command 'events-raw help: "List all events for the past day"
+	     (argument 'secs)))
+  (def events-week
+    (command 'events-week help: "List all events for the past week"
+	     (argument 'tag-string)))
+  (def find-app
+    (command 'find-app help: "List all servers with app"
+	     (argument 'application-name)))
+  (def graph-min
+    (command 'graph-min help: "Create a graph from query."
+	     (argument 'query)))
+  (def host
+    (command 'host help: "host"
+	     (argument 'host-pattern)))
+  (def hosts
+    (command 'hosts help: "List Datadog Hosts that match argument 1."
+	     (argument 'host-pattern help: "pattern of host to search for>")))
+
+  (def indexes
+    (command 'indexes help: "List Log Indexes."))
+
+  (def live-metrics
+    (command 'live-metrics help: "List Datadog live metrics for host."
+	     (argument 'hostname)))
+
+  (def livetail
+    (command 'livetail help: "List Log Indexes."))
+  (def metric-tags
+    (command 'metric-tags help: "metric-tags <metric>."
+	     (argument 'metric)))
+  (def metrics-by-tag
+    (command 'metrics-by-tag help: "metrics-by-tag <metric pattern> <tag>"
+	     (argument ') (usage: "metrics-by-tags <metric pattern> <tag>") (count: 2)))
    ("metric-tags-web" (hash (description: "metric-tags <metric>.") (usage: "metric-tags <metric>") (count: 1)))
    ("metric-tags-from-file" (hash (description: "metric-tags-from-file <file>.") (usage: "metric-tags-from-file <file>") (count: 1)))
    ("metrics" (hash (description: "List Datadog Metrics and search on argument 1.") (usage: "metrics <pattern of metric to search for>") (count: 1)))
@@ -103,34 +177,139 @@
    ("verify-account" (hash (description: "Verify account credentials") (usage: "validate") (count: 0)))
    ("verify-apps" (hash (description: "Verify account credentials") (usage: "verify-apps") (count: 0)))
    ("view-md" (hash (description: "Describe metric metadata") (usage: "view-md") (count: 1)))
-   ))
+   )
 
-(def (main . args)
-  (if (null? args)
-    (usage))
-  (let* ((argc (length args))
-	 (verb (car args))
-	 (args2 (cdr args)))
-    (unless (hash-key? interactives verb)
-      (usage))
-    (let* ((info (hash-get interactives verb))
-	   (count (hash-get info count:)))
-      (unless count
-	(set! count 0))
-      (unless (= (length args2) count)
-	(usage-verb verb))
-      (apply (eval (string->symbol (string-append "ober/datadog/client#" verb))) args2))))
+  (call-with-getopt process-args args
+		    program: "confluence"
+		    help: "Confluence cli in Gerbil"
+		    agents
+		    billing
+		    check-manifest
+		    clear-tags
+		    config
+		    contexts
+		    create-user
+		    del-user
+		    users
+		    del-monitor
+		    dump-monitors
+		    dump-sboards
+		    dump-tboards
+		    edit-monitor
+		    ems
+		    events-day
+		    events-hour
+		    events-min
+		    events-month
+		    events-raw
+		    events-week
+		    find-app
+		    graph-min
+		    host
+		    hosts
+		    indexes
+		    live-metrics
+		    livetail
+		    metric-tags
+		    metrics-by-tag
+		    metric-tags-web
+		    metric-tags-from-file
+		    metrics
+		    monitor
+		    monitors
+		    monitors-table
+		    new-monitor
+		    query-day
+		    query-hour
+		    query-metrics
+		    query-min
+		    run-agent-report
+		    screen
+		    screens
+		    dashes
+		    search
+		    sproc
+		    start-dd-web
+		    status
+		    stories
+		    tag
+		    tag-all
+		    tags
+		    tboard-add-chart
+		    tboard-create
+		    tboard-fancy
+		    tboard-mass-add
+		    tboard-mass-add-many
+		    totals
+		    verify-account
+		    verify-apps
+		    view-md
+   )
 
-(def (usage-verb verb)
-  (let ((howto (hash-get interactives verb)))
-    (displayln "Wrong number of arguments. Usage is:")
-    (displayln program-name " " (hash-get howto usage:))
-    (exit 2)))
 
-(def (usage)
-  (displayln "Datadog version: " version)
-  (displayln "Usage: datadog <verb>")
-  (displayln "Verbs:")
-  (for (k (sort! (hash-keys interactives) string<?))
-       (displayln (format "~a: ~a" k (hash-get (hash-get interactives k) description:))))
-  (exit 2))
+
+(def (process-args cmd opt)
+  (let-hash opt
+    (case cmd
+      agents
+      billing
+      check-manifest
+      clear-tags
+      config
+      contexts
+      create-user
+      del-user
+      users
+      del-monitor
+      dump-monitors
+      dump-sboards
+      dump-tboards
+      edit-monitor
+      ems
+      events-day
+      events-hour
+      events-min
+      events-month
+      events-raw
+      events-week
+      find-app
+      graph-min
+      host
+      hosts
+      indexes
+      live-metrics
+      livetail
+      metric-tags
+      metrics-by-tag
+      metric-tags-web
+      metric-tags-from-file
+      metrics
+      monitor
+      monitors
+      monitors-table
+      new-monitor
+      query-day
+      query-hour
+      query-metrics
+      query-min
+      run-agent-report
+      screen
+      screens
+      dashes
+      search
+      sproc
+      start-dd-web
+      status
+      stories
+      tag
+      tag-all
+      tags
+      tboard-add-chart
+      tboard-create
+      tboard-fancy
+      tboard-mass-add
+      tboard-mass-add-many
+      totals
+      verify-account
+      verify-apps
+      view-md
