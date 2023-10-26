@@ -1,5 +1,5 @@
 ;; -*- Gerbil -*-
-;;; © ober
+;;; © ober 2023
 ;;; Datadog client binary
 
 (import
@@ -12,6 +12,7 @@
   :std/format
   :std/generic
   :std/generic/dispatch
+  :std/getopt
   :std/misc/channel
   :std/misc/list
   :std/misc/ports
@@ -45,11 +46,11 @@
   (def billing
     (command 'billing  help: "List Metering/Billing information for timeframe."
 	     (argument 'from-date help: "From Date in YYYY-MM-DDTHH. e.g. 2010-02-03T12")
-             (agument 'to-date help: "From Date in YYYY-MM-DDTHH. e.g. 2010-02-03T12")))
+             (argument 'to-date help: "From Date in YYYY-MM-DDTHH. e.g. 2010-02-03T12")))
 
   (def check-manifest
     (command 'check-manifest help: "Check manifest yaml file"
-	     (arguments 'manifest help:  "manifest.yaml")))
+	     (argument 'manifest help:  "manifest.yaml")))
 
   (def clear-tags
     (command 'clear-tags help: "Remove all tags from hostname"
@@ -70,7 +71,7 @@
     (command 'del-user help: "Disable a Datadog user. "
 	     (argument 'email help: "Email of user to remove")))
   (def users
-    (command 'users help "List all Datadog users. "))
+    (command 'users help: "List all Datadog users. "))
 
   (def del-monitor
     (command 'del-monitor help: "Delete monitor."
@@ -94,8 +95,8 @@
 	     (argument 'new-query)
 	     (argument 'new-name)
 	     (argument 'new-message)))
-  (def ems
-    (command 'ems help: "Search event for last minute matching tag."))
+  ;; (def ems
+  ;;   (command 'ems help: "Search event for last minute matching tag."))
   (def events-day
     (command 'events-day help: "List all events for the past day"
 	     (argument 'tag-string)))
@@ -220,12 +221,12 @@
     (command 'tboard-create help: "Create a new timeboard"
 	     (argument 'title)
 	     (argument 'description)))
-  (def tboard-fancy
-    (command 'tboard-fancy help: "Add charts for metrics which apply to tag provided."
-	     (argument 'timeboard-id)
-	     (argument 'metric-pattern)
-	     (argument 'tag help: "key:value")
-	     (argument 'replace help: "t or f")))
+  ;; (def tboard-fancy
+  ;;   (command 'tboard-fancy help: "Add charts for metrics which apply to tag provided."
+  ;; 	     (argument 'timeboard-id)
+  ;; 	     (argument 'metric-pattern)
+  ;; 	     (argument 'tag help: "key:value")
+  ;; 	     (argument 'replace help: "t or f")))
   (def tboard-mass-add
     (command 'tboard-mass-add help: "Add charts matching regexp metrics to a timeboard."
 	     (argument 'timeboard-id)
@@ -266,7 +267,7 @@
 		    dump-sboards
 		    dump-tboards
 		    edit-monitor
-		    ems
+;;		    ems
 		    events-day
 		    events-hour
 		    events-min
@@ -307,7 +308,7 @@
 		    tags
 		    tboard-add-chart
 		    tboard-create
-		    tboard-fancy
+;;		    tboard-fancy
 		    tboard-mass-add
 		    tboard-mass-add-many
 		    totals
@@ -346,8 +347,8 @@
        (dump-tboards .directory))
       ((edit-monitor)
        (edit-monitor .id .new-query .new-name .new-message))
-      ((ems)
-       (ems))
+      ;; ((ems)
+      ;;  (ems))
       ((events-day)
        (events-day .tag-string))
       ((events-hour)
@@ -428,8 +429,8 @@
        (tboard-add-chart .timeboard-id .title .request .viz))
       ((tboard-create)
        (tboard-create .title .description))
-      ((tboard-fancy)
-       (tboard-fancy .timeboard-id .metric-pattern .tag .replace))
+      ;; ((tboard-fancy)
+      ;;  (tboard-fancy .timeboard-id .metric-pattern .tag .replace))
       ((tboard-mass-add)
        (tboard-mass-add .timeboard-id .pattern .host-clause .group-by-clause .replace))
       ((tboard-mass-add-many)

@@ -1393,7 +1393,7 @@
 
 (def (proc host pattern dwl)
   "Find any processes who's name matches pattern on the given host and seconds window"
-  (let ((procs (time (get-procs-by-host host 100 dwl))))
+  (let ((procs (get-procs-by-host host 100 dwl)))
     (let-hash procs
       (let ((results #f)
             (matches []))
@@ -1520,7 +1520,7 @@
     result))
 
 (def (agents)
-  (let ((hosts (time (hosts-with-agent))))
+  (let ((hosts (hosts-with-agent)))
     (for (host hosts)
       (displayln host))))
 
