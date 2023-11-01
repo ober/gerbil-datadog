@@ -1118,10 +1118,13 @@
 (def (config)
      (displayln "Please enter your DataDog API Key:")
      (def api-key (read-password ##console-port))
+     (displayln "Please enter your DataDog Application Key:")
+     (def app-key (read-password ##console-port))
      (def secrets (base64-encode
                    (object->u8vector
                     (hash
                      (api-key (encrypt-string api-key))
+		     (app-key (encrypt-string app-key))
                      ))))
 
      (displayln "Add the following lines to your " config-file)
