@@ -17,7 +17,7 @@
  :std/pregexp
  :std/srfi/1
  :std/srfi/13
- :std/srfi/19
+ (only-in :std/srfi/19 date->string)
  :std/srfi/95
  :std/sugar
  :std/text/base64
@@ -179,12 +179,8 @@
 
 (def (metrics pattern)
      (verify-account)
-     (let (url (make-dd-url (format "metrics?from=~a"
-                                    (inexact->exact
-                                     (round
-                                      (-
-                                       (time->seconds
-					(current-time)) 9000))))))
+     (let* ((past (inexact->exact (round (- (time->seconds (current-time)) 9000))))
+	    (url (make-dd-url (format "metrics?from=~a" past))))
        (with ([status body] (rest-call 'get url (default-headers)))
 	     (unless status
                (error body))
