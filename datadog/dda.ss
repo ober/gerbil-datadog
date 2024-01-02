@@ -316,6 +316,7 @@
 		    verify-apps
 		    view-md
 		    ))
+
 (def (process-args cmd opt)
   (let-hash opt
     (case cmd

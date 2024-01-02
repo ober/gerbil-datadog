@@ -5,7 +5,7 @@
 
 (defbuild-script
   '("datadog/client"
-    (static-exe:
+    (exe:
      "datadog/datadog"
      "-ld-options"
      "-lyaml")))
