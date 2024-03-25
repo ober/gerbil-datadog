@@ -1,6 +1,6 @@
 PROJECT := datadog
 ARCH := $(shell uname -m)
-DOCKER_IMAGE := "gerbil/gerbilxx:$(ARCH)"
+DOCKER_IMAGE := "gerbil/gerbilxx:$(ARCH)-master"
 
 default: linux-static-docker
 
