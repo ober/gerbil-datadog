@@ -37,7 +37,7 @@
            (config-data (yaml-load config-file)))
        (unless (and (list? config-data)
                     (length>n? config-data 0)
-                    (table? (car config-data)))
+                    (hash-table? (car config-data)))
 	 (displayln (format "Could not parse your config ~a" config-file))
 	 (exit 2))
        (hash-for-each
@@ -136,7 +136,7 @@
        (with ([status body] (rest-call 'get url (default-headers)))
 	     (unless status
                (error body))
-	     (when (table? body)
+	     (when (hash-table? body)
                (let-hash body
 			 (when .?series
 			   .series))))))
@@ -148,7 +148,7 @@
        (with ([status body] (rest-call 'get url (default-headers)))
 	     (unless status
                (error body))
-	     (when (table? body)
+	     (when (hash-table? body)
                (let-hash body
 			 (when .?users
 			   (for (user .users)
@@ -184,7 +184,7 @@
        (with ([status body] (rest-call 'get url (default-headers)))
 	     (unless status
                (error body))
-	     (when (table? body)
+	     (when (hash-table? body)
                (let-hash body
 			 (for (m .metrics)
 			      (if pattern
@@ -198,7 +198,7 @@
        (with ([status body] (rest-call 'get url (default-headers)))
 	     (unless status
                (error body))
-	     (when (table? body)
+	     (when (hash-table? body)
                (let-hash body
 			 (displayln (format "description:~a integration:~a statsd_interval:~a type:~a unit:~a"
 					    (if (void? .?description)
@@ -258,7 +258,7 @@
      (let* ((start (float->int (- (time->seconds (current-time)) secs)))
             (end (float->int (time->seconds (current-time))))
             (evtags (get-events-tags start end tags)))
-       (unless (table? evtags)
+       (unless (hash-table? evtags)
 	 (error (format "evtags is not a table: ~a" evtags)))
        (let-hash evtags
 		 (when (list? .?events)
@@ -474,9 +474,9 @@
      (let* ((tbinfo (get-tboard id))
             (new-graphs [])
             (url (make-dd-url (format "dash/~a" id))))
-       (when (table? tbinfo)
+       (when (hash-table? tbinfo)
 	 (let-hash tbinfo
-		   (when (table? .?dash)
+		   (when (hash-table? .?dash)
 		     (let-hash .dash
 			       (unless (string=? replace "t")
 				 (set! new-graphs .?graphs))
@@ -557,7 +557,7 @@
 
 ;; (def (tboard-fancy id metric-pattern tag replace)
 ;;   (let ((tboard (get-tboard id)))
-;;     (when (table? tboard)
+;;     (when (hash-table? tboard)
 ;;       (let-hash tboard
 ;;         (let ((groupby (if (string-contains tag ":")
 ;;                          (car (pregexp-split ":" tag))
@@ -565,7 +565,7 @@
 ;;               (url (make-dd-url (format "dash/~a" id)))
 ;;               (new-graphs []))
 ;;           (when .?dash
-;;             (when (table? .dash)
+;;             (when (hash-table? .dash)
 ;;               (dp (hash->list .dash))
 ;;               (let-hash .dash
 ;;                 (unless (string=? replace "t")
@@ -586,9 +586,9 @@
 ;;                     (with ([status body] (rest-call 'put url (default-headers) data))
 ;;                       (unless status
 ;;                         (error body))
-;;                       (when (table? body)
+;;                       (when (hash-table? body)
 ;;                         (let-hash body
-;;                           (when (table? .?dash)
+;;                           (when (hash-table? .?dash)
 ;;                             (let-hash .dash
 ;;                               (dp (format "description: ~a title: ~a graphs: ~a" .?description .?title new-graphs))
 ;;                               (displayln (format "https://~a/dashboard/~a" datadog-host .?new_id)))))
@@ -655,7 +655,7 @@
        (with ([status body] (rest-call 'get url (default-headers)))
 	     (unless status
                (error body))
-	     (when (table? body)
+	     (when (hash-table? body)
                (let-hash body
 			 (when (and .?dashes (list? .dashes))
 			   (for (tboard .dashes)
@@ -672,7 +672,7 @@
        (with ([status body] (rest-call 'get url (default-headers)))
 	     (unless status
                (error body))
-	     (when (table? body)
+	     (when (hash-table? body)
                (let-hash body
 			 (when (and .?screenboards (list? .screenboards))
 			   (for (screen .screenboards)
@@ -706,7 +706,7 @@
        (for (request requests)
 	    (hash-for-each
 	     (lambda (k v)
-               (if (hash-table? v)
+               (if (hash-hash-table? v)
 		   (set! results (string-append results (format " ~a:~a " k (hash->string v))))
 		   (set! results (string-append results (format " ~a:~a " k v)))))
 	     request))
@@ -716,7 +716,7 @@
      (with ([status body] (rest-call 'get (make-dd-url "screen") (default-headers)))
 	   (unless status
 	     (error body))
-	   (when (table? body)
+	   (when (hash-table? body)
 	     (let-hash body
 		       (for (screen .screenboards)
 			    (print-screens screen))))))
@@ -726,7 +726,7 @@
        (with ([status body] (rest-call 'get url (default-headers)))
 	     (unless status
                (error body))
-	     (when (table? body)
+	     (when (hash-table? body)
                (let-hash body
 			 (for (dash .dashes)
 			      (print-screens dash)))))))
@@ -778,7 +778,7 @@
        (with ([status body] (rest-call 'get url (default-headers)))
 	     (unless status
                (error body))
-	     (when (table? body)
+	     (when (hash-table? body)
                (let-hash body
 			 (let-hash .results
 				   (for (m .metrics)
@@ -792,9 +792,9 @@
        (with ([status body] (rest-call 'get url (default-headers)))
 	     (unless status
                (error body))
-	     (when (table? body)
+	     (when (hash-table? body)
                (let-hash body
-			 (when (table? .?results)
+			 (when (hash-table? .?results)
 			   ;;(pi .results)
 			   (let-hash .results
 				     (for (m .metrics)
@@ -824,9 +824,9 @@
        (with ([status body] (rest-call 'get url (default-headers)))
 	     (unless status
                (error body))
-	     (when (table? body)
+	     (when (hash-table? body)
                (let-hash body
-			 (when (table? .?results)
+			 (when (hash-table? .?results)
 			   (let-hash .results
 				     (when (and .?hosts
 						(list? .hosts))
@@ -842,9 +842,9 @@
        (with ([status body] (rest-call 'get url (default-headers)))
 	     (unless status
                (error body))
-	     (when (table? body)
+	     (when (hash-table? body)
                (let-hash body
-			 (when (table? .?results)
+			 (when (hash-table? .?results)
 			   (let-hash .results
 				     (for (h .hosts)
 					  (let ((matches (pregexp-match pattern h)))
@@ -894,10 +894,10 @@
        (with ([status body] (rest-call 'get url (default-headers)))
 	     (unless status
                (error body))
-	     (when (table? body)
+	     (when (hash-table? body)
                (let-hash body
 			 (displayln .?errors)
-			 (when (table? .?tags)
+			 (when (hash-table? .?tags)
 			   (for (k (hash-keys .tags))
 				(displayln k))))))))
 
@@ -907,7 +907,7 @@
        (with ([status body] (rest-call 'get url (default-headers)))
 	     (unless status
                (error body))
-	     (when (table? body)
+	     (when (hash-table? body)
                (let-hash body
 			 (for (k (hash-keys .tags))
 			      (displayln k)))))))
@@ -917,7 +917,7 @@
        (with ([status body] (rest-call 'get url (default-headers)))
 	     (unless status
                (error body))
-	     (when (table? body)
+	     (when (hash-table? body)
                (for (k (hash-keys body))
 		    (displayln k))))))
 
@@ -926,7 +926,7 @@
        (with ([status body] (rest-call 'get url (default-headers)))
 	     (unless status
                (error body))
-	     (when (table? body)
+	     (when (hash-table? body)
                (let-hash body
 			 (present-item .?snapshot_url))))))
 
@@ -951,7 +951,7 @@
        (with ([status body] (rest-call 'put url (default-headers) data))
 	     (unless status
                (error body))
-	     (when (table? body)
+	     (when (hash-table? body)
                (present-item body)))))
 
 (def (del-monitor id)
@@ -995,7 +995,7 @@
 	       (displayln "*** Message:")
 	       (displayln .message)
 	       (displayln "*** Tags: " .tags)
-	       (displayln "*** Creator: " (if (table? .creator) (let-hash .creator .name " " .email " " .handle) "N/A"))
+	       (displayln "*** Creator: " (if (hash-table? .creator) (let-hash .creator .name " " .email " " .handle) "N/A"))
 	       (displayln "*** Options: ")
 	       (let-hash .options
 			 (displayln "	- require_full_window: " .?require_full_window)
@@ -1006,12 +1006,12 @@
 			 (displayln "	- no_data_timeframe: " .?no_data_timeframe)
 			 (displayln "	- locked: " .?locked)
 			 (displayln "	- silenced: ")
-			 (when (and .?silenced (table? .silenced))
+			 (when (and .?silenced (hash-table? .silenced))
 			   (hash-for-each
 			    (lambda (k v)
 			      (displayln "	- " k ": " v))
 			    .silenced))
-			 (when (and .?thresholds (table? .silenced))
+			 (when (and .?thresholds (hash-table? .silenced))
 			   (hash-for-each
 			    (lambda (k v)
 			      (displayln "	- " k ": " v))
@@ -1100,7 +1100,7 @@
 		(message .message))))
 
 (def (data->get url data)
-     (if (table? data)
+     (if (hash-table? data)
 	 (string-append
 	  url "?"
 	  (string-join
@@ -1172,7 +1172,7 @@
            (results (query-last-sec 3600 (format "~a{*}by{host}" metric))))
        (when (list? results)
 	 (for (item results)
-              (when (table? item)
+              (when (hash-table? item)
 		(let-hash item
 			  (when .?tag_set
 			    (for (t .tag_set)
@@ -1250,7 +1250,7 @@
 		 (with ([status body] (rest-call 'get url (default-headers)))
 		       (unless status
 			 (error body))
-		       (when (table? body)
+		       (when (hash-table? body)
 			 (let-hash body
 				   (for (host .host_list)
 					(let-hash host
@@ -1266,7 +1266,7 @@
 		 (with ([status body] (rest-call 'get url (default-headers)))
 		       (unless status
 			 (error body))
-		       (when (table? body)
+		       (when (hash-table? body)
 			 (let-hash body
 				   (displayln "Total Up: " .total_up " Total Active: " .total_active)))))))
 
@@ -1354,7 +1354,7 @@
             (threads (spawn-proc-collectors hosts 300 dwl))
             (results (collect-from-pool threads)))
        (for (result results)
-	    (when (table? result)
+	    (when (hash-table? result)
               (proc-format result procpat)))))
 
 (def (metrics-by-tag metric-pattern tag)
@@ -1403,7 +1403,7 @@
 (def (format-snapshot snapshot)
      "Snapshots are lists of pslists."
      ;; [ 1, "rabbitmq", "0.0", "25.84", 14841081856, 8697987072, 0, 0, "beam.smp", 1 ],
-     (when (table? snapshot)
+     (when (hash-table? snapshot)
        (let-hash snapshot
 		 (for (proc .pslist)
 		      (with ([
@@ -1433,7 +1433,7 @@
 (def (match-snapshot snapshot pattern)
      "Snapshots are lists of pslists."
      ;; [ 1, "rabbitmq", "0.0", "25.84", 14841081856, 8697987072, 0, 0, "beam.smp", 1 ],
-     (when (table? snapshot)
+     (when (hash-table? snapshot)
        (let ((results []))
 	 (let-hash snapshot
 		   (for (proc .pslist)
@@ -1475,7 +1475,7 @@
 		     (with ([status body] (rest-call 'get url (default-headers)))
 			   (unless status
 			     (error body))
-			   (when (table? body)
+			   (when (hash-table? body)
 			     (let-hash body
 				       (when .?host_list
 					 (set! results (flatten (cons .host_list results)))
@@ -1539,7 +1539,7 @@
      (let ((results (get-meta-by-host hst))
            (outs [[ "Name" "Hostname" "Id" "Integrations" "Muted?" "Sources" "Tags by Source" "Aliases" "is Up?" "Metrics" ]]))
        (for (host results)
-	    (when (table? host)
+	    (when (hash-table? host)
               (let-hash host
 			(set! outs (cons [ .?name
 					   .?host_name
@@ -1563,7 +1563,7 @@
        (cons [ a b c ] outs)))
 
 (def (format-host host outs)
-     (when (table? host)
+     (when (hash-table? host)
        (let-hash host
 		 (cons [
 			.?name
@@ -1595,7 +1595,7 @@
 		      (display-context context)))))
 
 (def (display-context context)
-     (when (table? context)
+     (when (hash-table? context)
        (let-hash context
 		 (displayln "*** " .name)
 		 (displayln "**** Groups")
@@ -1670,7 +1670,7 @@
 (def (hash-key-like hsh pat)
      "Search a hash for keys that match a given regexp and return value"
      (present-item pat)
-     (when (table? hsh)
+     (when (hash-table? hsh)
        (let ((found #f))
 	 (hash-map
 	  (lambda (k v)
@@ -1710,7 +1710,7 @@
 		       (unless status
 			 (error body))
 		       (present-item body)
-		       (when (table? body)
+		       (when (hash-table? body)
 			 (let-hash body
 				   (for (entry .usage)
 					(let-hash entry
@@ -1748,7 +1748,7 @@
 
 (def (verify-app-tag host)
      "Verify all Users App tag is consistent with apps."
-     (when (table? host)
+     (when (hash-table? host)
        (let-hash host
 		 (let* ((user-tags (hash-get .tags_by_source 'Users)))
 		   (when user-tags
@@ -1835,7 +1835,7 @@
 (def (manifest-tag-check required-tags meta)
      "Verify that all the tags expected for this host are applied"
      (let-hash meta
-	       (when (table? .tags_by_source)
+	       (when (hash-table? .tags_by_source)
 		 (let-hash .tags_by_source
 			   (for (tag required-tags)
 				(let* ((found #f)
