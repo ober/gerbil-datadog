@@ -5,6 +5,7 @@ DOCKER_IMAGE := "gerbil/gerbilxx:$(ARCH)-master"
 default: linux-static-docker
 
 deps:
+	git config --global --add safe.directory /src
 	/opt/gerbil/bin/gxpkg install github.com/ober/oberlib
 
 build: deps
