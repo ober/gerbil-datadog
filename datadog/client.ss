@@ -706,7 +706,7 @@
        (for (request requests)
 	    (hash-for-each
 	     (lambda (k v)
-               (if (hash-hash-table? v)
+               (if (hash-table? v)
 		   (set! results (string-append results (format " ~a:~a " k (hash->string v))))
 		   (set! results (string-append results (format " ~a:~a " k v)))))
 	     request))
