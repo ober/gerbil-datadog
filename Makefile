@@ -1,4 +1,5 @@
 PROJECT := datadog
+PWD := $(shell pwd)
 ARCH := $(shell uname -m)
 DOCKER_IMAGE := "gerbil/gerbilxx:$(ARCH)-master"
 
