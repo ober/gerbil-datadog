@@ -30,7 +30,7 @@
   :std/text/utf8
   :clan/text/yaml
   :std/text/zlib
-  :std/xml/ssax
+  :std/markup/sxml
   :ober/oberlib
   "client.ss")
 
