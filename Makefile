@@ -1,9 +1,9 @@
 PROJECT := datadog
-PWD := $(shell pwd)
 ARCH := $(shell uname -m)
+PWD := $(shell pwd)
+DOCKER_IMAGE := "gerbil/gerbilxx:$(ARCH)-master"
 UID := $(shell id -u)
 GID := $(shell id -g)
-DOCKER_IMAGE := "gerbil/gerbilxx:$(ARCH)-master"
 
 default: linux-static-docker
 
@@ -13,11 +13,12 @@ check-root:
 	fi
 
 deps:
-	/opt/gerbil/bin/gxpkg install github.com/ober/oberlib
+	$(GERBIL_HOME)/bin/gxpkg install github.com/mighty-gerbils/gerbil-libyaml
+	$(GERBIL_HOME)/bin/gxpkg install github.com/ober/oberlib
 
 build: deps check-root
-	/opt/gerbil/bin/gxpkg link $(PROJECT) /src || true
-	/opt/gerbil/bin/gxpkg build -R $(PROJECT)
+	$(GERBIL_HOME)/bin/gxpkg link $(PROJECT) /src || true
+	$(GERBIL_HOME)/bin/gxpkg build -R $(PROJECT)
 
 linux-static-docker: clean
 	docker run -t \
