@@ -46,7 +46,7 @@
   (def billing
     (command 'billing  help: "List Metering/Billing information for timeframe."
 	     (argument 'from-date help: "From Date in YYYY-MM-DDTHH. e.g. 2010-02-03T12")
-             (argument 'to-date help: "From Date in YYYY-MM-DDTHH. e.g. 2010-02-03T12")))
+             (argument 'to-date help: "To Date in YYYY-MM-DDTHH. e.g. 2010-02-03T12")))
 
   (def bulk-resolve-monitors
     (command 'bulk-resolve-monitors help: "Resolve multiple monitors at once"
@@ -654,7 +654,7 @@
       ((new-monitor)
        (new-monitor .type .query .name .message .tags))
       ((post-check-run)
-       (post-check-run .check .host-name .status .?timestamp .?message 
+       (post-check-run .check .host-name (string->number .status) .?timestamp .?message 
                        (if .?tags (string-split .?tags #\,) #f)))
       ((query-day)
        (query-day .query))
