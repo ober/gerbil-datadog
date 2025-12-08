@@ -1111,13 +1111,13 @@
   legend: Whether to show legend (optional: yes, no)
   template_variables: Hash of template variables to replace (optional)"
      (let* ((params [])
-            (params (if size (cons (format "size=~a" size) params) params))
-            (params (if legend (cons (format "legend=~a" legend) params) params))
+            (params (if size (cons (format "size=~a" (web-encode size)) params) params))
+            (params (if legend (cons (format "legend=~a" (web-encode legend)) params) params))
             (params (if (and template_variables (hash-table? template_variables))
                        (append params
                                (hash-fold
                                 (lambda (k v acc)
-                                  (cons (format "~a=~a" k v) acc))
+                                  (cons (format "~a=~a" (web-encode k) (web-encode v)) acc))
                                 [] template_variables))
                        params))
             (query-string (if (pair? params)
