@@ -1157,7 +1157,7 @@
              (present-item body))))
 
 (def (edit-monitor id query name message)
-     (let ((url (make-dd-url (format "montior/~a" id)))
+     (let ((url (make-dd-url (format "monitor/~a" id)))
            (data (json-object->string
 		  (hash
                    ("query" query)
