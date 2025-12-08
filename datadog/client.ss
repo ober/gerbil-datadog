@@ -344,18 +344,16 @@
   handle: The handle of the user making the comment (optional)
   related_event_id: The id of another comment or event to reply to (optional)"
      (let* ((url (make-dd-url "comments"))
-            (data-hash (hash ("message" message)))
-            (data-hash (if handle
-                          (hash-put! data-hash "handle" handle)
-                          data-hash))
-            (data-hash (if related_event_id
-                          (hash-put! data-hash "related_event_id" related_event_id)
-                          data-hash))
-            (data (json-object->string data-hash)))
-       (with ([status body] (rest-call 'post url (default-headers) data))
-             (unless status
-               (error body))
-             (present-item body))))
+            (data-hash (hash ("message" message))))
+       (when handle
+         (hash-put! data-hash "handle" handle))
+       (when related_event_id
+         (hash-put! data-hash "related_event_id" related_event_id))
+       (let ((data (json-object->string data-hash)))
+         (with ([status body] (rest-call 'post url (default-headers) data))
+               (unless status
+                 (error body))
+               (present-item body)))))
 
 (def (edit-comment comment_id message handle)
      "Edit an existing comment
@@ -363,18 +361,16 @@
   message: The new comment text (optional)
   handle: The handle of the user making the edit (optional)"
      (let* ((url (make-dd-url (format "comments/~a" comment_id)))
-            (data-hash (hash))
-            (data-hash (if message
-                          (hash-put! data-hash "message" message)
-                          data-hash))
-            (data-hash (if handle
-                          (hash-put! data-hash "handle" handle)
-                          data-hash))
-            (data (json-object->string data-hash)))
-       (with ([status body] (rest-call 'put url (default-headers) data))
-             (unless status
-               (error body))
-             (present-item body))))
+            (data-hash (hash)))
+       (when message
+         (hash-put! data-hash "message" message))
+       (when handle
+         (hash-put! data-hash "handle" handle))
+       (let ((data (json-object->string data-hash)))
+         (with ([status body] (rest-call 'put url (default-headers) data))
+               (unless status
+                 (error body))
+               (present-item body)))))
 
 (def (delete-comment comment_id)
      "Delete a comment by ID"
@@ -438,21 +434,18 @@
             (data-hash (hash
                         ("check" check)
                         ("host_name" host_name)
-                        ("status" status)))
-            (data-hash (if timestamp
-                          (hash-put! data-hash "timestamp" timestamp)
-                          data-hash))
-            (data-hash (if message
-                          (hash-put! data-hash "message" message)
-                          data-hash))
-            (data-hash (if (and tags (list? tags))
-                          (hash-put! data-hash "tags" tags)
-                          data-hash))
-            (data (json-object->string data-hash)))
-       (with ([status body] (rest-call 'post url (default-headers) data))
-             (unless status
-               (error body))
-             (present-item body))))
+                        ("status" status))))
+       (when timestamp
+         (hash-put! data-hash "timestamp" timestamp))
+       (when message
+         (hash-put! data-hash "message" message))
+       (when (and tags (list? tags))
+         (hash-put! data-hash "tags" tags))
+       (let ((data (json-object->string data-hash)))
+         (with ([status body] (rest-call 'post url (default-headers) data))
+               (unless status
+                 (error body))
+               (present-item body)))))
 
 (def (screen id)
      (let (url (make-dd-url (format "screen/~a" id)))
@@ -1096,24 +1089,20 @@
   legend: Whether to show legend (optional: yes, no)
   title: The graph title (optional)"
      (let* ((url (make-dd-url "graph/embed"))
-            (data-hash (hash ("graph_json" graph_json)))
-            (data-hash (if timeframe
-                          (hash-put! data-hash "timeframe" timeframe)
-                          data-hash))
-            (data-hash (if size
-                          (hash-put! data-hash "size" size)
-                          data-hash))
-            (data-hash (if legend
-                          (hash-put! data-hash "legend" legend)
-                          data-hash))
-            (data-hash (if title
-                          (hash-put! data-hash "title" title)
-                          data-hash))
-            (data (json-object->string data-hash)))
-       (with ([status body] (rest-call 'post url (default-headers) data))
-             (unless status
-               (error body))
-             (present-item body))))
+            (data-hash (hash ("graph_json" graph_json))))
+       (when timeframe
+         (hash-put! data-hash "timeframe" timeframe))
+       (when size
+         (hash-put! data-hash "size" size))
+       (when legend
+         (hash-put! data-hash "legend" legend))
+       (when title
+         (hash-put! data-hash "title" title))
+       (let ((data (json-object->string data-hash)))
+         (with ([status body] (rest-call 'post url (default-headers) data))
+               (unless status
+                 (error body))
+               (present-item body)))))
 
 (def (get-embed embed_id size legend template_variables)
      "Get a specific embeddable graph
@@ -1278,33 +1267,30 @@
   scope: The scope to mute (optional, e.g., 'host:myhost')
   end: POSIX timestamp for when the mute should end (optional)"
      (let* ((url (make-dd-url (format "monitor/~a/mute" monitor_id)))
-            (data-hash (hash))
-            (data-hash (if scope
-                          (hash-put! data-hash "scope" scope)
-                          data-hash))
-            (data-hash (if end
-                          (hash-put! data-hash "end" end)
-                          data-hash))
-            (data (json-object->string data-hash)))
-       (with ([status body] (rest-call 'post url (default-headers) data))
-             (unless status
-               (error body))
-             (present-item body))))
+            (data-hash (hash)))
+       (when scope
+         (hash-put! data-hash "scope" scope))
+       (when end
+         (hash-put! data-hash "end" end))
+       (let ((data (json-object->string data-hash)))
+         (with ([status body] (rest-call 'post url (default-headers) data))
+               (unless status
+                 (error body))
+               (present-item body)))))
 
 (def (unmute-monitor monitor_id scope)
      "Unmute a monitor
   monitor_id: The monitor ID (required)
   scope: The scope to unmute (optional)"
      (let* ((url (make-dd-url (format "monitor/~a/unmute" monitor_id)))
-            (data-hash (hash))
-            (data-hash (if scope
-                          (hash-put! data-hash "scope" scope)
-                          data-hash))
-            (data (json-object->string data-hash)))
-       (with ([status body] (rest-call 'post url (default-headers) data))
-             (unless status
-               (error body))
-             (present-item body))))
+            (data-hash (hash)))
+       (when scope
+         (hash-put! data-hash "scope" scope))
+       (let ((data (json-object->string data-hash)))
+         (with ([status body] (rest-call 'post url (default-headers) data))
+               (unless status
+                 (error body))
+               (present-item body)))))
 
 (def (mute-all-monitors)
      "Mute all monitors"
@@ -1836,21 +1822,18 @@
   message: A message to describe the mute (optional)
   override: Whether to override existing mutes (optional)"
      (let* ((url (make-dd-url (format "host/~a/mute" hostname)))
-            (data-hash (hash))
-            (data-hash (if end
-                          (hash-put! data-hash "end" end)
-                          data-hash))
-            (data-hash (if message
-                          (hash-put! data-hash "message" message)
-                          data-hash))
-            (data-hash (if override
-                          (hash-put! data-hash "override" override)
-                          data-hash))
-            (data (json-object->string data-hash)))
-       (with ([status body] (rest-call 'post url (default-headers) data))
-             (unless status
-               (error body))
-             (present-item body))))
+            (data-hash (hash)))
+       (when end
+         (hash-put! data-hash "end" end))
+       (when message
+         (hash-put! data-hash "message" message))
+       (when override
+         (hash-put! data-hash "override" override))
+       (let ((data (json-object->string data-hash)))
+         (with ([status body] (rest-call 'post url (default-headers) data))
+               (unless status
+                 (error body))
+               (present-item body)))))
 
 (def (unmute-host hostname)
      "Unmute a host"
@@ -2146,24 +2129,20 @@
   disabled: Whether the user is disabled (optional)
   access_role: The user's access role (st, adm, ro) (optional)"
      (let* ((url (make-dd-url (format "user/~a" handle)))
-            (data-hash (hash))
-            (data-hash (if name
-                          (hash-put! data-hash "name" name)
-                          data-hash))
-            (data-hash (if email
-                          (hash-put! data-hash "email" email)
-                          data-hash))
-            (data-hash (if disabled
-                          (hash-put! data-hash "disabled" disabled)
-                          data-hash))
-            (data-hash (if access_role
-                          (hash-put! data-hash "access_role" access_role)
-                          data-hash))
-            (data (json-object->string data-hash)))
-       (with ([status body] (rest-call 'put url (default-headers) data))
-             (unless status
-               (error body))
-             (present-item body))))
+            (data-hash (hash)))
+       (when name
+         (hash-put! data-hash "name" name))
+       (when email
+         (hash-put! data-hash "email" email))
+       (when disabled
+         (hash-put! data-hash "disabled" disabled))
+       (when access_role
+         (hash-put! data-hash "access_role" access_role))
+       (let ((data (json-object->string data-hash)))
+         (with ([status body] (rest-call 'put url (default-headers) data))
+               (unless status
+                 (error body))
+               (present-item body)))))
 
 
 (def (check-manifest manifest)
