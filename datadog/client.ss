@@ -439,7 +439,7 @@
          (hash-put! data-hash "timestamp" timestamp))
        (when message
          (hash-put! data-hash "message" message))
-       (when (and tags (list? tags))
+       (when tags
          (hash-put! data-hash "tags" tags))
        (let ((data (json-object->string data-hash)))
          (with ([status body] (rest-call 'post url (default-headers) data))
