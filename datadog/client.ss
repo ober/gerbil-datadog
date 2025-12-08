@@ -254,6 +254,22 @@
                (error body))
 	     body)))
 
+(def (get-event event_id)
+     "Get a specific event by ID"
+     (let ((url (make-dd-url (format "events/~a" event_id))))
+       (with ([status body] (rest-call 'get url (default-headers)))
+             (unless status
+               (error body))
+             (present-item body))))
+
+(def (delete-event event_id)
+     "Delete an event by ID"
+     (let ((url (make-dd-url (format "events/~a" event_id))))
+       (with ([status body] (rest-call 'delete url (default-headers)))
+             (unless status
+               (error body))
+             (present-item body))))
+
 (def (get-events-last-secs secs tags)
      (let* ((start (float->int (- (time->seconds (current-time)) secs)))
             (end (float->int (time->seconds (current-time))))
@@ -320,6 +336,54 @@
 		     " alert_type: " .alert_type
 		     " id: " .id))))
 
+;; *** COMMENTS ***
+
+(def (create-comment message handle related_event_id)
+     "Create a comment on Datadog
+  message: The comment text (required)
+  handle: The handle of the user making the comment (optional)
+  related_event_id: The id of another comment or event to reply to (optional)"
+     (let* ((url (make-dd-url "comments"))
+            (data-hash (hash ("message" message)))
+            (data-hash (if handle
+                          (hash-put! data-hash "handle" handle)
+                          data-hash))
+            (data-hash (if related_event_id
+                          (hash-put! data-hash "related_event_id" related_event_id)
+                          data-hash))
+            (data (json-object->string data-hash)))
+       (with ([status body] (rest-call 'post url (default-headers) data))
+             (unless status
+               (error body))
+             (present-item body))))
+
+(def (edit-comment comment_id message handle)
+     "Edit an existing comment
+  comment_id: The ID of the comment to edit (required)
+  message: The new comment text (optional)
+  handle: The handle of the user making the edit (optional)"
+     (let* ((url (make-dd-url (format "comments/~a" comment_id)))
+            (data-hash (hash))
+            (data-hash (if message
+                          (hash-put! data-hash "message" message)
+                          data-hash))
+            (data-hash (if handle
+                          (hash-put! data-hash "handle" handle)
+                          data-hash))
+            (data (json-object->string data-hash)))
+       (with ([status body] (rest-call 'put url (default-headers) data))
+             (unless status
+               (error body))
+             (present-item body))))
+
+(def (delete-comment comment_id)
+     "Delete a comment by ID"
+     (let ((url (make-dd-url (format "comments/~a" comment_id))))
+       (with ([status body] (rest-call 'delete url (default-headers)))
+             (unless status
+               (error body))
+             (present-item body))))
+
 (def (downtimes)
      (let (url (make-dd-url "downtime"))
        (with ([status body] (rest-call 'get url (default-headers)))
@@ -359,6 +423,36 @@
 		     " active:" active
 		     " monitor_id:" monitor_id
 		     ))))))
+
+;; *** SERVICE CHECKS ***
+
+(def (post-check-run check host_name status timestamp message tags)
+     "Post a service check run
+  check: The name of the check
+  host_name: The name of the host submitting the check
+  status: An integer for the status (0=OK, 1=WARNING, 2=CRITICAL, 3=UNKNOWN)
+  timestamp: POSIX timestamp (optional, use #f for current time)
+  message: Description of why this status occurred (optional)
+  tags: List of tags for this check (optional)"
+     (let* ((url (make-dd-url "check_run"))
+            (data-hash (hash
+                        ("check" check)
+                        ("host_name" host_name)
+                        ("status" status)))
+            (data-hash (if timestamp
+                          (hash-put! data-hash "timestamp" timestamp)
+                          data-hash))
+            (data-hash (if message
+                          (hash-put! data-hash "message" message)
+                          data-hash))
+            (data-hash (if (and tags (list? tags))
+                          (hash-put! data-hash "tags" tags)
+                          data-hash))
+            (data (json-object->string data-hash)))
+       (with ([status body] (rest-call 'post url (default-headers) data))
+             (unless status
+               (error body))
+             (present-item body))))
 
 (def (screen id)
      (let (url (make-dd-url (format "screen/~a" id)))
@@ -773,6 +867,38 @@
                (error body))
 	     (present-item body))))
 
+(def (delete-tboard dash_id)
+     "Delete a timeboard by ID"
+     (let ((url (make-dd-url (format "dash/~a" dash_id))))
+       (with ([status body] (rest-call 'delete url (default-headers)))
+             (unless status
+               (error body))
+             (present-item body))))
+
+(def (delete-sboard board_id)
+     "Delete a screenboard by ID"
+     (let ((url (make-dd-url (format "screen/~a" board_id))))
+       (with ([status body] (rest-call 'delete url (default-headers)))
+             (unless status
+               (error body))
+             (present-item body))))
+
+(def (share-sboard board_id)
+     "Share a screenboard (make it publicly accessible)"
+     (let ((url (make-dd-url (format "screen/share/~a" board_id))))
+       (with ([status body] (rest-call 'post url (default-headers) "{}"))
+             (unless status
+               (error body))
+             (present-item body))))
+
+(def (revoke-sboard-share board_id)
+     "Revoke sharing of a screenboard"
+     (let ((url (make-dd-url (format "screen/share/~a" board_id))))
+       (with ([status body] (rest-call 'delete url (default-headers)))
+             (unless status
+               (error body))
+             (present-item body))))
+
 (def (search query)
      (let (url (make-dd-url (format "search?q=~a" query)))
        (with ([status body] (rest-call 'get url (default-headers)))
@@ -921,6 +1047,17 @@
                (for (k (hash-keys body))
 		    (displayln k))))))
 
+(def (update-host-tags hostname tags)
+     "Update (replace) all tags for a host
+  hostname: The hostname (required)
+  tags: List of tags to set for the host (required)"
+     (let* ((url (make-dd-url (format "tags/hosts/~a" hostname)))
+            (data (json-object->string (hash ("tags" tags)))))
+       (with ([status body] (rest-call 'put url (default-headers) data))
+             (unless status
+               (error body))
+             (present-item body))))
+
 (def (graph query start end)
      (let (url (make-dd-url (format "graph/snapshot?metric_query=~a&start=~a&end=~a" query start end)))
        (with ([status body] (rest-call 'get url (default-headers)))
@@ -940,6 +1077,84 @@
 
 (def (graph-hour query)
      (query-last-secs 3600 query))
+
+;; *** EMBEDDABLE GRAPHS ***
+
+(def (get-all-embeds)
+     "Get a list of all embeddable graphs"
+     (let ((url (make-dd-url "graph/embed")))
+       (with ([status body] (rest-call 'get url (default-headers)))
+             (unless status
+               (error body))
+             (present-item body))))
+
+(def (create-embed graph_json timeframe size legend title)
+     "Create a new embeddable graph
+  graph_json: The graph definition in JSON (required)
+  timeframe: The timeframe for the graph (optional: 1_hour, 4_hours, 1_day, 2_days, 1_week)
+  size: The size of the graph (optional: small, medium, large, xlarge)
+  legend: Whether to show legend (optional: yes, no)
+  title: The graph title (optional)"
+     (let* ((url (make-dd-url "graph/embed"))
+            (data-hash (hash ("graph_json" graph_json)))
+            (data-hash (if timeframe
+                          (hash-put! data-hash "timeframe" timeframe)
+                          data-hash))
+            (data-hash (if size
+                          (hash-put! data-hash "size" size)
+                          data-hash))
+            (data-hash (if legend
+                          (hash-put! data-hash "legend" legend)
+                          data-hash))
+            (data-hash (if title
+                          (hash-put! data-hash "title" title)
+                          data-hash))
+            (data (json-object->string data-hash)))
+       (with ([status body] (rest-call 'post url (default-headers) data))
+             (unless status
+               (error body))
+             (present-item body))))
+
+(def (get-embed embed_id size legend template_variables)
+     "Get a specific embeddable graph
+  embed_id: The embed token (required)
+  size: The size of the graph (optional: small, medium, large, xlarge)
+  legend: Whether to show legend (optional: yes, no)
+  template_variables: Hash of template variables to replace (optional)"
+     (let* ((params [])
+            (params (if size (cons (format "size=~a" size) params) params))
+            (params (if legend (cons (format "legend=~a" legend) params) params))
+            (params (if (and template_variables (hash-table? template_variables))
+                       (append params
+                               (hash-fold
+                                (lambda (k v acc)
+                                  (cons (format "~a=~a" k v) acc))
+                                [] template_variables))
+                       params))
+            (query-string (if (pair? params)
+                            (string-append "?" (string-join params "&"))
+                            ""))
+            (url (make-dd-url (format "graph/embed/~a~a" embed_id query-string))))
+       (with ([status body] (rest-call 'get url (default-headers)))
+             (unless status
+               (error body))
+             (present-item body))))
+
+(def (enable-embed embed_id)
+     "Enable a specified embed"
+     (let ((url (make-dd-url (format "graph/embed/~a/enable" embed_id))))
+       (with ([status body] (rest-call 'get url (default-headers)))
+             (unless status
+               (error body))
+             (present-item body))))
+
+(def (revoke-embed embed_id)
+     "Revoke a specified embed"
+     (let ((url (make-dd-url (format "graph/embed/~a/revoke" embed_id))))
+       (with ([status body] (rest-call 'get url (default-headers)))
+             (unless status
+               (error body))
+             (present-item body))))
 
 (def (edit-monitor id query name message)
      (let ((url (make-dd-url (format "montior/~a" id)))
@@ -1056,6 +1271,66 @@
 		  (let-hash monitor
 			    (set! outs (cons [ .id .name .query (string-join .tags ",") (format "https://~a/monitors/~a" datadog-host .id)] outs))))
 	     (style-output outs))))
+
+(def (mute-monitor monitor_id scope end)
+     "Mute a monitor
+  monitor_id: The monitor ID (required)
+  scope: The scope to mute (optional, e.g., 'host:myhost')
+  end: POSIX timestamp for when the mute should end (optional)"
+     (let* ((url (make-dd-url (format "monitor/~a/mute" monitor_id)))
+            (data-hash (hash))
+            (data-hash (if scope
+                          (hash-put! data-hash "scope" scope)
+                          data-hash))
+            (data-hash (if end
+                          (hash-put! data-hash "end" end)
+                          data-hash))
+            (data (json-object->string data-hash)))
+       (with ([status body] (rest-call 'post url (default-headers) data))
+             (unless status
+               (error body))
+             (present-item body))))
+
+(def (unmute-monitor monitor_id scope)
+     "Unmute a monitor
+  monitor_id: The monitor ID (required)
+  scope: The scope to unmute (optional)"
+     (let* ((url (make-dd-url (format "monitor/~a/unmute" monitor_id)))
+            (data-hash (hash))
+            (data-hash (if scope
+                          (hash-put! data-hash "scope" scope)
+                          data-hash))
+            (data (json-object->string data-hash)))
+       (with ([status body] (rest-call 'post url (default-headers) data))
+             (unless status
+               (error body))
+             (present-item body))))
+
+(def (mute-all-monitors)
+     "Mute all monitors"
+     (let ((url (make-dd-url "monitor/mute_all")))
+       (with ([status body] (rest-call 'post url (default-headers) "{}"))
+             (unless status
+               (error body))
+             (present-item body))))
+
+(def (unmute-all-monitors)
+     "Unmute all monitors"
+     (let ((url (make-dd-url "monitor/unmute_all")))
+       (with ([status body] (rest-call 'post url (default-headers) "{}"))
+             (unless status
+               (error body))
+             (present-item body))))
+
+(def (bulk-resolve-monitors monitor_ids)
+     "Resolve multiple monitors at once
+  monitor_ids: List of monitor IDs to resolve (required)"
+     (let* ((url (make-dd-url "monitor/bulk_resolve"))
+            (data (json-object->string (hash ("resolve" monitor_ids)))))
+       (with ([status body] (rest-call 'post url (default-headers) data))
+             (unless status
+               (error body))
+             (present-item body))))
 
 (def (format-tboard tboard)
      "Try to order the keys in this hash to consistenly represent them in yaml"
@@ -1554,6 +1829,37 @@
 					   ] outs)))))
        (style-output outs)))
 
+(def (mute-host hostname end message override)
+     "Mute a host
+  hostname: The hostname to mute (required)
+  end: POSIX timestamp for when the mute should end (optional)
+  message: A message to describe the mute (optional)
+  override: Whether to override existing mutes (optional)"
+     (let* ((url (make-dd-url (format "host/~a/mute" hostname)))
+            (data-hash (hash))
+            (data-hash (if end
+                          (hash-put! data-hash "end" end)
+                          data-hash))
+            (data-hash (if message
+                          (hash-put! data-hash "message" message)
+                          data-hash))
+            (data-hash (if override
+                          (hash-put! data-hash "override" override)
+                          data-hash))
+            (data (json-object->string data-hash)))
+       (with ([status body] (rest-call 'post url (default-headers) data))
+             (unless status
+               (error body))
+             (present-item body))))
+
+(def (unmute-host hostname)
+     "Unmute a host"
+     (let ((url (make-dd-url (format "host/~a/unmute" hostname))))
+       (with ([status body] (rest-call 'post url (default-headers) "{}"))
+             (unless status
+               (error body))
+             (present-item body))))
+
 (def (format-no-host host outs)
      (displayln "fnh:" host (length outs))
      (let* ((split (pregexp-split " " host))
@@ -1739,6 +2045,40 @@
      (let-hash (load-config)
 	       (displayln "missing")))
 
+(def (get-timeseries-usage start end)
+     "Get hourly usage for custom metrics
+  start: Start date in YYYY-MM-DD format (required)
+  end: End date in YYYY-MM-DD format (required)"
+     (let* ((url (make-dd-url (format "usage/timeseries?start_hr=~a&end_hr=~a" start end)))
+            (outs [[ "Hour" "Num Custom Timeseries" ]]))
+       (with ([status body] (rest-call 'get url (default-headers)))
+             (unless status
+               (error body))
+             (when (hash-table? body)
+               (let-hash body
+                         (for (entry .usage)
+                              (let-hash entry
+                                        (set! outs (cons [ .?hour .?num_custom_timeseries ] outs)))))
+               (style-output outs)))))
+
+(def (get-top-avg-metrics month)
+     "Get top 500 custom metrics by hourly average
+  month: Month in YYYY-MM format (optional)"
+     (let* ((url (if month
+                    (make-dd-url (format "usage/top_avg_metrics?month=~a" month))
+                    (make-dd-url "usage/top_avg_metrics")))
+            (outs [[ "Metric Name" "Avg Metric Hour" "Max Metric Hour" ]]))
+       (with ([status body] (rest-call 'get url (default-headers)))
+             (unless status
+               (error body))
+             (when (hash-table? body)
+               (let-hash body
+                         (when .?metrics
+                           (for (entry .metrics)
+                                (let-hash entry
+                                          (set! outs (cons [ .?metric_name .?avg_metric_hour .?max_metric_hour ] outs)))))
+                         (style-output outs))))))
+
 (def (verify-apps)
      "Validate all hosts app list against their apps tag, show those out of sync"
      (let ((hosts (get-all-metas)))
@@ -1788,6 +2128,42 @@
 		       (unless status
 			 (error body))
 		       (present-item body)))))
+
+(def (get-user handle)
+     "Get details about a specific user
+  handle: The user's handle (email address)"
+     (let ((url (make-dd-url (format "user/~a" handle))))
+       (with ([status body] (rest-call 'get url (default-headers)))
+             (unless status
+               (error body))
+             (present-item body))))
+
+(def (update-user handle name email disabled access_role)
+     "Update a Datadog user
+  handle: The user's handle (email address) (required)
+  name: The user's name (optional)
+  email: The user's new email (optional)
+  disabled: Whether the user is disabled (optional)
+  access_role: The user's access role (st, adm, ro) (optional)"
+     (let* ((url (make-dd-url (format "user/~a" handle)))
+            (data-hash (hash))
+            (data-hash (if name
+                          (hash-put! data-hash "name" name)
+                          data-hash))
+            (data-hash (if email
+                          (hash-put! data-hash "email" email)
+                          data-hash))
+            (data-hash (if disabled
+                          (hash-put! data-hash "disabled" disabled)
+                          data-hash))
+            (data-hash (if access_role
+                          (hash-put! data-hash "access_role" access_role)
+                          data-hash))
+            (data (json-object->string data-hash)))
+       (with ([status body] (rest-call 'put url (default-headers) data))
+             (unless status
+               (error body))
+             (present-item body))))
 
 
 (def (check-manifest manifest)
