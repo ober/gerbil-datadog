@@ -46,14 +46,19 @@
 	(car config-data))
        (let-hash config
 		 (when .?secrets
-		   (let-hash (u8vector->object (base64-decode .secrets))
-			     (hash-put! config 'datadog-api-key (decrypt-bundle .api-key))
-			     (hash-put! config 'datadog-app-key (decrypt-bundle .app-key))
-			     (when .?username
-			       (hash-put! config 'username (decrypt-bundle .username)))
-			     (when .?password
-			       (hash-put! config 'password (decrypt-bundle .password)))
-			     )))
+           ;; Use JSON parsing instead of u8vector->object for security
+           ;; Prevents arbitrary code execution from malicious config files
+           (let ((secrets-json (parameterize ((read-json-key-as-symbol? #t))
+                                 (with-input-from-string
+                                     (bytes->string (base64-decode .secrets))
+                                   read-json))))
+             (let-hash secrets-json
+               (hash-put! config 'datadog-api-key (decrypt-bundle .api-key))
+               (hash-put! config 'datadog-app-key (decrypt-bundle .app-key))
+               (when .?username
+                 (hash-put! config 'username (decrypt-bundle .username)))
+               (when .?password
+                 (hash-put! config 'password (decrypt-bundle .password)))))))
        config))
 
 (def (ensure-api-keys)
@@ -1377,12 +1382,11 @@
      (def api-key (read-password ##console-port))
      (displayln "Please enter your DataDog Application Key:")
      (def app-key (read-password ##console-port))
-     (def secrets (base64-encode
-                   (object->u8vector
-                    (hash
-                     (api-key (encrypt-string api-key))
-		     (app-key (encrypt-string app-key))
-                     ))))
+     ;; Use JSON encoding instead of object->u8vector for security
+     (def secrets-hash (hash
+                        ("api-key" (encrypt-string api-key))
+                        ("app-key" (encrypt-string app-key))))
+     (def secrets (base64-encode (string->bytes (json-object->string secrets-hash))))
 
      (displayln "Add the following lines to your " config-file)
      (displayln "secrets: " secrets))
@@ -1395,10 +1399,11 @@
             (enc-pass-store (u8vector->base64-string encrypted-password))
             (iv-store (u8vector->base64-string iv))
             (key-store (u8vector->base64-string key)))
+       ;; Use string keys for JSON compatibility
        (hash
-	(key key-store)
-	(iv iv-store)
-	(password enc-pass-store))))
+        ("key" key-store)
+        ("iv" iv-store)
+        ("password" enc-pass-store))))
 
 (def (decrypt-password key iv password)
      (bytes->string
