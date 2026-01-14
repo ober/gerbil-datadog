@@ -31,35 +31,70 @@
 (def datadog-api-key #f)
 (def datadog-app-key #f)
 (def config-file "~/.datadog.yaml")
+(def keys-dir (path-expand "~/.config/gerbil/keys"))
+(def key-file (path-expand "datadog.key" keys-dir))
+
+;; Security: Ensure directory exists with restricted permissions
+(def (ensure-keys-dir!)
+  (unless (file-exists? keys-dir)
+    (create-directory* keys-dir)
+    (##shell-command (format "chmod 700 ~a" keys-dir))))
+
+;; Security: Save key to separate file with restricted permissions
+(def (save-key-to-file! key-bytes)
+  (ensure-keys-dir!)
+  (let ((key-b64 (u8vector->base64-string key-bytes)))
+    (with-output-to-file [path: key-file create: 'maybe truncate: #t]
+      (lambda () (display key-b64)))
+    (##shell-command (format "chmod 400 ~a" key-file))
+    (displayln (format "Key saved to ~a (mode 0400)" key-file))))
+
+;; Security: Load key from separate file
+(def (load-key-from-file)
+  (unless (file-exists? key-file)
+    (error (format "Key file not found: ~a. Run 'config' command first." key-file)))
+  (base64-string->u8vector (read-file-string key-file)))
+
+;; Security: Check file permissions (warn if too permissive)
+(def (check-file-permissions! file)
+  (when (file-exists? file)
+    (let* ((info (file-info file))
+           (mode (file-info-mode info)))
+      (when (> (bitwise-and mode #o077) 0)
+        (displayln (format "WARNING: ~a has insecure permissions. Run: chmod 600 ~a" file file))))))
 
 (def (load-config)
-     (let ((config (hash))
-           (config-data (yaml-load config-file)))
-       (unless (and (list? config-data)
-                    (length>n? config-data 0)
-                    (hash-table? (car config-data)))
-	 (displayln (format "Could not parse your config ~a" config-file))
-	 (exit 2))
-       (hash-for-each
-	(lambda (k v)
-	  (hash-put! config (string->symbol k) v))
-	(car config-data))
-       (let-hash config
-		 (when .?secrets
-           ;; Use JSON parsing instead of u8vector->object for security
-           ;; Prevents arbitrary code execution from malicious config files
-           (let ((secrets-json (parameterize ((read-json-key-as-symbol? #t))
-                                 (with-input-from-string
-                                     (bytes->string (base64-decode .secrets))
-                                   read-json))))
-             (let-hash secrets-json
-               (hash-put! config 'datadog-api-key (decrypt-bundle .api-key))
-               (hash-put! config 'datadog-app-key (decrypt-bundle .app-key))
-               (when .?username
-                 (hash-put! config 'username (decrypt-bundle .username)))
-               (when .?password
-                 (hash-put! config 'password (decrypt-bundle .password)))))))
-       config))
+  ;; SECURITY: Check file permissions
+  (check-file-permissions! config-file)
+  (check-file-permissions! key-file)
+
+  (let ((config (hash))
+        (config-data (yaml-load config-file)))
+    (unless (and (list? config-data)
+                 (length>n? config-data 0)
+                 (hash-table? (car config-data)))
+      (displayln (format "Could not parse your config ~a" config-file))
+      (exit 2))
+    (hash-for-each
+     (lambda (k v)
+       (hash-put! config (string->symbol k) v))
+     (car config-data))
+    (let-hash config
+      (when .?secrets
+        ;; Use JSON parsing instead of u8vector->object for security
+        ;; Prevents arbitrary code execution from malicious config files
+        (let ((secrets-json (parameterize ((read-json-key-as-symbol? #t))
+                              (with-input-from-string
+                                  (bytes->string (base64-decode .secrets))
+                                read-json))))
+          (let-hash secrets-json
+            (hash-put! config 'datadog-api-key (decrypt-bundle .api-key))
+            (hash-put! config 'datadog-app-key (decrypt-bundle .app-key))
+            (when .?username
+              (hash-put! config 'username (decrypt-bundle .username)))
+            (when .?password
+              (hash-put! config 'password (decrypt-bundle .password)))))))
+    config))
 
 (def (ensure-api-keys)
      (unless (and
@@ -1378,44 +1413,81 @@
 	 (displayln "not a table. got " data)))
 
 (def (config)
-     (displayln "Please enter your DataDog API Key:")
-     (def api-key (read-password ##console-port))
-     (displayln "Please enter your DataDog Application Key:")
-     (def app-key (read-password ##console-port))
-     ;; Use JSON encoding instead of object->u8vector for security
-     (def secrets-hash (hash
-                        ("api-key" (encrypt-string api-key))
-                        ("app-key" (encrypt-string app-key))))
-     (def secrets (base64-encode (string->bytes (json-object->string secrets-hash))))
+  (displayln "Please enter your DataDog API Key:")
+  (def api-key (read-password ##console-port))
+  (displayln "Please enter your DataDog Application Key:")
+  (def app-key (read-password ##console-port))
+  ;; SECURITY FIX: Generate single shared key and store it separately
+  (let* ((cipher (make-aes-256-ctr-cipher))
+         (shared-key (random-bytes (cipher-key-length cipher))))
+    ;; Save key to separate secure file
+    (save-key-to-file! shared-key)
+    ;; Encrypt with shared key - only store IV and ciphertext
+    (def secrets-hash (hash
+                       ("api-key" (encrypt-string-with-key api-key shared-key))
+                       ("app-key" (encrypt-string-with-key app-key shared-key))))
+    (def secrets (base64-encode (string->bytes (json-object->string secrets-hash))))
+    (displayln "")
+    (displayln "Add the following lines to your " config-file)
+    (displayln "secrets: " secrets)
+    (displayln "")
+    (displayln "SECURITY NOTE: Your encryption key is stored separately in " key-file)))
 
-     (displayln "Add the following lines to your " config-file)
-     (displayln "secrets: " secrets))
+;; SECURITY FIX: Encrypt using provided key (stored separately)
+(def (encrypt-string-with-key str key)
+  (let* ((cipher (make-aes-256-ctr-cipher))
+         (iv (random-bytes (cipher-iv-length cipher)))
+         (encrypted (encrypt cipher key iv str))
+         (enc-store (u8vector->base64-string encrypted))
+         (iv-store (u8vector->base64-string iv)))
+    ;; Only store IV and ciphertext, NOT the key
+    (hash
+     ("iv" iv-store)
+     ("password" enc-store))))
 
+;; Legacy: encrypt with random key stored in bundle (insecure, for backward compat)
 (def (encrypt-string str)
-     (let* ((cipher (make-aes-256-ctr-cipher))
-            (iv (random-bytes (cipher-iv-length cipher)))
-            (key (random-bytes (cipher-key-length cipher)))
-            (encrypted-password (encrypt cipher key iv str))
-            (enc-pass-store (u8vector->base64-string encrypted-password))
-            (iv-store (u8vector->base64-string iv))
-            (key-store (u8vector->base64-string key)))
-       ;; Use string keys for JSON compatibility
-       (hash
-        ("key" key-store)
-        ("iv" iv-store)
-        ("password" enc-pass-store))))
+  (displayln "WARNING: Using legacy encryption with key in config (insecure)")
+  (let* ((cipher (make-aes-256-ctr-cipher))
+         (iv (random-bytes (cipher-iv-length cipher)))
+         (key (random-bytes (cipher-key-length cipher)))
+         (encrypted-password (encrypt cipher key iv str))
+         (enc-pass-store (u8vector->base64-string encrypted-password))
+         (iv-store (u8vector->base64-string iv))
+         (key-store (u8vector->base64-string key)))
+    (hash
+     ("key" key-store)
+     ("iv" iv-store)
+     ("password" enc-pass-store))))
 
-(def (decrypt-password key iv password)
-     (bytes->string
-      (decrypt
-       (make-aes-256-ctr-cipher)
-       (base64-string->u8vector key)
-       (base64-string->u8vector iv)
-       (base64-string->u8vector password))))
+;; Legacy decrypt with key from bundle
+(def (decrypt-password-legacy key iv password)
+  (bytes->string
+   (decrypt
+    (make-aes-256-ctr-cipher)
+    (base64-string->u8vector key)
+    (base64-string->u8vector iv)
+    (base64-string->u8vector password))))
+
+;; SECURITY FIX: Decrypt using key from separate file
+(def (decrypt-password-secure iv password)
+  (let ((key (load-key-from-file)))
+    (bytes->string
+     (decrypt
+      (make-aes-256-ctr-cipher)
+      key
+      (base64-string->u8vector iv)
+      (base64-string->u8vector password)))))
 
 (def (decrypt-bundle bundle)
-     (let-hash bundle
-	       (decrypt-password .key .iv .password)))
+  (let-hash bundle
+    (if .?key
+      ;; Legacy format: key in bundle (warn user)
+      (begin
+        (displayln "WARNING: Using legacy config with key in secrets. Run 'config' to upgrade.")
+        (decrypt-password-legacy .key .iv .password))
+      ;; New format: key in separate file
+      (decrypt-password-secure .iv .password))))
 
 (def datadog-auth-url "https://app.datadoghq.com/account/login?redirect=f")
 
